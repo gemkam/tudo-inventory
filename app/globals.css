@@ -227,21 +227,6 @@ input, select {
 .tbtn.ghost { background: transparent; color: var(--cream); border: 1px solid rgba(247, 239, 225, .35); }
 .tbtn.ghost:hover { background: rgba(247, 239, 225, .12); }
 
-.formula-bar {
-  display: flex; align-items: stretch; border-bottom: 1px solid #d8c4a4; background: #f6ecdb;
-}
-.formula-bar .ref {
-  min-width: 64px; display: grid; place-items: center; font-size: 13px; font-weight: 600; color: var(--brown);
-  border-right: 1px solid #d8c4a4; font-variant-numeric: tabular-nums; padding: 0 10px;
-}
-.formula-bar .fx {
-  display: grid; place-items: center; padding: 0 12px; font-family: var(--display); font-style: italic;
-  color: var(--muted); border-right: 1px solid #d8c4a4;
-}
-.formula-bar input {
-  border: 0; border-radius: 0; background: transparent; padding: 9px 12px; font-size: 14px; min-width: 0; flex: 1;
-}
-.formula-bar input:focus-visible { outline: 2px solid var(--brown); outline-offset: -2px; }
 
 .grid-wrap { overflow: auto; max-height: min(70vh, 720px); position: relative; outline: none; -webkit-overflow-scrolling: touch; }
 .grid-wrap:focus-visible { box-shadow: inset 0 0 0 2px rgba(74, 46, 28, .25); }
@@ -249,12 +234,8 @@ input, select {
 .grid th, .grid td { border-right: 1px solid #e6d7bf; border-bottom: 1px solid #e6d7bf; padding: 0; }
 
 .grid thead th { position: sticky; z-index: 3; background: #f3e7d3; }
-.grid thead tr.letters th {
-  top: 0; height: 24px; font-size: 11px; font-weight: 600; color: #a08670; text-align: center; letter-spacing: .06em;
-}
-.grid thead tr.letters th.on { background: #e7d3b3; color: var(--brown); }
 .grid thead tr.labels th {
-  top: 24px; height: 40px; font-size: 11px; text-transform: uppercase; letter-spacing: .09em; color: var(--brown);
+  top: 0; height: 42px; font-size: 11px; text-transform: uppercase; letter-spacing: .09em; color: var(--brown);
   font-weight: 700; padding: 0 12px; box-shadow: 0 2px 0 #cdb593; white-space: nowrap;
 }
 .grid th.a-right, .grid td.a-right { text-align: right; }
@@ -268,9 +249,9 @@ input, select {
   font-variant-numeric: tabular-nums; z-index: 2; box-shadow: 1px 0 0 #d8c4a4;
 }
 .grid tbody td.k-name { position: sticky; left: var(--w-num); z-index: 1; background: inherit; box-shadow: 2px 0 0 #e6d7bf; }
-.grid thead tr.labels th:nth-child(2), .grid thead tr.letters th:nth-child(2) { position: sticky; left: var(--w-num); z-index: 4; }
+.grid thead tr.labels th:nth-child(2) { position: sticky; left: var(--w-num); z-index: 4; }
 .grid td.cell:not(.k-name) { scroll-margin-left: calc(var(--w-num) + var(--w-name)); }
-.grid td.cell { scroll-margin-top: 66px; scroll-margin-bottom: 40px; }
+.grid td.cell { scroll-margin-top: 44px; scroll-margin-bottom: 40px; }
 
 .grid tbody tr { background: #fffaf2; }
 .grid tbody tr:nth-child(even) { background: #fbf3e6; }

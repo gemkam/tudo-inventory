@@ -58,9 +58,6 @@ function unitOptions(current) {
   return current && !UNIT_LABEL[current] ? [[current, current], ...UNITS] : UNITS;
 }
 
-function colLetter(i) {
-  return String.fromCharCode(65 + i);
-}
 
 function SheetPage() {
   const { id } = useParams();
@@ -397,14 +394,10 @@ function SheetPage() {
   const lowCount = items.filter(isLow).length;
   const monthIn = num(Object.values(stats).reduce((t, s) => t + s.in, 0));
   const monthOut = num(Object.values(stats).reduce((t, s) => t + s.out, 0));
-  const selCol = cols[sel.c];
-  const selEditable = canEdit(sel.r, sel.c);
-  const barValue = editing ? editing.value : rawValue(sel.r, sel.c);
-  const ref = `${colLetter(sel.c)}${sel.r + 1}`;
 
   function renderCell(row, col, r, c) {
     const isEditing = editing && editing.r === r && editing.c === c;
-    if (isEditing && !editing.bar && col.key === 'unit') {
+    if (isEditing && col.key === 'unit') {
       return (
         <select
           className="cell-input"
@@ -419,7 +412,7 @@ function SheetPage() {
         </select>
       );
     }
-    if (isEditing && !editing.bar) {
+    if (isEditing) {
       return (
         <input
           className="cell-input"
@@ -489,8 +482,8 @@ function SheetPage() {
           </p>
         </div>
         <div className="sheet-kpis">
-          <div><span>In this month</span><strong className="pos">+{monthIn}</strong></div>
-          <div><span>Out this month</span><strong className="neg">−{monthOut}</strong></div>
+          <div><span>In this month</span><strong className="pos">{monthIn ? `+${monthIn}` : 0}</strong></div>
+          <div><span>Out this month</span><strong className="neg">{monthOut ? `−${monthOut}` : 0}</strong></div>
         </div>
       </div>
 
@@ -510,21 +503,6 @@ function SheetPage() {
           </div>
         </div>
 
-        <div className="formula-bar">
-          <span className="ref">{ref}</span>
-          <span className="fx">fx</span>
-          <input
-            id="formula-input"
-            aria-label="Cell value"
-            value={barValue}
-            readOnly={!selEditable || selCol?.key === 'unit'}
-            placeholder={selEditable ? (selCol?.key === 'quantity' ? 'Type 10, +5, -2 or =4*3' : 'Type a value') : ''}
-            onFocus={() => { if (selEditable && selCol?.key !== 'unit' && !editing) startEdit(sel.r, sel.c, undefined, true); }}
-            onChange={(e) => editing && setEditing({ ...editing, value: e.target.value })}
-            onKeyDown={onEditorKey}
-            onBlur={() => editing?.bar && commitEdit()}
-          />
-        </div>
 
         <div className="grid-wrap" ref={gridRef} tabIndex={0} onKeyDown={onGridKey} aria-label={`${cat.name} sheet`}>
           <table className="grid">
@@ -534,11 +512,6 @@ function SheetPage() {
               {isAdmin && <col className="w-actions" />}
             </colgroup>
             <thead>
-              <tr className="letters">
-                <th className="corner" />
-                {cols.map((c, i) => <th key={c.key} className={sel.c === i ? 'on' : ''}>{colLetter(i)}</th>)}
-                {isAdmin && <th />}
-              </tr>
               <tr className="labels">
                 <th className="corner" />
                 {cols.map((c) => (
@@ -551,7 +524,7 @@ function SheetPage() {
                     ) : c.label}
                   </th>
                 ))}
-                {isAdmin && <th className="a-right">Row</th>}
+                {isAdmin && <th className="a-right">Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -596,8 +569,8 @@ function SheetPage() {
                   <div className="foot-sum">
                     <span>{items.length} items</span>
                     <span className={lowCount ? 'neg' : ''}>{lowCount} low</span>
-                    <span className="pos">In +{monthIn}</span>
-                    <span className="neg">Out −{monthOut}</span>
+                    <span className="pos">In {monthIn ? `+${monthIn}` : 0}</span>
+                    <span className="neg">Out {monthOut ? `−${monthOut}` : 0}</span>
                   </div>
                 </td>
               </tr>
