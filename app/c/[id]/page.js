@@ -15,7 +15,6 @@ const ALL_COLS = [
   { key: 'add', label: 'Add +', edit: true, adminOnly: true, width: 96, align: 'right' },
   { key: 'remove', label: 'Remove −', edit: true, adminOnly: true, width: 104, align: 'right' },
   { key: 'min_qty', label: 'Minimum', edit: true, sort: true, width: 100, align: 'right' },
-  { key: 'status', label: 'Status', sort: true, width: 120, align: 'left' },
   { key: 'in_m', label: 'In this month', sort: true, width: 120, align: 'right' },
   { key: 'out_m', label: 'Out this month', sort: true, width: 126, align: 'right' }
 ];
@@ -46,10 +45,17 @@ function evaluate(raw, current) {
   return num(relative ? Number(current) + value : value);
 }
 
-function statusOf(item) {
-  if (Number(item.min_qty) <= 0) return { label: 'No minimum', cls: 'neutral', rank: 1 };
-  if (isLow(item)) return { label: 'Low stock', cls: 'low', rank: 0 };
-  return { label: 'OK', cls: 'ok', rank: 2 };
+/* Units shown in the Unit dropdown, Packets first */
+const UNITS = [
+  ['packets', 'Packets'], ['pcs', 'Pieces'], ['box', 'Box'], ['carton', 'Carton'], ['ream', 'Ream'],
+  ['roll', 'Roll'], ['bottle', 'Bottle'], ['set', 'Set'], ['kg', 'Kg'], ['litre', 'Litre']
+];
+const UNIT_LABEL = Object.fromEntries(UNITS);
+function unitLabel(u) {
+  return UNIT_LABEL[u] || u || '';
+}
+function unitOptions(current) {
+  return current && !UNIT_LABEL[current] ? [[current, current], ...UNITS] : UNITS;
 }
 
 function colLetter(i) {
@@ -128,7 +134,6 @@ function SheetPage() {
     if (sortBy.key) {
       const val = (it) => {
         switch (sortBy.key) {
-          case 'status': return statusOf(it).rank;
           case 'in_m': return (stats[it.id] || EMPTY_STATS).in;
           case 'out_m': return (stats[it.id] || EMPTY_STATS).out;
           case 'quantity': case 'min_qty': return Number(it[sortBy.key]);
@@ -170,10 +175,9 @@ function SheetPage() {
     const st = stats[it.id] || EMPTY_STATS;
     switch (col.key) {
       case 'name': return it.name;
-      case 'unit': return it.unit || '';
+      case 'unit': return unitLabel(it.unit);
       case 'quantity': return String(num(it.quantity));
       case 'min_qty': return String(num(it.min_qty));
-      case 'status': return statusOf(it).label;
       case 'in_m': return String(st.in);
       case 'out_m': return String(st.out);
       default: return '';
@@ -183,7 +187,9 @@ function SheetPage() {
   function startEdit(r, c, value, bar = false) {
     if (!canEdit(r, c)) return;
     setSel({ r, c });
-    setEditing({ r, c, value: value ?? rawValue(r, c), bar, typed: value !== undefined });
+    const isUnit = cols[c]?.key === 'unit';
+    const start = isUnit ? (rows[r]?.item?.unit || 'pcs') : (value ?? rawValue(r, c));
+    setEditing({ r, c, value: start, bar, typed: !isUnit && value !== undefined });
   }
 
   function focusGrid() {
@@ -214,13 +220,13 @@ function SheetPage() {
 
   async function moveStock(item, type, qty) {
     if (!(qty > 0)) { flash('Enter a number more than 0', 'err'); return; }
-    if (type === 'out' && qty > Number(item.quantity)) { flash(`Only ${num(item.quantity)} ${item.unit} in stock`, 'err'); return; }
+    if (type === 'out' && qty > Number(item.quantity)) { flash(`Only ${num(item.quantity)} ${unitLabel(item.unit)} in stock`, 'err'); return; }
     const before = item.quantity;
     patchItem(item.id, { quantity: num(Number(before) + (type === 'in' ? qty : -qty)) });
     const { data, error } = await sb().rpc('record_move', { p_item: item.id, p_type: type, p_qty: qty, p_note: null });
     if (error) { patchItem(item.id, { quantity: before }); flash(error.message, 'err'); return; }
     patchItem(item.id, { quantity: num(data) });
-    flash(`${item.name}: ${type === 'in' ? '+' : '−'}${qty} → ${num(data)} ${item.unit}`);
+    flash(`${item.name}: ${type === 'in' ? '+' : '−'}${qty} → ${num(data)} ${unitLabel(item.unit)}`);
     loadStats();
   }
 
@@ -232,7 +238,7 @@ function SheetPage() {
     patchItem(item.id, { quantity: qty });
     const { error } = await sb().rpc('set_quantity', { p_item: item.id, p_qty: qty, p_note: null });
     if (error) { patchItem(item.id, { quantity: before }); flash(error.message, 'err'); return; }
-    flash(`${item.name}: ${num(before)} → ${qty} ${item.unit}`);
+    flash(`${item.name}: ${num(before)} → ${qty} ${unitLabel(item.unit)}`);
     loadStats();
   }
 
@@ -323,10 +329,10 @@ function SheetPage() {
   }
 
   function exportCsv() {
-    const head = ['Item', 'Unit', 'Present', 'Minimum', 'Status', 'In this month', 'Out this month'];
+    const head = ['Item', 'Unit', 'Present', 'Minimum', 'In this month', 'Out this month'];
     const lines = rows.filter((r) => !r.isNew).map(({ item: it }) => {
       const st = stats[it.id] || EMPTY_STATS;
-      return [it.name, it.unit, num(it.quantity), num(it.min_qty), statusOf(it).label, st.in, st.out];
+      return [it.name, unitLabel(it.unit), num(it.quantity), num(it.min_qty), st.in, st.out];
     });
     const csv = [head, ...lines].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
     const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
@@ -398,6 +404,21 @@ function SheetPage() {
 
   function renderCell(row, col, r, c) {
     const isEditing = editing && editing.r === r && editing.c === c;
+    if (isEditing && !editing.bar && col.key === 'unit') {
+      return (
+        <select
+          className="cell-input"
+          id={`cell-editor-${r}-${c}`}
+          autoFocus
+          value={editing.value}
+          onChange={(e) => { setEditing({ ...editing, value: e.target.value }); commitEdit(); }}
+          onKeyDown={onEditorKey}
+          onBlur={() => commitEdit()}
+        >
+          {unitOptions(editing.value).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        </select>
+      );
+    }
     if (isEditing && !editing.bar) {
       return (
         <input
@@ -423,7 +444,7 @@ function SheetPage() {
     const st = stats[it.id] || EMPTY_STATS;
     switch (col.key) {
       case 'name': return <span className="cell-text">{it.name}</span>;
-      case 'unit': return <span className="muted">{it.unit}</span>;
+      case 'unit': return <span className="muted">{unitLabel(it.unit)}</span>;
       case 'quantity':
         return (
           <div className="qty">
@@ -450,10 +471,6 @@ function SheetPage() {
       case 'add': return <span className="ph in">+ qty</span>;
       case 'remove': return <span className="ph out">− qty</span>;
       case 'min_qty': return <span>{num(it.min_qty)}</span>;
-      case 'status': {
-        const s = statusOf(it);
-        return <span className={`pill ${s.cls}`}>{s.label}</span>;
-      }
       case 'in_m': return <span className={st.in ? 'pos' : 'muted'}>{st.in ? `+${st.in}` : '0'}</span>;
       case 'out_m': return <span className={st.out ? 'neg' : 'muted'}>{st.out ? `−${st.out}` : '0'}</span>;
       default: return null;
@@ -500,9 +517,9 @@ function SheetPage() {
             id="formula-input"
             aria-label="Cell value"
             value={barValue}
-            readOnly={!selEditable}
+            readOnly={!selEditable || selCol?.key === 'unit'}
             placeholder={selEditable ? (selCol?.key === 'quantity' ? 'Type 10, +5, -2 or =4*3' : 'Type a value') : ''}
-            onFocus={() => { if (selEditable && !editing) startEdit(sel.r, sel.c, undefined, true); }}
+            onFocus={() => { if (selEditable && selCol?.key !== 'unit' && !editing) startEdit(sel.r, sel.c, undefined, true); }}
             onChange={(e) => editing && setEditing({ ...editing, value: e.target.value })}
             onKeyDown={onEditorKey}
             onBlur={() => editing?.bar && commitEdit()}
@@ -607,7 +624,7 @@ function SheetPage() {
                     <td>{fmtDateTime(m.created_at)}</td>
                     <td>{m.items?.name}</td>
                     <td><span className={`pill ${m.move_type}`}>{m.move_type === 'in' ? 'In' : 'Out'}</span></td>
-                    <td className="num">{num(m.qty)} {m.items?.unit}</td>
+                    <td className="num">{num(m.qty)} {unitLabel(m.items?.unit)}</td>
                     <td>{m.note || ''}</td>
                   </tr>
                 ))}
@@ -629,7 +646,9 @@ function SheetPage() {
             <div className="form-row">
               <div className="field">
                 <label htmlFor="re-unit">Unit</label>
-                <input id="re-unit" value={rowEdit.unit} onChange={(e) => setRowEdit({ ...rowEdit, unit: e.target.value })} placeholder="pcs, box, ream" />
+                <select id="re-unit" value={rowEdit.unit} onChange={(e) => setRowEdit({ ...rowEdit, unit: e.target.value })}>
+                  {unitOptions(rowEdit.unit).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
               </div>
               <div className="field">
                 <label htmlFor="re-qty">Present</label>
