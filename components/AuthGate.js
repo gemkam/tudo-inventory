@@ -18,7 +18,7 @@ function readUser(session) {
   return { isAdmin: u.app_metadata?.role === 'admin', name };
 }
 
-export default function AuthGate({ children, adminOnly = false }) {
+export default function AuthGate({ children, adminOnly = false, wide = false }) {
   const router = useRouter();
   const path = usePathname();
   const [user, setUser] = useState(null);
@@ -59,14 +59,16 @@ export default function AuthGate({ children, adminOnly = false }) {
             {nav.map(([href, label]) => (
               <Link key={href} href={href} className={path === href ? 'active' : ''}>{label}</Link>
             ))}
+          </nav>
+          <div className="top-user">
             <span className="who">
               {user.name}{user.isAdmin ? '' : ' (view only)'}
             </span>
             <button className="btn small switch" onClick={switchUser}>Switch user</button>
-          </nav>
+          </div>
         </div>
       </header>
-      <main className="page">
+      <main className={`page${wide ? ' wide' : ''}`}>
         {adminOnly && !user.isAdmin
           ? <div className="error">Only Administrator can open this page.</div>
           : children}
