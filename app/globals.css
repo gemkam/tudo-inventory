@@ -177,15 +177,21 @@ input, select {
 .grid { --w-num: 46px; --w-name: 210px; }
 .grid col.w-num { width: var(--w-num); }
 .grid col.w-name { width: var(--w-name); }
+.sheet:not(.is-editing) .grid col.w-quantity, .sheet:not(.is-editing) .grid col.w-packets { width: 96px; }
+.sheet:not(.is-editing) .grid col.w-price { width: 120px; }
 .grid col.w-unit { width: 84px; }
-.grid col.w-quantity { width: 150px; }
+.grid col.w-quantity { width: 140px; }
+.grid col.w-per_pack { width: 100px; }
+.grid col.w-packets { width: 140px; }
+.grid col.w-price { width: 170px; }
+.grid col.w-value { width: 120px; }
 .grid col.w-add { width: 92px; }
 .grid col.w-remove { width: 104px; }
 .grid col.w-min_qty { width: 92px; }
 .grid col.w-status { width: 112px; }
 .grid col.w-in_m { width: 104px; }
 .grid col.w-out_m { width: 110px; }
-.grid col.w-actions { width: 132px; }
+.grid col.w-actions { width: 90px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .pos { color: var(--green); }
 .neg { color: var(--red); }
@@ -276,6 +282,13 @@ input, select {
 .qty { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
 .qty-num { min-width: 34px; text-align: right; font-weight: 600; font-size: 15px; color: var(--ink); }
 .qty-num.is-low { color: var(--red); }
+.loose { font-size: 12px; color: var(--muted); font-weight: 500; }
+.money { color: var(--ink); }
+.money.strong { font-weight: 600; }
+.btn.in { background: var(--green); }
+.btn.in:hover { background: #355a27; }
+.sheet.is-editing { border-color: var(--brown); box-shadow: 0 0 0 3px rgba(74, 46, 28, .15), 0 24px 48px -24px rgba(74, 46, 28, .45); }
+.edit-banner { background: #fff3d6; color: #6b4a14; border-bottom: 1px solid #ecd49a; padding: 10px 14px; font-size: 13px; }
 .step {
   width: 28px; height: 28px; border-radius: 50%; border: 1px solid #d8c4a4; background: #fff; color: var(--brown);
   font-size: 16px; line-height: 1; cursor: pointer; display: grid; place-items: center; padding: 0;
@@ -283,7 +296,7 @@ input, select {
 }
 .step:hover { background: var(--brown); color: var(--cream); border-color: var(--brown); }
 .step:active { transform: scale(.92); }
-.step:disabled { opacity: .35; cursor: default; background: #fff; color: var(--brown); }
+.step:disabled { opacity: .35; cursor: default; background: #fff; color: var(--brown); pointer-events: none; }
 
 .new-row td { background: #fffdf8; }
 .new-row td.cell.k-name { font-style: italic; }
@@ -326,7 +339,6 @@ input, select {
   .step { width: 32px; height: 32px; }
   .topbar-inner { gap: 8px 12px; }
   .grid { --w-name: 136px; }
-  .grid col.w-quantity { width: 140px; }
   .topnav { order: 3; flex-wrap: nowrap; overflow-x: auto; width: 100%; gap: 14px; padding-bottom: 2px; scrollbar-width: none; }
   .topnav::-webkit-scrollbar { display: none; }
   .topnav a, .who { white-space: nowrap; flex: none; }

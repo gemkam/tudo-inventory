@@ -169,3 +169,8 @@ begin
 end; $$;
 revoke execute on function public.set_quantity(uuid, numeric, text) from public, anon;
 grant execute on function public.set_quantity(uuid, numeric, text) to authenticated;
+
+-- Packing and price: stock is kept in pieces; per_pack = pieces in 1 packet; price in OMR per piece
+alter table public.items
+  add column if not exists per_pack numeric not null default 1 check (per_pack > 0),
+  add column if not exists price numeric(12,3) not null default 0 check (price >= 0);

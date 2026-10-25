@@ -7,19 +7,28 @@ import AuthGate, { useUser } from '@/components/AuthGate';
 import Modal from '@/components/Modal';
 import { sb, isLow, fmtDateTime } from '@/lib/supabase';
 
-/* Sheet columns. edit: admin can type in the cell. adminOnly: hidden for view-only users. */
+/*
+  Sheet columns.
+  edit: can be typed in (Edit mode only). editOnly: column only shows in Edit mode.
+  Stock is stored in pieces (quantity). Packets = pieces / per_pack.
+*/
 const ALL_COLS = [
-  { key: 'name', label: 'Item', edit: true, sort: true, width: 230, align: 'left' },
-  { key: 'unit', label: 'Unit', edit: true, sort: true, width: 90, align: 'left' },
-  { key: 'quantity', label: 'Present', edit: true, sort: true, width: 150, align: 'right' },
-  { key: 'add', label: 'Add +', edit: true, adminOnly: true, width: 96, align: 'right' },
-  { key: 'remove', label: 'Remove −', edit: true, adminOnly: true, width: 104, align: 'right' },
-  { key: 'min_qty', label: 'Minimum', edit: true, sort: true, width: 100, align: 'right' },
-  { key: 'in_m', label: 'In this month', sort: true, width: 120, align: 'right' },
-  { key: 'out_m', label: 'Out this month', sort: true, width: 126, align: 'right' }
+  { key: 'name', label: 'Item', edit: true, sort: true, align: 'left' },
+  { key: 'unit', label: 'Unit', edit: true, sort: true, align: 'left' },
+  { key: 'per_pack', label: 'In 1 packet', edit: true, sort: true, align: 'right' },
+  { key: 'packets', label: 'Packets', edit: true, sort: true, align: 'right' },
+  { key: 'quantity', label: 'Pieces', edit: true, sort: true, align: 'right' },
+  { key: 'add', label: 'Add +', edit: true, editOnly: true, align: 'right' },
+  { key: 'remove', label: 'Remove −', edit: true, editOnly: true, align: 'right' },
+  { key: 'price', label: 'Price', edit: true, sort: true, align: 'right' },
+  { key: 'value', label: 'Value', sort: true, align: 'right' },
+  { key: 'min_qty', label: 'Minimum', edit: true, sort: true, align: 'right' },
+  { key: 'in_m', label: 'In this month', sort: true, align: 'right' },
+  { key: 'out_m', label: 'Out this month', sort: true, align: 'right' }
 ];
 
 const EMPTY_STATS = { in: 0, out: 0 };
+const PRICE_STEP = 0.1; // 100 Bz
 
 function num(v) {
   const n = Number(v);
@@ -45,10 +54,18 @@ function evaluate(raw, current) {
   return num(relative ? Number(current) + value : value);
 }
 
-/* Units shown in the Unit dropdown, Packets first */
+/* Omani money: below 1 OMR shows Baisa (Bz), 1 OMR and above shows Rials */
+function fmtMoney(v) {
+  const n = num(v);
+  if (n <= 0) return '';
+  if (n < 1) return `${Math.round(n * 1000)} Bz`;
+  return `${n.toFixed(3)} ${n === 1 ? 'Rial' : 'Rials'}`;
+}
+
+/* Units shown in the Unit dropdown */
 const UNITS = [
-  ['packets', 'Packets'], ['pcs', 'Pieces'], ['box', 'Box'], ['carton', 'Carton'], ['ream', 'Ream'],
-  ['roll', 'Roll'], ['bottle', 'Bottle'], ['set', 'Set'], ['kg', 'Kg'], ['litre', 'Litre']
+  ['packets', 'Packets'], ['pcs', 'Pieces'], ['roll', 'Rolls'], ['box', 'Box'], ['carton', 'Carton'],
+  ['ream', 'Ream'], ['bottle', 'Bottle'], ['set', 'Set'], ['kg', 'Kg'], ['litre', 'Litre']
 ];
 const UNIT_LABEL = Object.fromEntries(UNITS);
 function unitLabel(u) {
@@ -58,11 +75,24 @@ function unitOptions(current) {
   return current && !UNIT_LABEL[current] ? [[current, current], ...UNITS] : UNITS;
 }
 
+function perPack(it) {
+  const p = Number(it.per_pack);
+  return p > 0 ? p : 1;
+}
+function packs(it) {
+  const p = perPack(it);
+  const q = num(it.quantity);
+  if (p <= 1) return null;
+  const full = Math.floor(q / p);
+  return { full, loose: num(q - full * p) };
+}
+function valueOf(it) {
+  return num(Number(it.quantity) * Number(it.price || 0));
+}
 
 function SheetPage() {
   const { id } = useParams();
   const { isAdmin } = useUser();
-  const cols = useMemo(() => ALL_COLS.filter((c) => isAdmin || !c.adminOnly), [isAdmin]);
 
   const [cat, setCat] = useState(null);
   const [items, setItems] = useState([]);
@@ -73,15 +103,19 @@ function SheetPage() {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState({ key: null, dir: 1 });
   const [sel, setSel] = useState({ r: 0, c: 0 });
-  const [editing, setEditingState] = useState(null); // { r, c, value, bar }
+  const [editMode, setEditMode] = useState(false);
+  const [pendingNew, setPendingNew] = useState(false);
+  const [editing, setEditingState] = useState(null); // { r, c, value, typed }
   const editingRef = useRef(null);
   const setEditing = (v) => { editingRef.current = v; setEditingState(v); };
-  const [rowEdit, setRowEdit] = useState(null);
   const [del, setDel] = useState(null);
   const [busy, setBusy] = useState(false);
 
   const gridRef = useRef(null);
   const toastTimer = useRef(null);
+
+  const canChange = isAdmin && editMode;
+  const cols = useMemo(() => ALL_COLS.filter((c) => canChange || !c.editOnly), [canChange]);
 
   const flash = useCallback((text, kind = 'ok') => {
     setToast({ text, kind });
@@ -124,25 +158,28 @@ function SheetPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  /* Rows shown in the sheet: filtered, sorted, plus a "new item" row for admin */
+  /* Rows shown in the sheet: filtered, sorted, plus a "new item" row in Edit mode */
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase();
-    let list = items.filter((it) => !q || it.name.toLowerCase().includes(q) || (it.unit || '').toLowerCase().includes(q));
+    let list = items.filter((it) => !q || it.name.toLowerCase().includes(q) || unitLabel(it.unit).toLowerCase().includes(q));
     if (sortBy.key) {
       const val = (it) => {
         switch (sortBy.key) {
           case 'in_m': return (stats[it.id] || EMPTY_STATS).in;
           case 'out_m': return (stats[it.id] || EMPTY_STATS).out;
-          case 'quantity': case 'min_qty': return Number(it[sortBy.key]);
+          case 'packets': return packs(it)?.full ?? -1;
+          case 'value': return valueOf(it);
+          case 'unit': return unitLabel(it.unit).toLowerCase();
+          case 'quantity': case 'min_qty': case 'price': case 'per_pack': return Number(it[sortBy.key]);
           default: return String(it[sortBy.key] || '').toLowerCase();
         }
       };
       list = [...list].sort((a, b) => (val(a) > val(b) ? 1 : val(a) < val(b) ? -1 : 0) * sortBy.dir);
     }
     const out = list.map((item) => ({ item }));
-    if (isAdmin && !q) out.push({ isNew: true });
+    if (canChange && !q) out.push({ isNew: true });
     return out;
-  }, [items, search, sortBy, stats, isAdmin]);
+  }, [items, search, sortBy, stats, canChange]);
 
   // Keep selection inside the sheet
   useEffect(() => {
@@ -158,35 +195,34 @@ function SheetPage() {
   function canEdit(r, c) {
     const row = rows[r];
     const col = cols[c];
-    if (!isAdmin || !row || !col?.edit) return false;
+    if (!canChange || !row || !col?.edit) return false;
     if (row.isNew) return col.key === 'name';
+    if (col.key === 'packets') return perPack(row.item) > 1;
     return true;
   }
 
   function rawValue(r, c) {
     const row = rows[r];
     const col = cols[c];
-    if (!row || !col) return '';
-    if (row.isNew) return '';
+    if (!row || !col || row.isNew) return '';
     const it = row.item;
-    const st = stats[it.id] || EMPTY_STATS;
     switch (col.key) {
       case 'name': return it.name;
-      case 'unit': return unitLabel(it.unit);
       case 'quantity': return String(num(it.quantity));
       case 'min_qty': return String(num(it.min_qty));
-      case 'in_m': return String(st.in);
-      case 'out_m': return String(st.out);
+      case 'per_pack': return String(perPack(it));
+      case 'packets': return String(packs(it)?.full ?? '');
+      case 'price': return Number(it.price) > 0 ? num(it.price).toFixed(3) : '';
       default: return '';
     }
   }
 
-  function startEdit(r, c, value, bar = false) {
+  function startEdit(r, c, value) {
     if (!canEdit(r, c)) return;
-    setSel({ r, c });
     const isUnit = cols[c]?.key === 'unit';
     const start = isUnit ? (rows[r]?.item?.unit || 'pcs') : (value ?? rawValue(r, c));
-    setEditing({ r, c, value: start, bar, typed: !isUnit && value !== undefined });
+    setSel({ r, c });
+    setEditing({ r, c, value: start, typed: !isUnit && value !== undefined });
   }
 
   function focusGrid() {
@@ -209,6 +245,28 @@ function SheetPage() {
     focusGrid();
   }
 
+  function toggleEditMode() {
+    if (editMode) commitEdit();
+    setEditMode((v) => !v);
+  }
+
+  function newItem() {
+    setSearch('');
+    setEditMode(true);
+    setPendingNew(true);
+  }
+
+  // After "+ New item" turns on Edit mode, jump into the new row
+  useEffect(() => {
+    if (!pendingNew || !canChange) return;
+    const r = rows.findIndex((x) => x.isNew);
+    if (r !== -1) {
+      setPendingNew(false);
+      setSel({ r, c: 0 });
+      setEditing({ r, c: 0, value: '', typed: true });
+    }
+  }, [pendingNew, canChange, rows]);
+
   /* ---------- Saving ---------- */
 
   function patchItem(itemId, patch) {
@@ -229,7 +287,7 @@ function SheetPage() {
 
   async function setQuantity(item, qty) {
     if (qty === null) return;
-    if (Number.isNaN(qty) || qty < 0) { flash('Present cannot be less than 0', 'err'); return; }
+    if (Number.isNaN(qty) || qty < 0) { flash('Stock cannot be less than 0', 'err'); return; }
     if (qty === num(item.quantity)) return;
     const before = item.quantity;
     patchItem(item.id, { quantity: qty });
@@ -251,12 +309,19 @@ function SheetPage() {
     flash(label);
   }
 
+  async function setPrice(item, v) {
+    if (v === null) v = 0;
+    if (Number.isNaN(v) || v < 0) { flash('Price must be 0 or more', 'err'); return; }
+    if (v === num(item.price)) return;
+    await updateField(item, { price: v }, v > 0 ? `${item.name}: ${fmtMoney(v)}` : `${item.name}: price cleared`);
+  }
+
   async function addItem(name) {
     const clean = name.trim();
     if (!clean) return;
     const sort = items.reduce((m, x) => Math.max(m, x.sort || 0), 0) + 1;
     const { data, error } = await sb().from('items')
-      .insert({ category_id: id, name: clean, unit: 'pcs', quantity: 0, min_qty: 0, sort })
+      .insert({ category_id: id, name: clean, unit: 'pcs', quantity: 0, min_qty: 0, per_pack: 1, price: 0, sort })
       .select().single();
     if (error) { flash(error.message, 'err'); return; }
     setItems((list) => [...list, data]);
@@ -275,6 +340,22 @@ function SheetPage() {
       case 'unit':
         if ((value || 'pcs') !== it.unit) await updateField(it, { unit: value || 'pcs' }, 'Unit saved');
         break;
+      case 'per_pack': {
+        const v = evaluate(value);
+        if (v === null) break;
+        if (Number.isNaN(v) || v < 1) { flash('Pieces in 1 packet must be 1 or more', 'err'); break; }
+        if (v !== perPack(it)) await updateField(it, { per_pack: v }, v > 1 ? `1 packet = ${v} ${unitLabel(it.unit)}` : 'Sold as single pieces');
+        break;
+      }
+      case 'packets': {
+        const p = packs(it);
+        if (!p) break;
+        const v = evaluate(value, p.full);
+        if (v === null) break;
+        if (Number.isNaN(v) || v < 0) { flash('Packets cannot be less than 0', 'err'); break; }
+        await setQuantity(it, num(Math.floor(v) * perPack(it) + p.loose));
+        break;
+      }
       case 'min_qty': {
         const v = evaluate(value);
         if (v === null) break;
@@ -282,6 +363,9 @@ function SheetPage() {
         if (v !== num(it.min_qty)) await updateField(it, { min_qty: v }, `Minimum set to ${v}`);
         break;
       }
+      case 'price':
+        await setPrice(it, evaluate(value, it.price));
+        break;
       case 'quantity':
         await setQuantity(it, evaluate(value, it.quantity));
         break;
@@ -297,23 +381,6 @@ function SheetPage() {
     }
   }
 
-  async function saveRowEdit(e) {
-    e.preventDefault();
-    const it = items.find((x) => x.id === rowEdit.id);
-    if (!it) return;
-    setBusy(true);
-    const patch = {};
-    if (rowEdit.name.trim() && rowEdit.name.trim() !== it.name) patch.name = rowEdit.name.trim();
-    if ((rowEdit.unit.trim() || 'pcs') !== it.unit) patch.unit = rowEdit.unit.trim() || 'pcs';
-    const min = evaluate(rowEdit.min_qty);
-    if (min !== null && !Number.isNaN(min) && min >= 0 && min !== num(it.min_qty)) patch.min_qty = min;
-    if (Object.keys(patch).length) await updateField(it, patch, 'Item saved');
-    const qty = evaluate(rowEdit.quantity, it.quantity);
-    if (qty !== null && qty !== num(it.quantity)) await setQuantity({ ...it, ...patch }, qty);
-    setBusy(false);
-    setRowEdit(null);
-  }
-
   async function confirmDelete() {
     setBusy(true);
     const { error } = await sb().from('items').delete().eq('id', del.id);
@@ -325,10 +392,18 @@ function SheetPage() {
     loadStats();
   }
 
+  /* ---------- Export ---------- */
+
   function exportRows() {
     return rows.filter((r) => !r.isNew).map(({ item: it }, i) => {
       const st = stats[it.id] || EMPTY_STATS;
-      return { n: i + 1, name: it.name, unit: unitLabel(it.unit), qty: num(it.quantity), min: num(it.min_qty), in: st.in, out: st.out, low: isLow(it) };
+      const p = packs(it);
+      return {
+        n: i + 1, name: it.name, unit: unitLabel(it.unit), per: perPack(it) > 1 ? perPack(it) : '',
+        packets: p ? (p.loose ? `${p.full} + ${p.loose} loose` : p.full) : '',
+        qty: num(it.quantity), price: num(it.price), value: valueOf(it), min: num(it.min_qty),
+        in: st.in, out: st.out, low: isLow(it)
+      };
     });
   }
 
@@ -340,6 +415,17 @@ function SheetPage() {
     return new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   }
 
+  function download(blob, name) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
   async function exportExcel() {
     try {
       flash('Preparing Excel file...');
@@ -348,17 +434,18 @@ function SheetPage() {
       wb.creator = 'Tudo Office Inventory';
       const ws = wb.addWorksheet((cat?.name || 'Inventory').slice(0, 31), { views: [{ state: 'frozen', ySplit: 4 }] });
       ws.columns = [
-        { key: 'n', width: 6 }, { key: 'name', width: 32 }, { key: 'unit', width: 12 }, { key: 'qty', width: 12 },
-        { key: 'min', width: 12 }, { key: 'in', width: 16 }, { key: 'out', width: 16 }
+        { key: 'n', width: 6 }, { key: 'name', width: 30 }, { key: 'unit', width: 11 }, { key: 'per', width: 12 },
+        { key: 'packets', width: 16 }, { key: 'qty', width: 10 }, { key: 'price', width: 13 }, { key: 'value', width: 14 },
+        { key: 'min', width: 11 }, { key: 'in', width: 14 }, { key: 'out', width: 14 }
       ];
-      ws.mergeCells('A1:G1');
+      ws.mergeCells('A1:K1');
       ws.getCell('A1').value = `Tudo Office Inventory · ${cat?.name || ''}`;
       ws.getCell('A1').font = { bold: true, size: 16, color: { argb: 'FF4A2E1C' } };
-      ws.mergeCells('A2:G2');
-      ws.getCell('A2').value = `Exported ${exportDate()}`;
+      ws.mergeCells('A2:K2');
+      ws.getCell('A2').value = `Exported ${exportDate()} · Prices in OMR`;
       ws.getCell('A2').font = { size: 10, color: { argb: 'FF7A5F4A' } };
       const head = ws.getRow(4);
-      head.values = ['#', 'Item', 'Unit', 'Present', 'Minimum', 'In this month', 'Out this month'];
+      head.values = ['#', 'Item', 'Unit', 'In 1 packet', 'Packets', 'Pieces', 'Price (OMR)', 'Value (OMR)', 'Minimum', 'In this month', 'Out this month'];
       head.height = 22;
       head.eachCell((c) => {
         c.font = { bold: true, color: { argb: 'FFF7EFE1' } };
@@ -366,18 +453,30 @@ function SheetPage() {
         c.alignment = { vertical: 'middle', horizontal: c.col >= 4 ? 'right' : 'left' };
       });
       const data = exportRows();
+      const last = 4 + data.length;
       data.forEach((d, i) => {
-        const row = ws.addRow({ n: d.n, name: d.name, unit: d.unit, qty: d.qty, min: d.min, in: d.in, out: d.out });
-        row.eachCell((c) => {
+        const r = 5 + i;
+        const row = ws.addRow({
+          n: d.n, name: d.name, unit: d.unit, per: d.per, packets: d.packets, qty: d.qty,
+          price: d.price || null, value: { formula: `F${r}*G${r}`, result: d.value }, min: d.min, in: d.in, out: d.out
+        });
+        row.getCell('price').numFmt = '0.000';
+        row.getCell('value').numFmt = '0.000';
+        row.getCell('packets').alignment = { horizontal: 'right' };
+        row.eachCell({ includeEmpty: true }, (c) => {
           c.border = { bottom: { style: 'thin', color: { argb: 'FFE6D7BF' } } };
           if (i % 2) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFBF3E6' } };
         });
         if (d.low) row.getCell('qty').font = { bold: true, color: { argb: 'FFA3321F' } };
       });
-      const total = ws.addRow({ name: `${data.length} items`, in: { formula: `SUM(F5:F${4 + data.length})` }, out: { formula: `SUM(G5:G${4 + data.length})` } });
+      const total = ws.addRow({
+        name: `${data.length} items`,
+        value: { formula: `SUM(H5:H${last})` }, in: { formula: `SUM(J5:J${last})` }, out: { formula: `SUM(K5:K${last})` }
+      });
+      total.getCell('value').numFmt = '0.000';
       total.font = { bold: true };
       total.eachCell((c) => { c.border = { top: { style: 'medium', color: { argb: 'FF4A2E1C' } } }; });
-      ws.autoFilter = { from: 'A4', to: `G${4 + data.length}` };
+      ws.autoFilter = { from: 'A4', to: `K${last}` };
       const buf = await wb.xlsx.writeBuffer();
       download(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), exportName('xlsx'));
       flash('Excel file downloaded');
@@ -391,30 +490,35 @@ function SheetPage() {
       flash('Preparing PDF...');
       const { jsPDF } = await import('jspdf');
       const { autoTable } = await import('jspdf-autotable');
-      const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
       const data = exportRows();
       const low = data.filter((d) => d.low).length;
+      const totalValue = num(data.reduce((t, d) => t + d.value, 0));
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(20);
       doc.setTextColor(74, 46, 28);
-      doc.text(cat?.name || 'Inventory', 40, 54);
+      doc.text(cat?.name || 'Inventory', 40, 50);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       doc.setTextColor(122, 95, 74);
-      doc.text(`Tudo Office Inventory  |  Exported ${exportDate()}  |  ${data.length} items, ${low} low`, 40, 72);
+      doc.text(`Tudo Office Inventory  |  Exported ${exportDate()}  |  ${data.length} items, ${low} low  |  Stock value ${fmtMoney(totalValue) || '0'}`, 40, 68);
       autoTable(doc, {
-        startY: 90,
-        head: [['#', 'Item', 'Unit', 'Present', 'Minimum', 'In (month)', 'Out (month)']],
-        body: data.map((d) => [d.n, d.name, d.unit, d.qty, d.min, d.in ? `+${d.in}` : '0', d.out ? `-${d.out}` : '0']),
+        startY: 84,
+        head: [['#', 'Item', 'Unit', 'In 1 packet', 'Packets', 'Pieces', 'Price', 'Value', 'Minimum', 'In (month)', 'Out (month)']],
+        body: data.map((d) => [d.n, d.name, d.unit, d.per, d.packets, d.qty, fmtMoney(d.price), fmtMoney(d.value), d.min, d.in ? `+${d.in}` : '0', d.out ? `-${d.out}` : '0']),
         theme: 'plain',
-        styles: { fontSize: 10, cellPadding: 6, textColor: [46, 29, 18], lineColor: [230, 215, 191], lineWidth: { bottom: 0.5 } },
+        styles: { fontSize: 9, cellPadding: 5, textColor: [46, 29, 18], lineColor: [230, 215, 191], lineWidth: { bottom: 0.5 } },
         headStyles: { fillColor: [74, 46, 28], textColor: [247, 239, 225], fontStyle: 'bold' },
         alternateRowStyles: { fillColor: [251, 243, 230] },
-        columnStyles: { 0: { cellWidth: 28, textColor: [160, 134, 112] }, 3: { halign: 'right', fontStyle: 'bold' }, 4: { halign: 'right' }, 5: { halign: 'right', textColor: [63, 107, 47] }, 6: { halign: 'right', textColor: [163, 50, 31] } },
+        columnStyles: {
+          0: { cellWidth: 24, textColor: [160, 134, 112] }, 3: { halign: 'right' }, 4: { halign: 'right' },
+          5: { halign: 'right', fontStyle: 'bold' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' },
+          9: { halign: 'right', textColor: [63, 107, 47] }, 10: { halign: 'right', textColor: [163, 50, 31] }
+        },
         didParseCell: (h) => {
           if (h.section === 'head' && h.column.index >= 3) h.cell.styles.halign = 'right';
-          if (h.section === 'body' && h.column.index === 3 && data[h.row.index]?.low) h.cell.styles.textColor = [163, 50, 31];
-          if (h.section === 'body' && h.column.index >= 5 && h.cell.raw === '0') h.cell.styles.textColor = [160, 134, 112];
+          if (h.section === 'body' && h.column.index === 5 && data[h.row.index]?.low) h.cell.styles.textColor = [163, 50, 31];
+          if (h.section === 'body' && h.column.index >= 9 && h.cell.raw === '0') h.cell.styles.textColor = [160, 134, 112];
         },
         didDrawPage: () => {
           const pages = doc.internal.getNumberOfPages();
@@ -430,21 +534,10 @@ function SheetPage() {
     }
   }
 
-  function download(blob, name) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = name;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
-
   /* ---------- Keyboard ---------- */
 
   function onGridKey(e) {
-    if (editing || rowEdit || del) return;
+    if (editing || del) return;
     const { r, c } = sel;
     const maxR = rows.length - 1;
     const maxC = cols.length - 1;
@@ -495,6 +588,19 @@ function SheetPage() {
   const lowCount = items.filter(isLow).length;
   const monthIn = num(Object.values(stats).reduce((t, s) => t + s.in, 0));
   const monthOut = num(Object.values(stats).reduce((t, s) => t + s.out, 0));
+  const stockValue = num(items.reduce((t, it) => t + valueOf(it), 0));
+
+  function stepper(label, disabled, onClick) {
+    return (
+      <button
+        type="button"
+        className="step"
+        aria-label={label}
+        disabled={disabled}
+        onClick={(e) => { e.stopPropagation(); onClick(); }}
+      >{label.startsWith('Remove') || label.startsWith('Lower') ? '−' : '+'}</button>
+    );
+  }
 
   function renderCell(row, col, r, c) {
     const isEditing = editing && editing.r === r && editing.c === c;
@@ -519,7 +625,8 @@ function SheetPage() {
           className="cell-input"
           id={`cell-editor-${r}-${c}`}
           autoFocus
-          inputMode={['name', 'unit'].includes(col.key) ? 'text' : 'decimal'}
+          inputMode={col.key === 'name' ? 'text' : 'decimal'}
+          placeholder={col.key === 'price' ? 'OMR e.g. 0.800' : ''}
           value={editing.value}
           onChange={(e) => setEditing({ ...editing, value: e.target.value })}
           onKeyDown={onEditorKey}
@@ -536,34 +643,41 @@ function SheetPage() {
     }
     const it = row.item;
     const st = stats[it.id] || EMPTY_STATS;
+    const pk = packs(it);
     switch (col.key) {
       case 'name': return <span className="cell-text">{it.name}</span>;
       case 'unit': return <span className="muted">{unitLabel(it.unit)}</span>;
+      case 'per_pack': return perPack(it) > 1 ? <span>{perPack(it)}</span> : <span className="muted">1</span>;
+      case 'packets':
+        if (!pk) return <span className="muted">–</span>;
+        return (
+          <div className="qty">
+            {canChange && stepper(`Remove 1 packet of ${it.name}`, Number(it.quantity) < perPack(it), () => moveStock(it, 'out', perPack(it)))}
+            <span className="qty-num">
+              {pk.full}{pk.loose > 0 && <small className="loose"> +{pk.loose}</small>}
+            </span>
+            {canChange && stepper(`Add 1 packet of ${it.name}`, false, () => moveStock(it, 'in', perPack(it)))}
+          </div>
+        );
       case 'quantity':
         return (
           <div className="qty">
-            {isAdmin && (
-              <button
-                type="button"
-                className="step"
-                aria-label={`Remove 1 ${it.name}`}
-                disabled={Number(it.quantity) <= 0}
-                onClick={(e) => { e.stopPropagation(); moveStock(it, 'out', 1); }}
-              >−</button>
-            )}
+            {canChange && stepper(`Remove 1 ${it.name}`, Number(it.quantity) <= 0, () => moveStock(it, 'out', 1))}
             <span className={`qty-num ${isLow(it) ? 'is-low' : ''}`}>{num(it.quantity)}</span>
-            {isAdmin && (
-              <button
-                type="button"
-                className="step"
-                aria-label={`Add 1 ${it.name}`}
-                onClick={(e) => { e.stopPropagation(); moveStock(it, 'in', 1); }}
-              >+</button>
-            )}
+            {canChange && stepper(`Add 1 ${it.name}`, false, () => moveStock(it, 'in', 1))}
           </div>
         );
       case 'add': return <span className="ph in">+ qty</span>;
       case 'remove': return <span className="ph out">− qty</span>;
+      case 'price':
+        return (
+          <div className="qty">
+            {canChange && stepper(`Lower price of ${it.name}`, Number(it.price) <= 0, () => setPrice(it, Math.max(0, num(Number(it.price) - PRICE_STEP))))}
+            <span className={Number(it.price) > 0 ? 'money' : 'muted'}>{fmtMoney(it.price) || '–'}</span>
+            {canChange && stepper(`Raise price of ${it.name}`, false, () => setPrice(it, num(Number(it.price) + PRICE_STEP)))}
+          </div>
+        );
+      case 'value': return <span className={valueOf(it) > 0 ? 'money strong' : 'muted'}>{fmtMoney(valueOf(it)) || '–'}</span>;
       case 'min_qty': return <span>{num(it.min_qty)}</span>;
       case 'in_m': return <span className={st.in ? 'pos' : 'muted'}>{st.in ? `+${st.in}` : '0'}</span>;
       case 'out_m': return <span className={st.out ? 'neg' : 'muted'}>{st.out ? `−${st.out}` : '0'}</span>;
@@ -581,10 +695,11 @@ function SheetPage() {
             <input id="sheet-search" type="search" placeholder="Search items" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           {isAdmin && (
-            <button type="button" className="btn" onClick={() => { const r = rows.findIndex((x) => x.isNew); if (r === -1) { setSearch(''); return; } startEdit(r, 0, ''); }}>
-              + New item
+            <button type="button" className={`btn ${editMode ? 'in' : ''}`} onClick={toggleEditMode} aria-pressed={editMode}>
+              {editMode ? '✓ Done editing' : 'Edit'}
             </button>
           )}
+          {isAdmin && <button type="button" className="btn ghost" onClick={newItem}>+ New item</button>}
           <button type="button" className="btn ghost" onClick={exportExcel}>Export Excel</button>
           <button type="button" className="btn ghost" onClick={exportPdf}>Export PDF</button>
         </div>
@@ -599,18 +714,24 @@ function SheetPage() {
           </p>
         </div>
         <div className="sheet-kpis">
+          <div><span>Stock value</span><strong>{fmtMoney(stockValue) || '0'}</strong></div>
           <div><span>In this month</span><strong className="pos">{monthIn ? `+${monthIn}` : 0}</strong></div>
           <div><span>Out this month</span><strong className="neg">{monthOut ? `−${monthOut}` : 0}</strong></div>
         </div>
       </div>
 
-      <section className="sheet">
+      <section className={`sheet ${editMode ? 'is-editing' : ''}`}>
+        {editMode && (
+          <div className="edit-banner">
+            Edit mode is on. Click any cell to change it, then press Enter. Click <strong>Done editing</strong> when finished.
+          </div>
+        )}
         <div className="grid-wrap" ref={gridRef} tabIndex={0} onKeyDown={onGridKey} aria-label={`${cat.name} sheet`}>
           <table className="grid">
             <colgroup>
               <col className="w-num" />
               {cols.map((c) => <col key={c.key} className={`w-${c.key}`} />)}
-              {isAdmin && <col className="w-actions" />}
+              {canChange && <col className="w-actions" />}
             </colgroup>
             <thead>
               <tr className="labels">
@@ -625,12 +746,12 @@ function SheetPage() {
                     ) : c.label}
                   </th>
                 ))}
-                {isAdmin && <th className="a-right">Actions</th>}
+                {canChange && <th className="a-right" />}
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 && (
-                <tr><td className="rownum" /><td colSpan={cols.length + (isAdmin ? 1 : 0)} className="empty-row">No items match your search.</td></tr>
+                <tr><td className="rownum" /><td colSpan={cols.length + (canChange ? 1 : 0)} className="empty-row">No items match your search.</td></tr>
               )}
               {rows.map((row, r) => (
                 <tr key={row.isNew ? 'new' : row.item.id} className={`${row.isNew ? 'new-row' : ''} ${!row.isNew && isLow(row.item) ? 'low-row' : ''} ${sel.r === r ? 'sel-row' : ''}`}>
@@ -650,13 +771,10 @@ function SheetPage() {
                       </td>
                     );
                   })}
-                  {isAdmin && (
+                  {canChange && (
                     <td className="row-actions">
                       {!row.isNew && (
-                        <>
-                          <button type="button" className="mini" onClick={() => setRowEdit({ id: row.item.id, name: row.item.name, unit: row.item.unit, quantity: String(num(row.item.quantity)), min_qty: String(num(row.item.min_qty)) })}>Edit</button>
-                          <button type="button" className="mini danger" onClick={() => setDel(row.item)}>Delete</button>
-                        </>
+                        <button type="button" className="mini danger" onClick={() => setDel(row.item)}>Delete</button>
                       )}
                     </td>
                   )}
@@ -666,10 +784,11 @@ function SheetPage() {
             <tfoot>
               <tr>
                 <td className="rownum">Σ</td>
-                <td colSpan={cols.length + (isAdmin ? 1 : 0)}>
+                <td colSpan={cols.length + (canChange ? 1 : 0)}>
                   <div className="foot-sum">
                     <span>{items.length} items</span>
                     <span className={lowCount ? 'neg' : ''}>{lowCount} low</span>
+                    <span>Value {fmtMoney(stockValue) || '0'}</span>
                     <span className="pos">In {monthIn ? `+${monthIn}` : 0}</span>
                     <span className="neg">Out {monthOut ? `−${monthOut}` : 0}</span>
                   </div>
@@ -680,9 +799,11 @@ function SheetPage() {
         </div>
 
         <p className="sheet-hint">
-          {isAdmin
-            ? 'Click a cell to select, click again or start typing to edit. Enter saves. In Present you can type 10, +5, -2 or =4*3. Add + and Remove − record stock in and out.'
-            : 'View only. Ask Administrator to make changes.'}
+          {!isAdmin
+            ? 'View only. Ask Administrator to make changes.'
+            : editMode
+              ? 'Type 10 to set, +5 to add, -2 to subtract, =4*3 to calculate. Price is in OMR, e.g. 0.800 shows as 800 Bz. Packets work out from "In 1 packet".'
+              : 'Click Edit to change items, stock and prices.'}
         </p>
       </section>
 
@@ -709,38 +830,6 @@ function SheetPage() {
       </section>
 
       {toast && <div className={`toast ${toast.kind}`} role="status">{toast.text}</div>}
-
-      {rowEdit && (
-        <Modal title="Edit item" onClose={() => setRowEdit(null)}>
-          <form onSubmit={saveRowEdit} style={{ display: 'grid', gap: 12 }}>
-            <div className="field">
-              <label htmlFor="re-name">Item name</label>
-              <input id="re-name" required value={rowEdit.name} onChange={(e) => setRowEdit({ ...rowEdit, name: e.target.value })} />
-            </div>
-            <div className="form-row">
-              <div className="field">
-                <label htmlFor="re-unit">Unit</label>
-                <select id="re-unit" value={rowEdit.unit} onChange={(e) => setRowEdit({ ...rowEdit, unit: e.target.value })}>
-                  {unitOptions(rowEdit.unit).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                </select>
-              </div>
-              <div className="field">
-                <label htmlFor="re-qty">Present</label>
-                <input id="re-qty" inputMode="decimal" value={rowEdit.quantity} onChange={(e) => setRowEdit({ ...rowEdit, quantity: e.target.value })} />
-              </div>
-              <div className="field">
-                <label htmlFor="re-min">Minimum</label>
-                <input id="re-min" inputMode="decimal" value={rowEdit.min_qty} onChange={(e) => setRowEdit({ ...rowEdit, min_qty: e.target.value })} />
-              </div>
-            </div>
-            <p className="sub" style={{ margin: 0 }}>Changing Present is recorded in the stock log.</p>
-            <div className="modal-actions">
-              <button type="button" className="btn ghost" onClick={() => setRowEdit(null)}>Cancel</button>
-              <button type="submit" className="btn" disabled={busy}>Save</button>
-            </div>
-          </form>
-        </Modal>
-      )}
 
       {del && (
         <Modal title="Delete item?" onClose={() => setDel(null)}>
