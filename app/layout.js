@@ -16,7 +16,10 @@ export default function RootLayout({ children }) {
           href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Work+Sans:wght@400;500;600&display=swap"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <div className="watermark" aria-hidden="true">Tudo Num</div>
+        <div className="content">{children}</div>
+      </body>
     </html>
   );
 }

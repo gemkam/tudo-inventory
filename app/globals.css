@@ -22,6 +22,16 @@ body { margin: 0; font-family: var(--body); font-size: 15px; line-height: 1.5; }
 a { color: inherit; }
 button, input, select, textarea { font: inherit; }
 
+/* Watermark behind every page */
+.watermark {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none; user-select: none;
+  display: grid; place-items: center; overflow: hidden;
+  font-family: var(--display); font-weight: 700; white-space: nowrap;
+  font-size: clamp(64px, 16vw, 220px); letter-spacing: .02em;
+  color: var(--brown); opacity: .07; transform: rotate(-24deg);
+}
+.content { position: relative; z-index: 1; }
+
 /* Top bar */
 .topbar { background: var(--brown); color: var(--cream); }
 .topbar-inner {
@@ -94,7 +104,7 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 22px; margin: 0; 
 @media (hover: none) { .drop { display: none; } }
 
 /* Panels, tables */
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 14px; }
+.panel { background: rgba(247, 239, 225, .82); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 14px; }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
 th {
@@ -154,7 +164,7 @@ input, select {
 
 /* Summary row */
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
-.stat { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.stat { background: rgba(247, 239, 225, .82); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
 .stat .label { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
 .stat .value { font-family: var(--display); font-size: 24px; font-weight: 600; color: var(--brown); font-variant-numeric: tabular-nums; }
 

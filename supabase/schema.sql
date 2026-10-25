@@ -52,6 +52,10 @@ create table if not exists public.bill_payments (
 );
 create index if not exists bill_payments_account_idx on public.bill_payments(account_id);
 
+-- Table access for logged-in users only (anon gets nothing)
+grant select, insert, update, delete on public.categories, public.items, public.stock_moves, public.bill_accounts, public.bill_payments to authenticated;
+revoke all on public.categories, public.items, public.stock_moves, public.bill_accounts, public.bill_payments from anon;
+
 -- Row Level Security: only logged-in admin can read or write
 alter table public.categories enable row level security;
 alter table public.items enable row level security;
