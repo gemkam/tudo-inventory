@@ -17,7 +17,7 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body>
-        <div className="watermark" aria-hidden="true">Tudonum Inventory</div>
+        <div className="watermark" aria-hidden="true" />
         <div className="content">{children}</div>
       </body>
     </html>

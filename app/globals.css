@@ -22,13 +22,11 @@ body { margin: 0; font-family: var(--body); font-size: 15px; line-height: 1.5; }
 a { color: inherit; }
 button, input, select, textarea { font: inherit; }
 
-/* Watermark behind every page */
+/* Watermark behind every page: small repeated text */
 .watermark {
   position: fixed; inset: 0; z-index: 0; pointer-events: none; user-select: none;
-  display: grid; place-items: center; overflow: hidden;
-  font-family: var(--display); font-weight: 700; white-space: nowrap;
-  font-size: clamp(40px, 9vw, 150px); letter-spacing: .02em;
-  color: var(--brown); opacity: .07; transform: rotate(-24deg);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='340' height='220'><g fill='%234a2e1c' fill-opacity='0.08' font-family='Georgia,serif' font-weight='700' font-size='20'><text x='10' y='90' transform='rotate(-24 95 85)'>Tudonum Inventory</text><text x='150' y='165' transform='rotate(-24 235 160)'>Tudonum Inventory</text></g></svg>");
+  background-repeat: repeat; background-size: 340px 220px;
 }
 .content { position: relative; z-index: 1; }
 
