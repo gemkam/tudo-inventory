@@ -320,7 +320,7 @@ input, select {
   .sheet-kpis > div { flex: 1 1 0; min-width: 0; }
   .tools { justify-content: stretch; width: 100%; }
   .search { flex: 1 1 100%; }
-  .tools .btn { flex: 1 1 0; }
+  .tools .btn { flex: 1 1 0; padding-inline: 8px; }
   .grid-wrap { max-height: 65vh; }
   .grid td.cell { height: 48px; }
   .step { width: 32px; height: 32px; }

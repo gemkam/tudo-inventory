@@ -325,19 +325,120 @@ function SheetPage() {
     loadStats();
   }
 
-  function exportCsv() {
-    const head = ['Item', 'Unit', 'Present', 'Minimum', 'In this month', 'Out this month'];
-    const lines = rows.filter((r) => !r.isNew).map(({ item: it }) => {
+  function exportRows() {
+    return rows.filter((r) => !r.isNew).map(({ item: it }, i) => {
       const st = stats[it.id] || EMPTY_STATS;
-      return [it.name, unitLabel(it.unit), num(it.quantity), num(it.min_qty), st.in, st.out];
+      return { n: i + 1, name: it.name, unit: unitLabel(it.unit), qty: num(it.quantity), min: num(it.min_qty), in: st.in, out: st.out, low: isLow(it) };
     });
-    const csv = [head, ...lines].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
+  }
+
+  function exportName(ext) {
+    return `Tudo ${cat?.name || 'Inventory'} ${new Date().toISOString().slice(0, 10)}.${ext}`;
+  }
+
+  function exportDate() {
+    return new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  async function exportExcel() {
+    try {
+      flash('Preparing Excel file...');
+      const ExcelJS = (await import('exceljs')).default;
+      const wb = new ExcelJS.Workbook();
+      wb.creator = 'Tudo Office Inventory';
+      const ws = wb.addWorksheet((cat?.name || 'Inventory').slice(0, 31), { views: [{ state: 'frozen', ySplit: 4 }] });
+      ws.columns = [
+        { key: 'n', width: 6 }, { key: 'name', width: 32 }, { key: 'unit', width: 12 }, { key: 'qty', width: 12 },
+        { key: 'min', width: 12 }, { key: 'in', width: 16 }, { key: 'out', width: 16 }
+      ];
+      ws.mergeCells('A1:G1');
+      ws.getCell('A1').value = `Tudo Office Inventory · ${cat?.name || ''}`;
+      ws.getCell('A1').font = { bold: true, size: 16, color: { argb: 'FF4A2E1C' } };
+      ws.mergeCells('A2:G2');
+      ws.getCell('A2').value = `Exported ${exportDate()}`;
+      ws.getCell('A2').font = { size: 10, color: { argb: 'FF7A5F4A' } };
+      const head = ws.getRow(4);
+      head.values = ['#', 'Item', 'Unit', 'Present', 'Minimum', 'In this month', 'Out this month'];
+      head.height = 22;
+      head.eachCell((c) => {
+        c.font = { bold: true, color: { argb: 'FFF7EFE1' } };
+        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4A2E1C' } };
+        c.alignment = { vertical: 'middle', horizontal: c.col >= 4 ? 'right' : 'left' };
+      });
+      const data = exportRows();
+      data.forEach((d, i) => {
+        const row = ws.addRow({ n: d.n, name: d.name, unit: d.unit, qty: d.qty, min: d.min, in: d.in, out: d.out });
+        row.eachCell((c) => {
+          c.border = { bottom: { style: 'thin', color: { argb: 'FFE6D7BF' } } };
+          if (i % 2) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFBF3E6' } };
+        });
+        if (d.low) row.getCell('qty').font = { bold: true, color: { argb: 'FFA3321F' } };
+      });
+      const total = ws.addRow({ name: `${data.length} items`, in: { formula: `SUM(F5:F${4 + data.length})` }, out: { formula: `SUM(G5:G${4 + data.length})` } });
+      total.font = { bold: true };
+      total.eachCell((c) => { c.border = { top: { style: 'medium', color: { argb: 'FF4A2E1C' } } }; });
+      ws.autoFilter = { from: 'A4', to: `G${4 + data.length}` };
+      const buf = await wb.xlsx.writeBuffer();
+      download(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), exportName('xlsx'));
+      flash('Excel file downloaded');
+    } catch (e) {
+      flash('Could not create the Excel file. Please try again.', 'err');
+    }
+  }
+
+  async function exportPdf() {
+    try {
+      flash('Preparing PDF...');
+      const { jsPDF } = await import('jspdf');
+      const { autoTable } = await import('jspdf-autotable');
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+      const data = exportRows();
+      const low = data.filter((d) => d.low).length;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(20);
+      doc.setTextColor(74, 46, 28);
+      doc.text(cat?.name || 'Inventory', 40, 54);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(122, 95, 74);
+      doc.text(`Tudo Office Inventory  |  Exported ${exportDate()}  |  ${data.length} items, ${low} low`, 40, 72);
+      autoTable(doc, {
+        startY: 90,
+        head: [['#', 'Item', 'Unit', 'Present', 'Minimum', 'In (month)', 'Out (month)']],
+        body: data.map((d) => [d.n, d.name, d.unit, d.qty, d.min, d.in ? `+${d.in}` : '0', d.out ? `-${d.out}` : '0']),
+        theme: 'plain',
+        styles: { fontSize: 10, cellPadding: 6, textColor: [46, 29, 18], lineColor: [230, 215, 191], lineWidth: { bottom: 0.5 } },
+        headStyles: { fillColor: [74, 46, 28], textColor: [247, 239, 225], fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [251, 243, 230] },
+        columnStyles: { 0: { cellWidth: 28, textColor: [160, 134, 112] }, 3: { halign: 'right', fontStyle: 'bold' }, 4: { halign: 'right' }, 5: { halign: 'right', textColor: [63, 107, 47] }, 6: { halign: 'right', textColor: [163, 50, 31] } },
+        didParseCell: (h) => {
+          if (h.section === 'head' && h.column.index >= 3) h.cell.styles.halign = 'right';
+          if (h.section === 'body' && h.column.index === 3 && data[h.row.index]?.low) h.cell.styles.textColor = [163, 50, 31];
+          if (h.section === 'body' && h.column.index >= 5 && h.cell.raw === '0') h.cell.styles.textColor = [160, 134, 112];
+        },
+        didDrawPage: () => {
+          const pages = doc.internal.getNumberOfPages();
+          doc.setFontSize(8);
+          doc.setTextColor(160, 134, 112);
+          doc.text(`Page ${pages}`, doc.internal.pageSize.getWidth() - 40, doc.internal.pageSize.getHeight() - 24, { align: 'right' });
+        }
+      });
+      doc.save(exportName('pdf'));
+      flash('PDF downloaded');
+    } catch (e) {
+      flash('Could not create the PDF. Please try again.', 'err');
+    }
+  }
+
+  function download(blob, name) {
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${cat?.name || 'inventory'} ${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = name;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   /* ---------- Keyboard ---------- */
@@ -484,7 +585,8 @@ function SheetPage() {
               + New item
             </button>
           )}
-          <button type="button" className="btn ghost" onClick={exportCsv}>Export CSV</button>
+          <button type="button" className="btn ghost" onClick={exportExcel}>Export Excel</button>
+          <button type="button" className="btn ghost" onClick={exportPdf}>Export PDF</button>
         </div>
       </div>
 
