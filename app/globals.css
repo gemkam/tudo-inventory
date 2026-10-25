@@ -212,12 +212,10 @@ input, select {
   background: linear-gradient(180deg, #553522, var(--brown)); color: var(--cream);
   display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; padding: 12px 14px;
 }
-.search { flex: 1 1 220px; max-width: 360px; }
-.search input {
-  background: rgba(247, 239, 225, .12); border: 1px solid rgba(247, 239, 225, .25); color: var(--cream);
-  border-radius: 8px; padding: 8px 12px;
-}
-.search input::placeholder { color: rgba(247, 239, 225, .6); }
+.page-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: -12px; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; flex: 1 1 auto; justify-content: flex-end; }
+.search { flex: 0 1 300px; min-width: 0; }
+.search input { background: #fffaf2; border: 1px solid var(--line); border-radius: 6px; padding: 9px 12px; }
 .toolbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .tbtn {
   background: var(--cream); color: var(--brown); border: 0; border-radius: 8px; padding: 8px 14px;
@@ -320,7 +318,9 @@ input, select {
 @media (max-width: 640px) {
   .sheet-kpis { width: 100%; }
   .sheet-kpis > div { flex: 1 1 0; min-width: 0; }
-  .search { max-width: none; }
+  .tools { justify-content: stretch; width: 100%; }
+  .search { flex: 1 1 100%; }
+  .tools .btn { flex: 1 1 0; }
   .grid-wrap { max-height: 65vh; }
   .grid td.cell { height: 48px; }
   .step { width: 32px; height: 32px; }

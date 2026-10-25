@@ -472,9 +472,24 @@ function SheetPage() {
 
   return (
     <>
+      <div className="page-tools">
+        <Link href="/" className="crumb">← Home</Link>
+        <div className="tools">
+          <div className="search">
+            <label htmlFor="sheet-search" className="sr-only">Search items</label>
+            <input id="sheet-search" type="search" placeholder="Search items" value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
+          {isAdmin && (
+            <button type="button" className="btn" onClick={() => { const r = rows.findIndex((x) => x.isNew); if (r === -1) { setSearch(''); return; } startEdit(r, 0, ''); }}>
+              + New item
+            </button>
+          )}
+          <button type="button" className="btn ghost" onClick={exportCsv}>Export CSV</button>
+        </div>
+      </div>
+
       <div className="sheet-head">
         <div>
-          <Link href="/" className="crumb">← Home</Link>
           <h1>{cat.name}</h1>
           <p className="sub">
             {items.length} items · {lowCount > 0 ? <span className="neg">{lowCount} low on stock</span> : 'stock levels OK'}
@@ -488,22 +503,6 @@ function SheetPage() {
       </div>
 
       <section className="sheet">
-        <div className="sheet-toolbar">
-          <div className="search">
-            <label htmlFor="sheet-search" className="sr-only">Search items</label>
-            <input id="sheet-search" placeholder="Search items" value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
-          <div className="toolbar-actions">
-            {isAdmin && (
-              <button type="button" className="tbtn" onClick={() => { const r = rows.findIndex((x) => x.isNew); if (r === -1) { setSearch(''); return; } startEdit(r, 0, ''); }}>
-                + New item
-              </button>
-            )}
-            <button type="button" className="tbtn ghost" onClick={exportCsv}>Export CSV</button>
-          </div>
-        </div>
-
-
         <div className="grid-wrap" ref={gridRef} tabIndex={0} onKeyDown={onGridKey} aria-label={`${cat.name} sheet`}>
           <table className="grid">
             <colgroup>
