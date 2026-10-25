@@ -127,3 +127,25 @@ where not exists (select 1 from public.items i where i.category_id = c.id and i.
 insert into public.bill_accounts (name, payment_type, sort) values
   ('Electricity','Prepaid',1), ('Water','Postpaid',2), ('Dispenser',null,3), ('Internet',null,4)
 on conflict (name) do nothing;
+
+-- Roles: only users with app_metadata.role = 'admin' can change data; everyone logged in can view
+create or replace function public.is_admin()
+returns boolean language sql stable set search_path = ''
+as $$ select coalesce((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin', false); $$;
+revoke execute on function public.is_admin() from public, anon;
+grant execute on function public.is_admin() to authenticated;
+
+do $$
+declare t text;
+begin
+  foreach t in array array['categories','items','stock_moves','bill_accounts','bill_payments'] loop
+    execute format('drop policy if exists "admin all" on public.%I', t);
+    execute format('create policy "read all" on public.%I for select to authenticated using (true)', t);
+    execute format('create policy "admin insert" on public.%I for insert to authenticated with check (public.is_admin())', t);
+    execute format('create policy "admin update" on public.%I for update to authenticated using (public.is_admin()) with check (public.is_admin())', t);
+    execute format('create policy "admin delete" on public.%I for delete to authenticated using (public.is_admin())', t);
+  end loop;
+end $$;
+
+-- Users log in with a username, stored in Supabase Auth as <username>@tudo.local.
+-- Admin users have raw_app_meta_data.role = 'admin'; others are view only.

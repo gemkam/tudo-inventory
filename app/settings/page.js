@@ -227,5 +227,5 @@ function SettingsPage() {
 }
 
 export default function Page() {
-  return <AuthGate><SettingsPage /></AuthGate>;
+  return <AuthGate adminOnly><SettingsPage /></AuthGate>;
 }

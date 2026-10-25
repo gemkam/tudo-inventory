@@ -82,7 +82,7 @@ function Home() {
       <section className="panel">
         <h2>Low stock</h2>
         {lowItems.length === 0 ? (
-          <p className="empty">Nothing is below its minimum level. Set a minimum on each item to get alerts here.</p>
+          <p className="empty">Nothing is below its minimum level. Administrator can set a minimum on each item to get alerts here.</p>
         ) : (
           <div className="table-wrap">
             <table>

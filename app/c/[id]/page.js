@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import AuthGate from '@/components/AuthGate';
+import AuthGate, { useUser } from '@/components/AuthGate';
 import Modal from '@/components/Modal';
 import { sb, isLow, fmtDateTime } from '@/lib/supabase';
 
@@ -11,6 +11,7 @@ const EMPTY_ITEM = { name: '', unit: 'pcs', quantity: '0', min_qty: '0' };
 
 function CategoryPage() {
   const { id } = useParams();
+  const { isAdmin } = useUser();
   const [cat, setCat] = useState(null);
   const [items, setItems] = useState([]);
   const [moves, setMoves] = useState([]);
@@ -115,7 +116,7 @@ function CategoryPage() {
       {error && <div className="error">{error}</div>}
       {msg && <div className="ok-msg">{msg}</div>}
 
-      <section className="panel">
+      {isAdmin && <section className="panel">
         <h2>Add item</h2>
         <form className="form-row" onSubmit={addItem}>
           <div className="field">
@@ -136,15 +137,15 @@ function CategoryPage() {
           </div>
           <button className="btn" type="submit" disabled={busy}>Add item</button>
         </form>
-      </section>
+      </section>}
 
       <section className="panel">
         <h2>Stock</h2>
-        {items.length === 0 ? <p className="empty">No items yet. Add the first item above.</p> : (
+        {items.length === 0 ? <p className="empty">No items yet.</p> : (
           <div className="table-wrap">
             <table>
               <thead>
-                <tr><th>Item</th><th className="num">In stock</th><th className="num">Minimum</th><th>Status</th><th className="num">Actions</th></tr>
+                <tr><th>Item</th><th className="num">In stock</th><th className="num">Minimum</th><th>Status</th>{isAdmin && <th className="num">Actions</th>}</tr>
               </thead>
               <tbody>
                 {items.map((i) => (
@@ -156,14 +157,14 @@ function CategoryPage() {
                       {Number(i.min_qty) === 0 ? <span className="pill neutral">No minimum</span>
                         : isLow(i) ? <span className="pill low">Low</span> : <span className="pill ok">OK</span>}
                     </td>
-                    <td>
+                    {isAdmin && <td>
                       <div className="actions">
                         <button className="btn small in" onClick={() => setMove({ item: i, type: 'in', qty: '', note: '' })}>+ In</button>
                         <button className="btn small danger" onClick={() => setMove({ item: i, type: 'out', qty: '', note: '' })}>- Out</button>
                         <button className="btn small ghost" onClick={() => setEdit({ ...i, min_qty: String(i.min_qty) })}>Edit</button>
                         <button className="btn small ghost" onClick={() => setDel(i)}>Delete</button>
                       </div>
-                    </td>
+                    </td>}
                   </tr>
                 ))}
               </tbody>

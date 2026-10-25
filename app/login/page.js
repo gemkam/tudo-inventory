@@ -4,9 +4,12 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { sb } from '@/lib/supabase';
 
+// Usernames are mapped to internal login emails, e.g. "Momin" -> momin@tudo.local
+const DOMAIN = '@tudo.local';
+
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -20,11 +23,13 @@ export default function LoginPage() {
   async function submit(e) {
     e.preventDefault();
     setError('');
+    const name = username.trim().toLowerCase().replace(/\s+/g, '');
+    if (!name) return;
     setBusy(true);
-    const { error } = await sb().auth.signInWithPassword({ email: email.trim(), password });
+    const { error } = await sb().auth.signInWithPassword({ email: name + DOMAIN, password });
     setBusy(false);
     if (error) {
-      setError('Email or password is wrong. Please check and try again.');
+      setError('Username or password is wrong. Please check and try again.');
       return;
     }
     router.replace('/');
@@ -34,11 +39,10 @@ export default function LoginPage() {
     <div className="login">
       <form className="login-card panel" onSubmit={submit}>
         <h1>Tudo Office Inventory System</h1>
-        <p className="sub" style={{ textAlign: 'center', margin: 0 }}>Admin login</p>
         {error && <div className="error">{error}</div>}
         <div className="field">
-          <label htmlFor="email">Email</label>
-          <input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          <label htmlFor="username">Username</label>
+          <input id="username" autoComplete="username" autoCapitalize="none" required value={username} onChange={(e) => setUsername(e.target.value)} placeholder="e.g. Administrator" />
         </div>
         <div className="field">
           <label htmlFor="password">Password</label>

@@ -46,6 +46,9 @@ button, input, select, textarea { font: inherit; }
 }
 .topnav a:hover, .link-btn:hover { opacity: 1; }
 .topnav a.active { opacity: 1; border-bottom-color: var(--cream); }
+.who { font-size: 13px; opacity: .85; padding-left: 8px; border-left: 1px solid rgba(247, 239, 225, .3); }
+.btn.switch { background: var(--cream); color: var(--brown); }
+.btn.switch:hover { background: #fffaf2; }
 
 .page {
   max-width: 1000px; margin: 0 auto; padding-block: 32px 80px;

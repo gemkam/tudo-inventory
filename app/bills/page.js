@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import AuthGate from '@/components/AuthGate';
+import AuthGate, { useUser } from '@/components/AuthGate';
 import Modal from '@/components/Modal';
 import { sb, fmtOMR, fmtDate } from '@/lib/supabase';
 
@@ -11,6 +11,7 @@ function today() {
 }
 
 function BillsPage() {
+  const { isAdmin } = useUser();
   const [accounts, setAccounts] = useState([]);
   const [payments, setPayments] = useState([]);
   const [error, setError] = useState('');
@@ -97,7 +98,7 @@ function BillsPage() {
         })}
       </div>
 
-      <section className="panel">
+      {isAdmin && <section className="panel">
         <h2>Add payment</h2>
         <form className="form-row" onSubmit={addPayment}>
           <div className="field">
@@ -124,7 +125,7 @@ function BillsPage() {
           </div>
           <button className="btn" type="submit" disabled={busy || !form.account_id}>Save payment</button>
         </form>
-      </section>
+      </section>}
 
       <section className="panel">
         <div className="page-head">
@@ -140,7 +141,7 @@ function BillsPage() {
         {shown.length === 0 ? <p className="empty">No payments recorded yet.</p> : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Paid on</th><th>Bill</th><th>For month</th><th className="num">Amount</th><th>Note</th><th></th></tr></thead>
+              <thead><tr><th>Paid on</th><th>Bill</th><th>For month</th><th className="num">Amount</th><th>Note</th>{isAdmin && <th></th>}</tr></thead>
               <tbody>
                 {shown.map((p) => (
                   <tr key={p.id}>
@@ -149,7 +150,7 @@ function BillsPage() {
                     <td>{p.period || ''}</td>
                     <td className="num">{fmtOMR(p.amount)}</td>
                     <td>{p.note || ''}</td>
-                    <td><div className="actions"><button className="btn small ghost" onClick={() => setDel(p)}>Delete</button></div></td>
+                    {isAdmin && <td><div className="actions"><button className="btn small ghost" onClick={() => setDel(p)}>Delete</button></div></td>}
                   </tr>
                 ))}
               </tbody>
