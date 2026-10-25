@@ -27,7 +27,7 @@ button, input, select, textarea { font: inherit; }
   position: fixed; inset: 0; z-index: 0; pointer-events: none; user-select: none;
   display: grid; place-items: center; overflow: hidden;
   font-family: var(--display); font-weight: 700; white-space: nowrap;
-  font-size: clamp(64px, 16vw, 220px); letter-spacing: .02em;
+  font-size: clamp(40px, 9vw, 150px); letter-spacing: .02em;
   color: var(--brown); opacity: .07; transform: rotate(-24deg);
 }
 .content { position: relative; z-index: 1; }
