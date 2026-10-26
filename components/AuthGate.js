@@ -6,7 +6,21 @@ import { usePathname, useRouter } from 'next/navigation';
 import { sb } from '@/lib/supabase';
 import Assistant from '@/components/Assistant';
 
-const UserCtx = createContext({ isAdmin: false, name: '' });
+/*
+  Access levels (stored in the user's app_metadata.role):
+  admin  = Administrator: everything, plus managing users
+  editor = Full access: see and edit everything
+  viewer = View only
+  entry  = Data entry: only the Transport entry form, cannot see saved data
+*/
+export const ROLES = {
+  admin: { label: 'Administrator', short: 'Admin' },
+  editor: { label: 'Full access', short: 'Full access' },
+  viewer: { label: 'View only', short: 'View only' },
+  entry: { label: 'Data entry', short: 'Data entry' }
+};
+
+const UserCtx = createContext({ isAdmin: false, isOwner: false, role: '', name: '' });
 
 export function useUser() {
   return useContext(UserCtx);
@@ -15,16 +29,24 @@ export function useUser() {
 function readUser(session) {
   const u = session?.user;
   if (!u) return null;
+  const role = u.app_metadata?.role || 'viewer';
   const name = u.user_metadata?.display_name || (u.email || '').split('@')[0];
-  return { isAdmin: u.app_metadata?.role === 'admin', name };
+  return {
+    id: u.id,
+    name,
+    role,
+    isOwner: role === 'admin', // can manage users
+    isAdmin: role === 'admin' || role === 'editor', // can edit data (name kept for existing pages)
+    canRead: role === 'admin' || role === 'editor' || role === 'viewer',
+    isEntry: role === 'entry'
+  };
 }
 
-export default function AuthGate({ children, adminOnly = false, wide = false, theme = '' }) {
+export default function AuthGate({ children, adminOnly = false, ownerOnly = false, entryPage = false, wide = false, theme = '' }) {
   const router = useRouter();
   const path = usePathname();
   const [user, setUser] = useState(null);
 
-  // Section colour theme (e.g. green for Transport), applied to the whole page
   useEffect(() => {
     if (!theme) return undefined;
     document.body.classList.add(`theme-${theme}`);
@@ -36,13 +58,14 @@ export default function AuthGate({ children, adminOnly = false, wide = false, th
     supabase.auth.getSession().then(({ data }) => {
       const u = readUser(data.session);
       if (!u) router.replace('/login');
+      else if (u.isEntry && !entryPage) router.replace('/entry'); // data entry users only see the entry form
       else setUser(u);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) router.replace('/login');
     });
     return () => sub.subscription.unsubscribe();
-  }, [router]);
+  }, [router, entryPage]);
 
   async function switchUser() {
     await sb().auth.signOut();
@@ -51,23 +74,31 @@ export default function AuthGate({ children, adminOnly = false, wide = false, th
 
   if (!user) return <div className="loading">Loading...</div>;
 
-  // Each section has its own assistant
-  const aiScope = path.startsWith('/transport') ? 'transport'
-    : (path.startsWith('/inventory') || path.startsWith('/c/') || path.startsWith('/bills') || path.startsWith('/log')) ? 'inventory'
-      : null;
+  const aiScope = !user.canRead ? null
+    : path.startsWith('/transport') ? 'transport'
+      : (path.startsWith('/inventory') || path.startsWith('/c/') || path.startsWith('/bills') || path.startsWith('/log')) ? 'inventory'
+        : null;
 
-  const nav = [
-    ['/', 'Home'],
-    ['/inventory', 'Inventory'],
-    ['/transport', 'Transport'],
-    ...(user.isAdmin ? [['/settings', 'Settings']] : [])
-  ];
+  const nav = user.isEntry
+    ? [['/entry', 'Data entry']]
+    : [
+      ['/', 'Home'],
+      ['/inventory', 'Inventory'],
+      ['/transport', 'Transport'],
+      ...(user.isAdmin ? [['/entry', 'Data entry']] : []),
+      ...(user.isAdmin ? [['/settings', 'Settings']] : []),
+      ...(user.isOwner ? [['/users', 'Users']] : [])
+    ];
+
+  let blocked = '';
+  if (ownerOnly && !user.isOwner) blocked = 'Only Administrator can open this page.';
+  else if (adminOnly && !user.isAdmin) blocked = 'You need Full access to open this page.';
 
   return (
     <UserCtx.Provider value={user}>
       <header className="topbar">
         <div className="topbar-inner">
-          <Link href="/" className="brand">Tudo Office Inventory</Link>
+          <Link href={user.isEntry ? '/entry' : '/'} className="brand">Tudo Office Inventory</Link>
           <nav className="topnav">
             {nav.map(([href, label]) => (
               <Link key={href} href={href} className={(href === '/' ? path === '/' : path.startsWith(href)) ? 'active' : ''}>{label}</Link>
@@ -75,16 +106,14 @@ export default function AuthGate({ children, adminOnly = false, wide = false, th
           </nav>
           <div className="top-user">
             <span className="who">
-              {user.name}{user.isAdmin ? '' : ' (view only)'}
+              {user.name} <small className="who-role">· {ROLES[user.role]?.short || user.role}</small>
             </span>
             <button className="btn small switch" onClick={switchUser}>Switch user</button>
           </div>
         </div>
       </header>
       <main className={`page${wide ? ' wide' : ''}`}>
-        {adminOnly && !user.isAdmin
-          ? <div className="error">Only Administrator can open this page.</div>
-          : children}
+        {blocked ? <div className="error">{blocked}</div> : children}
       </main>
       {aiScope && <Assistant key={aiScope} scope={aiScope} />}
     </UserCtx.Provider>

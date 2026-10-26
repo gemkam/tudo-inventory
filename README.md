@@ -30,3 +30,10 @@ npm run dev
   - `GROQ_API_KEY` (get it at console.groq.com). Optional: `AI_MODEL` (default `llama-3.3-70b-versatile`).
   - Alternatives: `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`.
 - Never prefix the key with NEXT_PUBLIC_.
+
+## Users and access levels
+Administrator manages logins on the **Users** page (no Supabase dashboard needed).
+- Administrator: everything, plus users
+- Full access: see and edit everything
+- View only: see everything, change nothing
+- Data entry: only the Transport data entry form (/entry); cannot read any saved data (enforced by database rules)
