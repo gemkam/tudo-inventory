@@ -454,9 +454,9 @@ function InvoicePage() {
         <div className="iv-titlebar">
           <div className="iv-title-main">
             {L(`title_${k}`, KINDS[k].title, 'iv-title-text', true)}
-            {k === 'interim' && <><span className="iv-dash">–</span><F value={inv.invoice_no} onChange={(v) => set('invoice_no', v)} ro={ro} className="iv-title-no" auto /></>}
           </div>
           {k !== 'interim' && <div className="iv-title-no-line">{L('no', 'No.', '', true)} <b>{inv.invoice_no || '—'}</b></div>}
+          {k === 'interim' && <div className="iv-title-no-line">{L('no', 'No.', '', true)} <b><F value={inv.invoice_no} onChange={(v) => set('invoice_no', v)} ro={ro} className="iv-title-no" auto /></b></div>}
           {k === 'tax' && <div className="iv-title-sub">{L('supplier_vat', `Supplier ${COMPANY.vat}`, '', true)}</div>}
           <div className="iv-title-orn" aria-hidden="true"><i /><b /><i /></div>
         </div>
