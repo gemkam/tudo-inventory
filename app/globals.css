@@ -455,7 +455,8 @@ body .btn.in { background: #1f8a5b; }
 }
 .letterhead-logo { flex: none; width: 64px; height: auto; }
 .letterhead-text { display: grid; gap: 2px; min-width: 0; }
-.letterhead-name { font-size: clamp(16px, 2.2vw, 20px); font-weight: 600; letter-spacing: .02em; color: var(--brown); }
+.letterhead-company { font-size: 13px; font-weight: 600; letter-spacing: .06em; color: var(--muted); }
+.letterhead-name { font-family: var(--display); font-size: clamp(26px, 4vw, 38px); font-weight: 700; color: var(--brown); line-height: 1.1; }
 .letterhead-line { font-size: 13px; color: var(--muted); }
 .letterhead-title { font-size: 16px; color: var(--ink); margin-top: 4px; font-weight: 500; }
 .letterhead-detail { font-size: 12px; color: var(--muted); margin-top: 6px; }
