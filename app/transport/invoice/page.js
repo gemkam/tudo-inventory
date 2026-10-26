@@ -192,25 +192,51 @@ function InvoicePage() {
 
   useEffect(() => { load(); }, [load]);
 
-  /* Print on ONE A4 page: just before printing, measure the invoice at A4 width
-     (as it will print: no buttons, no empty rows) and shrink it if it is too tall. */
+  /* Print on ONE A4 page.
+     1) Just before printing, lay the invoice out at A4 width (as it will print: no buttons,
+        no empty rows) and set a zoom so it fits, with a safety margin.
+     2) When the browser switches to the real print layout, measure again and correct the zoom
+        (a few rounds, because shrinking also makes lines wrap less). */
   const paperRef = useRef(null);
   useEffect(() => {
-    const A4_H = (297 - 16) * 3.7795; // printable height in px (8 mm margins)
+    const A4_H = (297 - 16) * 3.7795; // printable height in px (8 mm top and bottom margins)
+    const settle = (el, target) => {
+      let z = 1;
+      el.style.zoom = '';
+      for (let i = 0; i < 5; i += 1) {
+        const h = el.getBoundingClientRect().height; // already includes the zoom
+        const next = Math.max(0.4, Math.min(1, z * (target / h)));
+        if (Math.abs(next - z) < 0.005) break;
+        z = next;
+        el.style.zoom = z < 1 ? String(z) : '';
+      }
+      // never end above the target
+      if (el.getBoundingClientRect().height > target) {
+        z = Math.max(0.4, z * (target / el.getBoundingClientRect().height));
+        el.style.zoom = String(z);
+      }
+    };
     const fit = () => {
       const el = paperRef.current;
       if (!el) return;
-      el.style.zoom = '';
       el.classList.add('iv-measure');
-      const h = el.scrollHeight;
+      settle(el, A4_H * 0.88); // screen copy reads a little short, so aim lower
       el.classList.remove('iv-measure');
-      const z = Math.min(1, (A4_H / h) * 0.98);
-      if (z < 1) el.style.zoom = String(Math.max(z, 0.5));
+    };
+    const refit = (e) => {
+      const el = paperRef.current;
+      if (el && e.matches) settle(el, A4_H * 0.97);
     };
     const unfit = () => { if (paperRef.current) paperRef.current.style.zoom = ''; };
+    const mq = window.matchMedia('print');
     window.addEventListener('beforeprint', fit);
     window.addEventListener('afterprint', unfit);
-    return () => { window.removeEventListener('beforeprint', fit); window.removeEventListener('afterprint', unfit); };
+    mq.addEventListener?.('change', refit);
+    return () => {
+      window.removeEventListener('beforeprint', fit);
+      window.removeEventListener('afterprint', unfit);
+      mq.removeEventListener?.('change', refit);
+    };
   }, []);
 
   /* Dropdown values: everything already used before, plus drivers and trips */
