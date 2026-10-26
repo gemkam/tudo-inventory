@@ -1,4 +1,5 @@
 import './globals.css';
+import { THEME_BOOT } from '@/lib/theme';
 
 export const metadata = {
   title: 'Tudo Office Inventory System',
@@ -7,8 +8,10 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <meta name="theme-color" content="#13836b" />
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link

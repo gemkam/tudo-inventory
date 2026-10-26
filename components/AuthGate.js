@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { sb } from '@/lib/supabase';
 import Assistant from '@/components/Assistant';
+import ThemeMenu from '@/components/ThemeMenu';
 
 /*
   Access levels (stored in the user's app_metadata.role):
@@ -105,6 +106,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
             ))}
           </nav>
           <div className="top-user">
+            <ThemeMenu />
             <span className="who">
               {user.name} <small className="who-role">· {ROLES[user.role]?.short || user.role}</small>
             </span>
