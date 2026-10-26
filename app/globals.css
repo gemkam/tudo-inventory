@@ -1064,3 +1064,6 @@ body .btn.in:hover { background: var(--brown-deep); border-color: var(--brown-de
   body > .content > main, main.page { min-height: 0 !important; }
 }
 .iv-t th.c-no { white-space: nowrap; width: 54px; }
+
+/* Payment received on a later day than the trip */
+.late-pay { color: var(--brown); font-weight: 600; }

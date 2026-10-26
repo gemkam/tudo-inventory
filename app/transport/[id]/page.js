@@ -76,8 +76,9 @@ function DriverSheet() {
   async function save(row, key, value) {
     const patch = { [key]: NUM_KEYS.includes(key) ? (value ?? 0) : value };
     setEntries((list) => list.map((e) => (e.id === row.id ? { ...e, ...patch } : e)));
-    const { error: err } = await sb().from('transport_entries').update(patch).eq('id', row.id);
+    const { data: fresh, error: err } = await sb().from('transport_entries').update(patch).eq('id', row.id).select().single();
     if (err) { flash(err.code === '42501' ? 'Only Administrator can edit' : err.message, 'err'); load(); return; }
+    if (fresh) setEntries((list) => list.map((e) => (e.id === row.id ? fresh : e)));
     if (key === 'entry_date' && monthKey(value) !== month && month !== 'all') flash(`Moved to ${monthLabel(monthKey(value))}`);
     else flash('Saved');
   }
@@ -110,6 +111,7 @@ function DriverSheet() {
     { key: 'to_place', label: 'To', type: 'text', width: 170, render: (r) => r.to_place || (r.description ? <em className="muted">{r.description}</em> : '') },
     { key: 'rent', label: 'Total rent', type: 'number', min: 0, width: 104, render: amt('rent') },
     { key: 'received', label: 'Received', type: 'number', min: 0, width: 104, render: amt('received') },
+    { key: 'received_date', label: 'Received on', type: 'date', width: 108, render: (r) => (r.received_date ? <span className={r.received_date !== r.entry_date ? 'late-pay' : ''}>{fmtDay(r.received_date)}</span> : <span className="muted">–</span>) },
     {
       key: 'balance', label: 'Balance', type: 'calc', width: 96,
       render: (r) => { const b = num(Number(r.rent || 0) - Number(r.received || 0)); return b ? <span className={b > 0 ? 'neg' : 'pos'}>{fmtAmt(b)}</span> : <span className="muted">0</span>; }
@@ -131,14 +133,14 @@ function DriverSheet() {
   /* ---------- Export ---------- */
 
   function tableData() {
-    const head = ['Date', 'From', 'To', 'Description', 'Cargo', 'Consignee', 'Rent', 'Received', 'Balance', 'Payment', 'Driver allow.', 'Allowance', 'Diesel', 'Toll/other', 'Maint.', 'Status', 'Credit in', 'Entered by'];
+    const head = ['Date', 'From', 'To', 'Description', 'Cargo', 'Consignee', 'Rent', 'Received', 'Received on', 'Balance', 'Payment', 'Driver allow.', 'Allowance', 'Diesel', 'Toll/other', 'Maint.', 'Status', 'Credit in', 'Entered by'];
     const data = rows.map((r) => [
       fmtFullDate(r.entry_date), r.from_place || '', r.to_place || '', r.description || '', r.cargo || '', r.consignee || '',
-      num(r.rent), num(r.received), num(Number(r.rent || 0) - Number(r.received || 0)), r.payment_status || '',
+      num(r.rent), num(r.received), r.received_date ? fmtFullDate(r.received_date) : '', num(Number(r.rent || 0) - Number(r.received || 0)), r.payment_status || '',
       num(r.driver_allowance), r.allowance_status || '', num(r.diesel), num(r.toll), num(r.maintenance), r.remarks || '', r.credit_in || '', r.entered_by || ''
     ]);
-    const totalsRow = ['Total', `${totals.trips} trips`, '', '', '', '', totals.rent, totals.received, totals.balance, '', totals.driver_allowance, '', totals.diesel, totals.toll, totals.maintenance, '', '', ''];
-    return { head, data, totalsRow, numCols: [6, 7, 8, 10, 12, 13, 14] };
+    const totalsRow = ['Total', `${totals.trips} trips`, '', '', '', '', totals.rent, totals.received, '', totals.balance, '', totals.driver_allowance, '', totals.diesel, totals.toll, totals.maintenance, '', '', ''];
+    return { head, data, totalsRow, numCols: [6, 7, 9, 11, 13, 14, 15] };
   }
 
   async function doExcel() {
@@ -161,7 +163,7 @@ function DriverSheet() {
     try {
       flash('Preparing PDF...');
       const t = tableData();
-      const keep = [0, 1, 2, 3, 6, 7, 8, 9, 10, 12, 13, 14, 15];
+      const keep = [0, 1, 2, 3, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16];
       const pick = (r) => keep.map((i) => (t.numCols.includes(i) && typeof r[i] === 'number' ? fmtAmt(r[i]) : r[i]));
       await exportPdf(`${driver.name} ${monthLabel(month)}.pdf`, {
         title: `${driver.name} · Vehicle # ${driver.vehicle_no || ''}`,
