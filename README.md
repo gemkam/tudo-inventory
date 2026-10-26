@@ -37,3 +37,8 @@ Administrator manages logins on the **Users** page (no Supabase dashboard needed
 - Full access: see and edit everything
 - View only: see everything, change nothing
 - Data entry: only the Transport data entry form (/entry); cannot read any saved data (enforced by database rules)
+
+## Monthly transport report email
+- On the 1st of every month at 9:00 (Muscat) Vercel Cron calls `/api/transport-report`, which builds the full Transport Expense PDF and emails it.
+- Administrator / Full access can also press "✉ Email report" on the Transport page to send it now.
+- Vercel env vars needed: `CRON_SECRET` (must match `private.app_secrets.report_key` in Supabase), `GMAIL_USER`, `GMAIL_APP_PASSWORD` (Gmail app password), optional `REPORT_TO` (comma separated, default mianrauf.altaf9@gmail.com).

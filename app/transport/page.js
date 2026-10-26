@@ -234,6 +234,24 @@ function TransportPage() {
     }
   }
 
+  /* ---------- Email the full PDF report ---------- */
+
+  const [mailing, setMailing] = useState(false);
+  async function emailReport() {
+    setMailing(true);
+    flash('Sending the full report by email...');
+    try {
+      const { data } = await sb().auth.getSession();
+      const res = await fetch('/api/transport-report', { method: 'POST', headers: { Authorization: `Bearer ${data.session?.access_token || ''}` } });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok) flash(out.error || 'Sending failed.', 'err');
+      else flash(`Report emailed to ${(out.to || []).join(', ')}`);
+    } catch {
+      flash('Sending failed. Check the internet and try again.', 'err');
+    }
+    setMailing(false);
+  }
+
   /* ---------- Render ---------- */
 
   if (!drivers || !month) return <div className="loading">Loading transport...</div>;
@@ -264,6 +282,7 @@ function TransportPage() {
           <Link href="/transport/reports" className="btn report">📊 Reports</Link>
           <button type="button" className="btn ghost" onClick={doExcel}>Export Excel</button>
           <button type="button" className="btn ghost" onClick={doPdf}>Export PDF</button>
+          {isAdmin && <button type="button" className="btn ghost" onClick={emailReport} disabled={mailing}>{mailing ? 'Sending...' : '✉ Email report'}</button>}
         </div>
       </div>
 
