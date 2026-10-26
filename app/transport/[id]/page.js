@@ -124,19 +124,20 @@ function DriverSheet() {
     { key: 'cargo', label: 'Cargo detail', type: 'text', width: 130 },
     { key: 'consignee', label: 'Consignee', type: 'text', width: 120 },
     { key: 'remarks', label: 'Status', type: 'select', options: ['Completed', 'Loading', 'On the way', 'Done', 'Cancelled'], width: 116 },
-    { key: 'credit_in', label: 'Payment credit in', type: 'text', width: 140 }
+    { key: 'credit_in', label: 'Payment credit in', type: 'text', width: 140 },
+    { key: 'entered_by', label: 'Entered by', type: 'text', width: 120 }
   ];
 
   /* ---------- Export ---------- */
 
   function tableData() {
-    const head = ['Date', 'From', 'To', 'Description', 'Cargo', 'Consignee', 'Rent', 'Received', 'Balance', 'Payment', 'Driver allow.', 'Allowance', 'Diesel', 'Toll/other', 'Maint.', 'Status', 'Credit in'];
+    const head = ['Date', 'From', 'To', 'Description', 'Cargo', 'Consignee', 'Rent', 'Received', 'Balance', 'Payment', 'Driver allow.', 'Allowance', 'Diesel', 'Toll/other', 'Maint.', 'Status', 'Credit in', 'Entered by'];
     const data = rows.map((r) => [
       fmtFullDate(r.entry_date), r.from_place || '', r.to_place || '', r.description || '', r.cargo || '', r.consignee || '',
       num(r.rent), num(r.received), num(Number(r.rent || 0) - Number(r.received || 0)), r.payment_status || '',
-      num(r.driver_allowance), r.allowance_status || '', num(r.diesel), num(r.toll), num(r.maintenance), r.remarks || '', r.credit_in || ''
+      num(r.driver_allowance), r.allowance_status || '', num(r.diesel), num(r.toll), num(r.maintenance), r.remarks || '', r.credit_in || '', r.entered_by || ''
     ]);
-    const totalsRow = ['Total', `${totals.trips} trips`, '', '', '', '', totals.rent, totals.received, totals.balance, '', totals.driver_allowance, '', totals.diesel, totals.toll, totals.maintenance, '', ''];
+    const totalsRow = ['Total', `${totals.trips} trips`, '', '', '', '', totals.rent, totals.received, totals.balance, '', totals.driver_allowance, '', totals.diesel, totals.toll, totals.maintenance, '', '', ''];
     return { head, data, totalsRow, numCols: [6, 7, 8, 10, 12, 13, 14] };
   }
 

@@ -670,3 +670,18 @@ body .btn.in:hover { background: var(--brown-deep); border-color: var(--brown-de
 .driver-link { display: grid; gap: 10px; background: #fff8e6; border: 1px solid #ecd49a; border-radius: 12px; padding: 12px 14px; }
 .check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; cursor: pointer; }
 .check input { width: 18px; height: 18px; margin-top: 2px; flex: none; accent-color: var(--brown); }
+
+/* ---------- Share links (no-login entry) ---------- */
+.links-panel { display: grid; gap: 12px; }
+.links-head { display: flex; gap: 14px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+.links-head h2 { margin: 0 0 4px; }
+.links-list { display: grid; gap: 10px; }
+.link-card { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--cream); }
+.link-card.off { opacity: .6; }
+.link-info { display: grid; gap: 4px; min-width: 0; flex: 1 1 260px; }
+.link-info b { margin-right: 8px; }
+.link-info .tag { justify-self: start; }
+.link-url { font-size: 12px; color: var(--muted); word-break: break-all; background: var(--bg); padding: 4px 8px; border-radius: 6px; }
+.mini.wa-mini { background: #1f9d55; border-color: #1f9d55; color: #fff; }
+.mini.wa-mini:hover:not(:disabled) { background: #178246; }
+.locked-driver { padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); font-weight: 600; color: var(--brown-deep); }
