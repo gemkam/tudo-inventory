@@ -35,7 +35,10 @@ function InventoryHome() {
     <>
       <div className="page-tools">
         <Link href="/" className="crumb">← Home</Link>
-        <Link href="/log" className="btn ghost">Stock log</Link>
+        <div className="tools">
+          <Link href="/inventory/reports" className="btn report">📊 Reports</Link>
+          <Link href="/log" className="btn ghost">Stock log</Link>
+        </div>
       </div>
       <h1 className="center">Inventory</h1>
       {error && <div className="error">{error}</div>}

@@ -260,6 +260,7 @@ function TransportPage() {
               {editMode ? '✓ Done editing' : 'Edit'}
             </button>
           )}
+          <Link href="/transport/reports" className="btn report">📊 Reports</Link>
           <button type="button" className="btn ghost" onClick={doExcel}>Export Excel</button>
           <button type="button" className="btn ghost" onClick={doPdf}>Export PDF</button>
         </div>
