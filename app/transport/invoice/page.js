@@ -16,7 +16,6 @@ const COMPANY = {
   web: 'www.tudonumgroup.com'
 };
 const VAT_RATE = 5;
-const STATUSES = ['Completed', 'Loading', 'On the way', 'Done', 'Cancelled'];
 
 const KINDS = {
   invoice: { label: 'Transportation Invoice', title: 'INVOICE' },
@@ -496,9 +495,6 @@ function InvoicePage() {
             <dl className="iv-dl">
               <dt>{L('lbl_no', 'Invoice No.')}</dt><dd><F value={inv.invoice_no} onChange={(v) => set('invoice_no', v)} ro={ro} /></dd>
               <dt>{L('lbl_invdate', 'Invoice date')}</dt><dd><D value={inv.invoice_date} onChange={(v) => set('invoice_date', v)} ro={ro} /></dd>
-              <dt>{L('lbl_supply', 'Supply date')}</dt><dd><D value={inv.supply_date} onChange={(v) => set('supply_date', v)} ro={ro} /></dd>
-              <dt>{L('lbl_due', 'Due date')}</dt><dd><F value={inv.due_text} onChange={(v) => set('due_text', v)} list="iv-terms" ro={ro} /></dd>
-              <dt>{L('lbl_paydate', 'Payment date')}</dt><dd><F value={inv.payment_text} onChange={(v) => set('payment_text', v)} list="iv-payments" ro={ro} /></dd>
             </dl>
           </section>
         )}
@@ -524,33 +520,9 @@ function InvoicePage() {
           </section>
         )}
 
-        {/* ---------- Details (same as the trip entry form) ---------- */}
-        {k === 'invoice' && (
-          <section className="iv-block">
-            <h3 className="iv-h">{L('h_details', 'Details', '', true)}</h3>
-            <div className="iv-details">
-              <div className="iv-d wide"><div className="iv-d-cap">{L('lbl_desc', 'Description')}</div><F value={inv.description} onChange={(v) => set('description', v)} list="iv-descriptions" ro={ro} placeholder="Optional" /></div>
-              <div className="iv-d"><div className="iv-d-cap">{L('lbl_cargo', 'Cargo Detail')}</div><F value={inv.cargo} onChange={(v) => set('cargo', v)} list="iv-cargos" ro={ro} placeholder="Cargo" /></div>
-              <div className="iv-d"><div className="iv-d-cap">{L('lbl_consignee', 'Consignee')}</div><F value={inv.consignee} onChange={(v) => set('consignee', v)} list="iv-consignees" ro={ro} placeholder="Consignee" /></div>
-              <div className="iv-d"><div className="iv-d-cap">{L('lbl_status', 'Status')}</div>
-                {ro ? <span className="iv-in iv-txt">{inv.status}</span> : (
-                  <>
-                    <select className="iv-sel no-print" value={inv.status || ''} onChange={(e) => set('status', e.target.value)}>
-                      <option value="">—</option>
-                      {STATUSES.map((x) => <option key={x}>{x}</option>)}
-                    </select>
-                    <span className="iv-print-only iv-txt">{inv.status}</span>
-                  </>
-                )}
-              </div>
-              <div className="iv-d"><div className="iv-d-cap">{L('lbl_credit', 'Payment Credit In')}</div><F value={inv.credit_in} onChange={(v) => set('credit_in', v)} list="iv-credits" ro={ro} placeholder="e.g. Account" /></div>
-            </div>
-          </section>
-        )}
-
         {/* ---------- Items ---------- */}
         <section className="iv-block">
-          {k !== 'interim' && <h3 className="iv-h">{k === 'tax' ? L('h_services', 'Services', '', true) : L('h_items', 'Item Details', '', true)}</h3>}
+          {k !== 'interim' && <h3 className="iv-h">{k === 'tax' ? L('h_services', 'Services', '', true) : L('h_items', 'Details', '', true)}</h3>}
           <table className="iv-t">
             <thead>
               {k === 'invoice' && (

@@ -1028,6 +1028,7 @@ body .btn.in:hover { background: var(--brown-deep); border-color: var(--brown-de
 .iv-paper .iv-titlebar .iv-title-text { color: var(--iv-green); }
 .iv-paper .iv-foot-l { font-family: var(--display); font-style: italic; color: var(--iv-gold); font-size: 12.5px; }
 .iv-paper .iv-foot-r { font-size: 11px; color: #8b9692; letter-spacing: .04em; }
-.iv-rate .iv-txt { display: inline-block !important; min-height: 0; }
+.iv-rate .iv-txt:not(.iv-print-only) { display: inline-block !important; min-height: 0; }
+.iv-paper .iv-rate .iv-print-only { display: none !important; }
 @media print { .iv-paper .iv-rate .iv-print-only { display: inline-block !important; } }
 .iv-t .c-veh { width: 108px; }
