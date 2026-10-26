@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import AuthGate, { useUser } from '@/components/AuthGate';
 import { sb } from '@/lib/supabase';
 import { evaluate, todayISO, fmtFullDate } from '@/lib/sheet';
+import Modal from '@/components/Modal';
 
 const BLANK = {
   kind: 'trip', driver_id: '', entry_date: '', from_place: '', to_place: '', rent: '', received: '',
@@ -21,10 +22,45 @@ function EntryPage() {
   const [count, setCount] = useState(0);
   const [busy, setBusy] = useState(false);
   const firstRef = useRef(null);
+  const [addDrv, setAddDrv] = useState(null);
+  const [share, setShare] = useState(null); // { title, text, url }
+  const [copied, setCopied] = useState(false);
+  const myDriver = drivers.find((d) => d.user_id && d.user_id === me.id);
 
-  useEffect(() => {
-    sb().from('transport_drivers').select('id, name, vehicle_no').order('sort').then(({ data }) => setDrivers(data || []));
+  async function loadDrivers(selectId) {
+    const { data } = await sb().from('transport_drivers').select('id, name, vehicle_no, user_id, sort').order('sort').order('name');
+    setDrivers(data || []);
+    const mine = (data || []).find((d) => d.user_id && d.user_id === me.id);
+    if (selectId) setF((x) => ({ ...x, driver_id: selectId }));
+    else if (mine) setF((x) => (x.driver_id ? x : { ...x, driver_id: mine.id }));
+  }
+
+  useEffect(() => { loadDrivers(); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function saveDriver(e) {
+    e.preventDefault();
+    if (!addDrv.name.trim()) return;
+    const sort = drivers.reduce((m, d) => Math.max(m, d.sort || 0), 0) + 1;
+    const { data, error: err } = await sb().from('transport_drivers').insert({ name: addDrv.name.trim(), vehicle_no: addDrv.vehicle.trim() || null, sort }).select('id').single();
+    if (err) { setError(err.message); return; }
+    setAddDrv(null);
+    loadDrivers(data.id);
+  }
+
+  const pageUrl = typeof window !== 'undefined' ? `${window.location.origin}/entry` : '';
+
+  async function openShare(payload) {
+    setCopied(false);
+    if (navigator.share) {
+      try { await navigator.share(payload); return; } catch (e2) { if (e2?.name === 'AbortError') return; }
+    }
+    setShare(payload);
+  }
+
+  async function copy(text) {
+    try { await navigator.clipboard.writeText(text); setCopied(true); } catch { setCopied(false); }
+  }
 
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
 
@@ -74,9 +110,22 @@ function EntryPage() {
     setBusy(false);
     if (err) { setError(err.code === '42501' ? 'You are not allowed to add entries. Ask the Administrator.' : err.message); return; }
     const driver = drivers.find((d) => d.id === f.driver_id)?.name || '';
-    setSaved({ driver, date: f.entry_date, what: isTrip ? `${row.from_place} → ${row.to_place}` : row.description });
+    const money = (v) => `${Number(v).toFixed(3)} OMR`;
+    const lines = [
+      `${isTrip ? 'Trip' : 'Expense'} entry saved`,
+      `Driver: ${driver}`,
+      `Date: ${fmtFullDate(f.entry_date)}`,
+      isTrip ? `Route: ${row.from_place} to ${row.to_place}` : `For: ${row.description}`,
+      isTrip ? `Rent: ${money(row.rent)}` : null,
+      isTrip ? `Received: ${money(row.received)}` : null,
+      row.diesel ? `Diesel: ${money(row.diesel)}` : null,
+      row.toll ? `Toll: ${money(row.toll)}` : null,
+      row.maintenance ? `Maintenance: ${money(row.maintenance)}` : null,
+      `Entered by: ${me.name}`
+    ].filter(Boolean);
+    setSaved({ driver, date: f.entry_date, what: isTrip ? `${row.from_place} → ${row.to_place}` : row.description, text: lines.join('\n') });
     setCount((c) => c + 1);
-    setF({ ...BLANK, entry_date: todayISO(), kind: f.kind });
+    setF({ ...BLANK, entry_date: todayISO(), kind: f.kind, driver_id: myDriver ? myDriver.id : '' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setTimeout(() => firstRef.current?.focus(), 300);
   }
@@ -93,7 +142,13 @@ function EntryPage() {
           <h1>Transport data entry</h1>
           <p className="sub">Fill in one trip or expense and press Save. The form clears for the next one.</p>
         </div>
-        <div className="entry-count"><strong>{count}</strong><span>saved this session</span></div>
+        <div className="entry-head-right">
+          <button type="button" className="btn" onClick={() => openShare({ title: 'Tudo transport data entry', text: 'Transport data entry form. Log in with your username and password:', url: pageUrl })}>
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="18" cy="5" r="2.6" fill="none" stroke="currentColor" strokeWidth="1.8" /><circle cx="6" cy="12" r="2.6" fill="none" stroke="currentColor" strokeWidth="1.8" /><circle cx="18" cy="19" r="2.6" fill="none" stroke="currentColor" strokeWidth="1.8" /><path d="M8.3 10.8l7.4-4.3M8.3 13.2l7.4 4.3" stroke="currentColor" strokeWidth="1.8" /></svg>
+            Share this form
+          </button>
+          <div className="entry-count"><strong>{count}</strong><span>saved this session</span></div>
+        </div>
       </div>
 
       {saved && (
@@ -103,6 +158,7 @@ function EntryPage() {
             <b>Saved.</b> {saved.driver} · {fmtFullDate(saved.date)} · {saved.what}
             <div className="note">The form is ready for the next entry.</div>
           </div>
+          <button type="button" className="btn small wa-btn" onClick={() => openShare({ title: 'Transport entry', text: saved.text })}>Share entry</button>
         </div>
       )}
       {error && <div className="error" role="alert">{error}</div>}
@@ -125,6 +181,8 @@ function EntryPage() {
                 <option value="">Choose driver</option>
                 {drivers.map((d) => <option key={d.id} value={d.id}>{d.name}{d.vehicle_no ? ` (${d.vehicle_no})` : ''}</option>)}
               </select>
+              {me.isAdmin && <button type="button" className="link-add" onClick={() => setAddDrv({ name: '', vehicle: '' })}>+ Add a new driver</button>}
+              {drivers.length === 0 && <p className="note">No drivers yet. {me.isAdmin ? 'Add one with the link above.' : 'Ask the Administrator to add you to the driver list.'}</p>}
             </div>
             <div className="field narrow" style={{ flex: '0 1 180px' }}>
               <label htmlFor="e-date">Date *</label>
@@ -199,6 +257,30 @@ function EntryPage() {
           <button type="submit" className="btn in entry-save" disabled={busy}>{busy ? 'Saving...' : 'Save entry'}</button>
         </div>
       </form>
+
+      {addDrv && (
+        <Modal title="Add a new driver" onClose={() => setAddDrv(null)}>
+          <form onSubmit={saveDriver} style={{ display: 'grid', gap: 12 }}>
+            <div className="field"><label htmlFor="nd-name">Driver name</label><input id="nd-name" autoFocus required value={addDrv.name} onChange={(e) => setAddDrv({ ...addDrv, name: e.target.value })} /></div>
+            <div className="field"><label htmlFor="nd-veh">Vehicle number</label><input id="nd-veh" value={addDrv.vehicle} onChange={(e) => setAddDrv({ ...addDrv, vehicle: e.target.value })} placeholder="e.g. 899 YR" /></div>
+            <div className="modal-actions">
+              <button type="button" className="btn ghost" onClick={() => setAddDrv(null)}>Cancel</button>
+              <button type="submit" className="btn in">Add driver</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {share && (
+        <Modal title="Share" onClose={() => setShare(null)}>
+          <pre className="share-text">{share.url ? `${share.text}\n${share.url}` : share.text}</pre>
+          <div className="share-btns">
+            <a className="btn wa-btn" href={`https://wa.me/?text=${encodeURIComponent(share.url ? `${share.text}\n${share.url}` : share.text)}`} target="_blank" rel="noreferrer">WhatsApp</a>
+            <a className="btn" href={`mailto:?subject=${encodeURIComponent(share.title)}&body=${encodeURIComponent(share.url ? `${share.text}\n${share.url}` : share.text)}`}>Email</a>
+            <button type="button" className="btn" onClick={() => copy(share.url ? `${share.text}\n${share.url}` : share.text)}>{copied ? '✓ Copied' : 'Copy'}</button>
+          </div>
+        </Modal>
+      )}
 
       {me.isEntry && <p className="note" style={{ textAlign: 'center' }}>For privacy, saved entries are not shown here. The Administrator can see them in Transport.</p>}
     </>

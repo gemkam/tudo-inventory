@@ -28,3 +28,6 @@ create table if not exists public.transport_extras (
 );
 -- RLS: everyone logged in can read; only Administrator (app_metadata.role = 'admin') can change data.
 -- Same "read all" / "admin insert|update|delete" policies as the inventory tables, using public.is_admin().
+
+-- A driver can be linked to a Data entry login (picked automatically on the entry form)
+alter table public.transport_drivers add column if not exists user_id uuid references auth.users(id) on delete set null;

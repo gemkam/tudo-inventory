@@ -13,7 +13,7 @@ const ROLE_HELP = {
   entry: 'Only the Transport data entry form. Cannot see saved data.'
 };
 const ROLE_ORDER = ['admin', 'editor', 'viewer', 'entry'];
-const EMPTY = { username: '', display: '', password: '', role: 'viewer' };
+const EMPTY = { username: '', display: '', password: '', role: 'viewer', asDriver: true, vehicle: '' };
 
 function fmtWhen(d) {
   if (!d) return 'Never';
@@ -37,6 +37,7 @@ function RolePicker({ value, onChange, name }) {
 function UsersPage() {
   const me = useUser();
   const [users, setUsers] = useState(null);
+  const [drivers, setDrivers] = useState([]);
   const [form, setForm] = useState(EMPTY);
   const [showPw, setShowPw] = useState(false);
   const [edit, setEdit] = useState(null);
@@ -46,9 +47,13 @@ function UsersPage() {
   const [msg, setMsg] = useState('');
 
   const load = useCallback(async () => {
-    const { data, error: err } = await sb().rpc('admin_list_users');
+    const [{ data, error: err }, d] = await Promise.all([
+      sb().rpc('admin_list_users'),
+      sb().from('transport_drivers').select('id, name, vehicle_no, user_id, sort').order('sort')
+    ]);
     if (err) { setError(err.message); setUsers([]); return; }
     setUsers(data || []);
+    setDrivers(d.data || []);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -58,12 +63,18 @@ function UsersPage() {
   async function create(e) {
     e.preventDefault();
     setBusy(true); setError('');
-    const { error: err } = await sb().rpc('admin_create_user', {
+    const { data: newId, error: err } = await sb().rpc('admin_create_user', {
       p_username: form.username.trim(), p_password: form.password, p_display: form.display.trim(), p_role: form.role
     });
+    if (err) { setBusy(false); setError(err.message); return; }
+    let extra = '';
+    if (form.role === 'entry' && form.asDriver) {
+      const sort = drivers.reduce((m, x) => Math.max(m, x.sort || 0), 0) + 1;
+      const { error: dErr } = await sb().from('transport_drivers').insert({ name: form.display.trim() || form.username.trim(), vehicle_no: form.vehicle.trim() || null, user_id: newId, sort });
+      extra = dErr ? ` (Could not add to the driver list: ${dErr.message})` : ' Added to the driver list.';
+    }
     setBusy(false);
-    if (err) { setError(err.message); return; }
-    flash(`User "${form.username.trim().toLowerCase()}" created with ${ROLES[form.role].label}. They can log in now.`);
+    flash(`User "${form.username.trim().toLowerCase()}" created with ${ROLES[form.role].label}. They can log in now.${extra}`);
     setForm(EMPTY);
     load();
   }
@@ -74,8 +85,18 @@ function UsersPage() {
     const { error: err } = await sb().rpc('admin_update_user', {
       p_id: edit.id, p_role: edit.role, p_display: edit.display_name, p_password: edit.password ? edit.password : null
     });
+    if (err) { setBusy(false); setError(err.message); return; }
+    const current = drivers.find((d) => d.user_id === edit.id)?.id || '';
+    if (edit.driverId !== current) {
+      if (current) await sb().from('transport_drivers').update({ user_id: null }).eq('id', current);
+      if (edit.driverId === 'new') {
+        const sort = drivers.reduce((m, x) => Math.max(m, x.sort || 0), 0) + 1;
+        await sb().from('transport_drivers').insert({ name: edit.display_name || edit.username, user_id: edit.id, sort });
+      } else if (edit.driverId) {
+        await sb().from('transport_drivers').update({ user_id: edit.id }).eq('id', edit.driverId);
+      }
+    }
     setBusy(false);
-    if (err) { setError(err.message); return; }
     flash(`${edit.display_name || edit.username} saved.${edit.id !== me.id ? ' They were signed out, and the new access applies at their next login.' : ''}`);
     setEdit(null);
     load();
@@ -136,6 +157,20 @@ function UsersPage() {
             <label>Access level</label>
             <RolePicker value={form.role} onChange={(r) => setForm({ ...form, role: r })} name="new-role" />
           </div>
+          {form.role === 'entry' && (
+            <div className="driver-link">
+              <label className="check">
+                <input type="checkbox" checked={form.asDriver} onChange={(e) => setForm({ ...form, asDriver: e.target.checked })} />
+                This person is a driver. Add them to the driver list (they will be picked automatically on the entry form).
+              </label>
+              {form.asDriver && (
+                <div className="field narrow" style={{ maxWidth: 260 }}>
+                  <label htmlFor="nu-veh">Vehicle number</label>
+                  <input id="nu-veh" value={form.vehicle} onChange={(e) => setForm({ ...form, vehicle: e.target.value })} placeholder="e.g. 899 YR" />
+                </div>
+              )}
+            </div>
+          )}
           <div><button type="submit" className="btn in" disabled={busy}>{busy ? 'Creating...' : 'Create user'}</button></div>
         </form>
       </section>
@@ -145,17 +180,18 @@ function UsersPage() {
         {!users ? <p className="empty">Loading users...</p> : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Name</th><th>Username</th><th>Access level</th><th>Last login</th><th className="num">Actions</th></tr></thead>
+              <thead><tr><th>Name</th><th>Username</th><th>Access level</th><th>Driver</th><th>Last login</th><th className="num">Actions</th></tr></thead>
               <tbody>
                 {users.map((u) => (
                   <tr key={u.id}>
                     <td><b>{u.display_name}</b>{u.id === me.id && <span className="pill neutral" style={{ marginLeft: 8 }}>You</span>}</td>
                     <td>{u.username}</td>
                     <td><span className={`role-badge r-${u.role}`}>{ROLES[u.role]?.label || u.role || 'No access'}</span></td>
+                    <td>{drivers.find((d) => d.user_id === u.id)?.name || <span className="muted">–</span>}</td>
                     <td>{fmtWhen(u.last_sign_in_at)}</td>
                     <td>
                       <div className="actions">
-                        <button type="button" className="mini" onClick={() => setEdit({ ...u, password: '' })}>Edit</button>
+                        <button type="button" className="mini" onClick={() => setEdit({ ...u, password: '', driverId: drivers.find((d) => d.user_id === u.id)?.id || '' })}>Edit</button>
                         {u.id !== me.id && <button type="button" className="mini danger" onClick={() => setDel(u)}>Delete</button>}
                       </div>
                     </td>
@@ -182,6 +218,14 @@ function UsersPage() {
             <div className="field">
               <label>Access level</label>
               <RolePicker value={edit.role} onChange={(r) => setEdit({ ...edit, role: r })} name="edit-role" />
+            </div>
+            <div className="field">
+              <label htmlFor="eu-driver">Driver in the list (for Data entry)</label>
+              <select id="eu-driver" value={edit.driverId} onChange={(e) => setEdit({ ...edit, driverId: e.target.value })}>
+                <option value="">Not a driver</option>
+                {drivers.filter((d) => !d.user_id || d.user_id === edit.id).map((d) => <option key={d.id} value={d.id}>{d.name}{d.vehicle_no ? ` (${d.vehicle_no})` : ''}</option>)}
+                <option value="new">+ Add as a new driver</option>
+              </select>
             </div>
             <div className="modal-actions">
               <button type="button" className="btn ghost" onClick={() => setEdit(null)}>Cancel</button>
