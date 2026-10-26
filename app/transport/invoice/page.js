@@ -192,6 +192,27 @@ function InvoicePage() {
 
   useEffect(() => { load(); }, [load]);
 
+  /* Print on ONE A4 page: just before printing, measure the invoice at A4 width
+     (as it will print: no buttons, no empty rows) and shrink it if it is too tall. */
+  const paperRef = useRef(null);
+  useEffect(() => {
+    const A4_H = (297 - 16) * 3.7795; // printable height in px (8 mm margins)
+    const fit = () => {
+      const el = paperRef.current;
+      if (!el) return;
+      el.style.zoom = '';
+      el.classList.add('iv-measure');
+      const h = el.scrollHeight;
+      el.classList.remove('iv-measure');
+      const z = Math.min(1, (A4_H / h) * 0.98);
+      if (z < 1) el.style.zoom = String(Math.max(z, 0.5));
+    };
+    const unfit = () => { if (paperRef.current) paperRef.current.style.zoom = ''; };
+    window.addEventListener('beforeprint', fit);
+    window.addEventListener('afterprint', unfit);
+    return () => { window.removeEventListener('beforeprint', fit); window.removeEventListener('afterprint', unfit); };
+  }, []);
+
   /* Dropdown values: everything already used before, plus drivers and trips */
   const opts = useMemo(() => {
     const L = list || [];
@@ -430,7 +451,7 @@ function InvoicePage() {
       </div>
       {!ro && <p className="iv-hint no-print">✏️ Everything on the invoice can be edited: click any text, heading or label to change it. New invoices keep your wording. Empty rows and helper buttons do not print.</p>}
 
-      <article className={`iv-paper k-${k}${ro ? ' ro' : ''}`}>
+      <article ref={paperRef} className={`iv-paper k-${k}${ro ? ' ro' : ''}`}>
         <div className="iv-mark" aria-hidden="true" />
         <div className="iv-topline" aria-hidden="true" />
 
