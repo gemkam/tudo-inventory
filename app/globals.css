@@ -528,3 +528,32 @@ body .btn.in { background: #1f8a5b; }
 .btn.report { background: transparent; color: var(--brown); border: 1px solid var(--brown); }
 .btn.report:hover { background: transparent; color: var(--brown-hover); border-color: var(--brown-hover); text-decoration: underline; }
 @media (max-width: 760px) { .rp-grid { grid-template-columns: 1fr; } }
+
+/* ================= Pill buttons (same style as the 1bazarify.store menu) ================= */
+.btn, .btn.ghost, .btn.report, .mini {
+  background: #fff; color: var(--ink); border: 1px solid #d6dde1; border-radius: 999px;
+  padding: 7px 16px; font-size: 13.5px; font-weight: 500; line-height: 1.25; text-decoration: none;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  transition: border-color .15s ease, color .15s ease, background .15s ease, box-shadow .15s ease;
+}
+.btn:hover, .btn.ghost:hover, .btn.report:hover, .mini:hover {
+  background: #fff; color: var(--brown); border-color: var(--brown); text-decoration: none;
+  box-shadow: 0 1px 4px rgba(var(--shadow-rgb), .12);
+}
+.btn.small, .mini { padding: 5px 12px; font-size: 12.5px; margin-left: 0; }
+.btn.danger, .mini.danger { color: var(--red); border-color: #ecc3b9; }
+.btn.danger:hover, .mini.danger:hover { background: #fff; color: var(--red); border-color: var(--red); }
+body .btn.in, body .btn.in:hover { background: var(--brown); color: #fff; border-color: var(--brown); }
+.btn:disabled, .btn:disabled:hover { opacity: .5; cursor: default; box-shadow: none; }
+.row-actions { display: table-cell; }
+.row-actions .mini + .mini { margin-left: 4px; }
+
+/* Top menu links as pills */
+.topnav { gap: 6px; }
+.topnav a {
+  padding: 5px 14px; border: 1px solid rgba(255, 255, 255, .35); border-radius: 999px;
+  color: #fff; opacity: 1; font-size: 13px; font-weight: 500; line-height: 1.3;
+}
+.topnav a:hover { background: rgba(255, 255, 255, .12); border-color: rgba(255, 255, 255, .7); }
+.topnav a.active { background: #fff; color: var(--brown); border-color: #fff; }
+.btn.switch, .btn.switch:hover { background: #fff; color: var(--brown); border-color: #fff; }

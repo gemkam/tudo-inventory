@@ -406,7 +406,7 @@ function TransportPage() {
             addLabel="+ Add expense"
             onDelete={(r) => setDelExtra(r)}
             emptyText="No other expenses this month."
-            footer={{ driver: `${monthExtras.length} entries`, amount: fmtAmt(monthExtras.reduce((t2, x) => t2 + Number(x.amount || 0), 0)) }}
+            footer={{ driver: `${monthExtras.length} ${monthExtras.length === 1 ? "entry" : "entries"}`, amount: fmtAmt(monthExtras.reduce((t2, x) => t2 + Number(x.amount || 0), 0)) }}
             flash={flash}
           />
         </section>
