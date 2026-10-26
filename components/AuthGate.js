@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { sb } from '@/lib/supabase';
+import Assistant from '@/components/Assistant';
 
 const UserCtx = createContext({ isAdmin: false, name: '' });
 
@@ -50,6 +51,11 @@ export default function AuthGate({ children, adminOnly = false, wide = false, th
 
   if (!user) return <div className="loading">Loading...</div>;
 
+  // Each section has its own assistant
+  const aiScope = path.startsWith('/transport') ? 'transport'
+    : (path.startsWith('/inventory') || path.startsWith('/c/') || path.startsWith('/bills') || path.startsWith('/log')) ? 'inventory'
+      : null;
+
   const nav = [
     ['/', 'Home'],
     ['/inventory', 'Inventory'],
@@ -80,6 +86,7 @@ export default function AuthGate({ children, adminOnly = false, wide = false, th
           ? <div className="error">Only Administrator can open this page.</div>
           : children}
       </main>
+      {aiScope && <Assistant key={aiScope} scope={aiScope} />}
     </UserCtx.Provider>
   );
 }

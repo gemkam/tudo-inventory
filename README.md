@@ -23,3 +23,10 @@ Next.js + Supabase web app for Tudo office stock (Office Supplies, Kitchen, Sani
 npm install
 npm run dev
 ```
+
+## AI assistants (Inventory and Transport)
+- Each section has its own "Ask AI" button (bottom right) with a mic. Answers in English, Roman Urdu or Urdu script.
+- Server-side key (Vercel > Settings > Environment Variables, type **Secret**):
+  - `GROQ_API_KEY` (get it at console.groq.com). Optional: `AI_MODEL` (default `llama-3.3-70b-versatile`).
+  - Alternatives: `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`.
+- Never prefix the key with NEXT_PUBLIC_.
