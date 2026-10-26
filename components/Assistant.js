@@ -40,6 +40,7 @@ export default function Assistant({ scope }) {
 
   useEffect(() => {
     setMicOk(!!(window.SpeechRecognition || window.webkitSpeechRecognition));
+    window.speechSynthesis?.getVoices();
     try {
       const saved = JSON.parse(localStorage.getItem(`assistant-${scope}`) || 'null');
       if (saved?.msgs) setMsgs(saved.msgs.slice(-20));
@@ -59,21 +60,64 @@ export default function Assistant({ scope }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  function say(text) {
-    if (!speak || typeof window === 'undefined' || !window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text.replace(/[*_#]/g, ''));
-    u.lang = hasUrdu(text) ? 'ur-PK' : 'en-US';
-    const voice = window.speechSynthesis.getVoices().find((v) => v.lang?.toLowerCase().startsWith(u.lang.slice(0, 2)));
-    if (voice) u.voice = voice;
-    u.rate = 1;
-    window.speechSynthesis.speak(u);
+  const [speakingIdx, setSpeakingIdx] = useState(-1);
+
+  // Pick a voice: Urdu script needs an Urdu voice; Roman Urdu sounds natural with a Hindi/Urdu voice; English uses English
+  function pickVoice(text) {
+    const voices = window.speechSynthesis.getVoices();
+    const find = (code) => voices.find((v) => v.lang?.toLowerCase().replace('_', '-').startsWith(code));
+    if (hasUrdu(text)) return { voice: find('ur'), lang: 'ur-PK', urdu: true };
+    const roman = /\b(hai|hain|ka|ki|ke|kitna|kitni|kitne|mein|hua|hui|nahi|aur|baki|bacha|tak|wala|abhi|kul)\b/i.test(text);
+    if (roman) return { voice: find('ur') || find('hi') || find('en'), lang: find('ur') ? 'ur-PK' : (find('hi') ? 'hi-IN' : 'en-US') };
+    return { voice: find('en-gb') || find('en'), lang: 'en-US' };
   }
+
+  // Read text aloud (in small parts so long answers are not cut off)
+  function speakText(text, idx = -1) {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+    const synth = window.speechSynthesis;
+    synth.cancel();
+    const clean = String(text).replace(/[*_#`]/g, '').replace(/\bOMR\b/g, hasUrdu(text) ? 'ریال' : 'Rials').replace(/(\d),(\d{3})/g, '$1$2');
+    const { voice, lang, urdu } = pickVoice(clean);
+    if (urdu && !voice) {
+      setMsgs((m) => [...m, { role: 'assistant', content: 'This device has no Urdu voice, so I cannot read Urdu script aloud. Ask in Roman Urdu or English to listen, or use Chrome on Android or Microsoft Edge on PC (they have Urdu voices).', error: true }]);
+      return;
+    }
+    const parts = clean.split(/(?<=[.!?؟۔\n])\s+/).flatMap((p) => p.match(/.{1,180}(\s|$)/g) || [p]).map((p) => p.trim()).filter(Boolean);
+    setSpeakingIdx(idx);
+    parts.forEach((part, i) => {
+      const u = new SpeechSynthesisUtterance(part);
+      u.lang = lang;
+      if (voice) u.voice = voice;
+      u.rate = 0.95;
+      if (i === parts.length - 1) { u.onend = () => setSpeakingIdx(-1); u.onerror = () => setSpeakingIdx(-1); }
+      synth.speak(u);
+    });
+  }
+
+  function stopSpeaking() {
+    window.speechSynthesis?.cancel();
+    setSpeakingIdx(-1);
+  }
+
+  function say(text, idx) {
+    if (speak) speakText(text, idx);
+  }
+
+  // "padh ke batao", "sunao", "read it" etc: read the last answer again without asking the AI
+  const READ_AGAIN = /^(please\s+)?(read( it)?( out| aloud| again)?|repeat|sunao|suna do|sunaao|padh ?ke (batao|sunao)|parh ?ke (batao|sunao)|پڑھ کے (بتاؤ|سناؤ)|پڑھ کر (بتاؤ|سناؤ)|سناؤ|سنا دو|دوبارہ سناؤ)[\s.!?؟۔]*$/i;
 
   async function send(text) {
     const q = String(text ?? input).trim();
     if (!q || busy) return;
     setInput('');
+    if (READ_AGAIN.test(q)) {
+      const lastIdx = [...msgs].map((m, i) => ({ m, i })).reverse().find(({ m }) => m.role === 'assistant' && !m.error);
+      setMsgs((m) => [...m, { role: 'user', content: q }]);
+      if (lastIdx) speakText(lastIdx.m.content, lastIdx.i);
+      else setMsgs((m) => [...m, { role: 'assistant', content: 'There is no answer to read yet. Ask a question first.', error: true }]);
+      return;
+    }
     const next = [...msgs, { role: 'user', content: q }];
     setMsgs(next);
     setBusy(true);
@@ -87,7 +131,7 @@ export default function Assistant({ scope }) {
       const out = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(`${out.error || 'The assistant could not answer right now. Please try again.'}${out.detail ? `\n\nDetail: ${out.detail}` : ''}`);
       setMsgs((m) => [...m, { role: 'assistant', content: out.answer }]);
-      say(out.answer);
+      say(out.answer, next.length);
     } catch (e) {
       setMsgs((m) => [...m, { role: 'assistant', content: e.message, error: true }]);
     }
@@ -131,7 +175,7 @@ export default function Assistant({ scope }) {
   }
 
   function clearChat() {
-    window.speechSynthesis?.cancel();
+    stopSpeaking();
     setMsgs([]);
   }
 
@@ -159,10 +203,10 @@ export default function Assistant({ scope }) {
           <header className="ai-head">
             <div>
               <div className="ai-title">{cfg.title}</div>
-              <div className="ai-sub">English · Roman Urdu · اردو</div>
+              <div className="ai-sub">{speak ? '🚗 Driving mode: answers are read aloud' : 'English · Roman Urdu · اردو'}</div>
             </div>
             <div className="ai-head-actions">
-              <button type="button" className={`ai-icon ${speak ? 'on' : ''}`} onClick={() => { if (speak) window.speechSynthesis?.cancel(); setSpeak((v) => !v); }} aria-pressed={speak} title={speak ? 'Voice reply is on' : 'Voice reply is off'}>
+              <button type="button" className={`ai-icon ${speak ? 'on' : ''}`} onClick={() => { if (speak) stopSpeaking(); setSpeak((v) => !v); }} aria-pressed={speak} title={speak ? 'Driving mode on: answers are read aloud' : 'Driving mode: read every answer aloud'}>
                 {speak ? (
                   <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" /><path d="M16 8.5a5 5 0 010 7M18.5 6a8.5 8.5 0 010 12" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" /></svg>
                 ) : (
@@ -185,7 +229,19 @@ export default function Assistant({ scope }) {
               </div>
             )}
             {msgs.map((m, i) => (
-              <div key={i} className={`ai-msg ${m.role === 'user' ? 'me' : 'bot'} ${m.error ? 'err' : ''}`} dir="auto">{m.content}</div>
+              <div key={i} className={`ai-msg ${m.role === 'user' ? 'me' : 'bot'} ${m.error ? 'err' : ''}`} dir="auto">
+                {m.content}
+                {m.role === 'assistant' && !m.error && (
+                  <button
+                    type="button"
+                    className={`ai-listen ${speakingIdx === i ? 'on' : ''}`}
+                    onClick={() => (speakingIdx === i ? stopSpeaking() : speakText(m.content, i))}
+                    dir="ltr"
+                  >
+                    {speakingIdx === i ? '■ Stop' : '🔊 Listen'}
+                  </button>
+                )}
+              </div>
             ))}
             {busy && <div className="ai-msg bot typing" aria-label="Thinking"><i /><i /><i /></div>}
           </div>
