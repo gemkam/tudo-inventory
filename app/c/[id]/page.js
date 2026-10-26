@@ -583,7 +583,7 @@ function SheetPage() {
   /* ---------- Render ---------- */
 
   if (!cat && !error) return <div className="loading">Loading sheet...</div>;
-  if (!cat) return <div className="error">{error} <Link href="/">Back to home</Link></div>;
+  if (!cat) return <div className="error">{error} <Link href="/inventory">Back to Inventory</Link></div>;
 
   const lowCount = items.filter(isLow).length;
   const monthIn = num(Object.values(stats).reduce((t, s) => t + s.in, 0));
@@ -688,7 +688,7 @@ function SheetPage() {
   return (
     <>
       <div className="page-tools">
-        <Link href="/" className="crumb">← Home</Link>
+        <Link href="/inventory" className="crumb">← Inventory</Link>
         <div className="tools">
           <div className="search">
             <label htmlFor="sheet-search" className="sr-only">Search items</label>

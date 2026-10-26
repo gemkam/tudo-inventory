@@ -5,104 +5,48 @@ import Link from 'next/link';
 import AuthGate from '@/components/AuthGate';
 import { sb, isLow } from '@/lib/supabase';
 
-function bySort(a, b) {
-  return (a.sort ?? 0) - (b.sort ?? 0) || a.name.localeCompare(b.name);
-}
-
 function Home() {
-  const [cats, setCats] = useState(null);
-  const [bills, setBills] = useState([]);
-  const [error, setError] = useState('');
+  const [inv, setInv] = useState(null);
+  const [tr, setTr] = useState(null);
 
   useEffect(() => {
     (async () => {
       const s = sb();
-      const [c, b] = await Promise.all([
-        s.from('categories').select('id, name, sort, items(id, name, unit, quantity, min_qty, sort)').order('sort').order('name'),
-        s.from('bill_accounts').select('id, name, payment_type, sort').order('sort').order('name')
+      const [c, d, e] = await Promise.all([
+        s.from('categories').select('id, name, items(quantity, min_qty)').order('sort'),
+        s.from('transport_drivers').select('id, name').order('sort'),
+        s.from('transport_entries').select('entry_date').order('entry_date', { ascending: false }).limit(1)
       ]);
-      if (c.error || b.error) setError((c.error || b.error).message);
-      setCats((c.data || []).map((cat) => ({ ...cat, items: (cat.items || []).sort(bySort) })));
-      setBills(b.data || []);
+      const cats = c.data || [];
+      const items = cats.flatMap((x) => x.items || []);
+      setInv({ sections: cats.map((x) => x.name), items: items.length, low: items.filter(isLow).length });
+      setTr({ drivers: (d.data || []).map((x) => x.name), last: e.data?.[0]?.entry_date || null });
     })();
   }, []);
-
-  if (!cats) return <div className="loading">Loading inventory...</div>;
-
-  const lowItems = cats.flatMap((c) => c.items.filter(isLow).map((i) => ({ ...i, category: c.name, category_id: c.id })));
 
   return (
     <>
       <h1 className="center">Tudo Office Inventory System</h1>
-      {error && <div className="error">{error}</div>}
-
-      <div className="tiles">
-        {cats.map((c) => {
-          const low = c.items.filter(isLow).length;
-          return (
-            <div className="tile-wrap" key={c.id}>
-              <Link href={`/c/${c.id}`} className="tile">
-                <span>{c.name}</span>
-                <span className="count">{c.items.length} items</span>
-                {low > 0 && <span className="low-badge">{low} low</span>}
-              </Link>
-              <div className="drop">
-                <ul>
-                  {c.items.length === 0 && <li>No items yet</li>}
-                  {c.items.map((i) => (
-                    <li key={i.id} className={isLow(i) ? 'low' : ''}>
-                      <span>{i.name}</span>
-                      <span className="q">{Number(i.quantity)} {i.unit}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          );
-        })}
-
-        <div className="tile-wrap">
-          <Link href="/bills" className="tile">
-            <span>Bills</span>
-            <span className="count">{bills.length} accounts</span>
-          </Link>
-          <div className="drop">
-            <ul>
-              {bills.map((b) => (
-                <li key={b.id}>
-                  <span>{b.name}</span>
-                  <span className="q">{b.payment_type || ''}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
+      <div className="hub">
+        <Link href="/inventory" className="hub-tile">
+          <span className="hub-kicker">Office</span>
+          <span className="hub-title">Inventory</span>
+          <span className="hub-sub">
+            {inv ? `${[...inv.sections, 'Bills'].join(' · ')}` : 'Office supplies · Kitchen · Sanitary · Bills'}
+          </span>
+          <span className="hub-meta">
+            {inv ? <>{inv.items} {inv.items === 1 ? "item" : "items"}{inv.low > 0 && <b className="hub-alert">{inv.low} low</b>}</> : ' '}
+          </span>
+        </Link>
+        <Link href="/transport" className="hub-tile">
+          <span className="hub-kicker">Transport Division</span>
+          <span className="hub-title">Transport Expense</span>
+          <span className="hub-sub">Trips · Diesel · Tolls · Maintenance · Salaries</span>
+          <span className="hub-meta">
+            {tr ? <>{tr.drivers.length} drivers{tr.drivers.length > 0 && `: ${tr.drivers.join(', ')}`}</> : ' '}
+          </span>
+        </Link>
       </div>
-
-      <section className="panel">
-        <h2>Low stock</h2>
-        {lowItems.length === 0 ? (
-          <p className="empty">Nothing is below its minimum level. Administrator can set a minimum on each item to get alerts here.</p>
-        ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr><th>Item</th><th>Category</th><th className="num">In stock</th><th className="num">Minimum</th></tr>
-              </thead>
-              <tbody>
-                {lowItems.map((i) => (
-                  <tr key={i.id}>
-                    <td>{i.name}</td>
-                    <td><Link href={`/c/${i.category_id}`}>{i.category}</Link></td>
-                    <td className="num"><span className="pill low">{Number(i.quantity)} {i.unit}</span></td>
-                    <td className="num">{Number(i.min_qty)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
     </>
   );
 }

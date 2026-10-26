@@ -18,10 +18,17 @@ function readUser(session) {
   return { isAdmin: u.app_metadata?.role === 'admin', name };
 }
 
-export default function AuthGate({ children, adminOnly = false, wide = false }) {
+export default function AuthGate({ children, adminOnly = false, wide = false, theme = '' }) {
   const router = useRouter();
   const path = usePathname();
   const [user, setUser] = useState(null);
+
+  // Section colour theme (e.g. green for Transport), applied to the whole page
+  useEffect(() => {
+    if (!theme) return undefined;
+    document.body.classList.add(`theme-${theme}`);
+    return () => document.body.classList.remove(`theme-${theme}`);
+  }, [theme]);
 
   useEffect(() => {
     const supabase = sb();
@@ -45,8 +52,8 @@ export default function AuthGate({ children, adminOnly = false, wide = false }) 
 
   const nav = [
     ['/', 'Home'],
-    ['/log', 'Stock log'],
-    ['/bills', 'Bills'],
+    ['/inventory', 'Inventory'],
+    ['/transport', 'Transport'],
     ...(user.isAdmin ? [['/settings', 'Settings']] : [])
   ];
 
@@ -57,7 +64,7 @@ export default function AuthGate({ children, adminOnly = false, wide = false }) 
           <Link href="/" className="brand">Tudo Office Inventory</Link>
           <nav className="topnav">
             {nav.map(([href, label]) => (
-              <Link key={href} href={href} className={path === href ? 'active' : ''}>{label}</Link>
+              <Link key={href} href={href} className={(href === '/' ? path === '/' : path.startsWith(href)) ? 'active' : ''}>{label}</Link>
             ))}
           </nav>
           <div className="top-user">

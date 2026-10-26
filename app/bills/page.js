@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import AuthGate, { useUser } from '@/components/AuthGate';
 import Modal from '@/components/Modal';
 import { sb, fmtOMR, fmtDate } from '@/lib/supabase';
@@ -75,6 +76,7 @@ function BillsPage() {
     <>
       <div className="page-head">
         <div>
+          <Link href="/inventory" className="crumb">← Inventory</Link>
           <h1>Bills</h1>
           <p className="sub">Electricity, water, dispenser and internet payments</p>
         </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import AuthGate from '@/components/AuthGate';
 import { sb, fmtDateTime } from '@/lib/supabase';
 
@@ -34,6 +35,7 @@ function LogPage() {
     <>
       <div className="page-head">
         <div>
+          <Link href="/inventory" className="crumb">← Inventory</Link>
           <h1>Stock log</h1>
           <p className="sub">Every stock in and stock out, newest first</p>
         </div>
