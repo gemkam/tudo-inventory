@@ -72,18 +72,58 @@ export default function Assistant({ scope }) {
     return { voice: find('en-gb') || find('en'), lang: 'en-US' };
   }
 
+  // Online Urdu voice (used when the device has no Urdu voice, for example Chrome on Windows)
+  const audioRef = useRef(null);
+  const runRef = useRef(0);
+
+  async function speakOnline(parts, idx) {
+    const run = ++runRef.current;
+    setSpeakingIdx(idx);
+    const { data } = await sb().auth.getSession();
+    const token = data.session?.access_token || '';
+    // Fetch the first part, then fetch the next while the current one plays
+    const load = (t) => fetch('/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ text: t, lang: 'ur' })
+    }).then(async (r) => {
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'The Urdu voice is not available right now.');
+      return URL.createObjectURL(await r.blob());
+    });
+    try {
+      let next = load(parts[0]);
+      for (let i = 0; i < parts.length; i++) {
+        const src = await next;
+        if (run !== runRef.current) { URL.revokeObjectURL(src); return; }
+        if (i + 1 < parts.length) next = load(parts[i + 1]);
+        await new Promise((resolve, reject) => {
+          const a = new Audio(src);
+          audioRef.current = a;
+          a.onended = resolve;
+          a.onpause = resolve;
+          a.onerror = () => reject(new Error('Could not play the Urdu voice.'));
+          a.play().catch(reject);
+        });
+        URL.revokeObjectURL(src);
+        if (run !== runRef.current) return;
+      }
+    } catch (e) {
+      if (run === runRef.current) setMsgs((m) => [...m, { role: 'assistant', content: e.message, error: true }]);
+    }
+    if (run === runRef.current) setSpeakingIdx(-1);
+  }
+
   // Read text aloud (in small parts so long answers are not cut off)
   function speakText(text, idx = -1) {
-    if (typeof window === 'undefined' || !window.speechSynthesis) return;
-    const synth = window.speechSynthesis;
-    synth.cancel();
+    if (typeof window === 'undefined') return;
+    stopSpeaking();
     const clean = String(text).replace(/[*_#`]/g, '').replace(/\bOMR\b/g, hasUrdu(text) ? 'ریال' : 'Rials').replace(/(\d),(\d{3})/g, '$1$2');
-    const { voice, lang, urdu } = pickVoice(clean);
-    if (urdu && !voice) {
-      setMsgs((m) => [...m, { role: 'assistant', content: 'This device has no Urdu voice, so I cannot read Urdu script aloud. Ask in Roman Urdu or English to listen, or use Chrome on Android or Microsoft Edge on PC (they have Urdu voices).', error: true }]);
-      return;
-    }
     const parts = clean.split(/(?<=[.!?؟۔\n])\s+/).flatMap((p) => p.match(/.{1,180}(\s|$)/g) || [p]).map((p) => p.trim()).filter(Boolean);
+    if (!parts.length) return;
+    const synth = window.speechSynthesis;
+    const { voice, lang, urdu } = synth ? pickVoice(clean) : { urdu: hasUrdu(clean) };
+    if (urdu && !voice) { speakOnline(parts, idx); return; }
+    if (!synth) return;
     setSpeakingIdx(idx);
     parts.forEach((part, i) => {
       const u = new SpeechSynthesisUtterance(part);
@@ -96,7 +136,10 @@ export default function Assistant({ scope }) {
   }
 
   function stopSpeaking() {
+    runRef.current++;
     window.speechSynthesis?.cancel();
+    try { audioRef.current?.pause(); } catch { /* ignore */ }
+    audioRef.current = null;
     setSpeakingIdx(-1);
   }
 
@@ -141,7 +184,7 @@ export default function Assistant({ scope }) {
   function startMic() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return;
-    window.speechSynthesis?.cancel();
+    stopSpeaking();
     const rec = new SR();
     rec.lang = micLang;
     rec.interimResults = true;
