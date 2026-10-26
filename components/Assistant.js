@@ -85,7 +85,7 @@ export default function Assistant({ scope }) {
         body: JSON.stringify({ scope, messages: next.filter((m) => !m.error).slice(-8) })
       });
       const out = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(out.error || 'The assistant could not answer right now. Please try again.');
+      if (!res.ok) throw new Error(`${out.error || 'The assistant could not answer right now. Please try again.'}${out.detail ? `\n\nDetail: ${out.detail}` : ''}`);
       setMsgs((m) => [...m, { role: 'assistant', content: out.answer }]);
       say(out.answer);
     } catch (e) {
