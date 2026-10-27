@@ -66,6 +66,8 @@ export default function MaintenanceSection({ vehicles, canChange, flash }) {
   // Work list: the standard ones plus anything typed before (saved with the rows)
   const workList = [...new Set([...WORK_TYPES, ...rows.map((r) => (r.work || '').trim()).filter(Boolean)])];
 
+  const paidToList = [...new Set(rows.map((r) => (r.paid_to || '').trim()).filter(Boolean))];
+
   const columns = [
     { key: 'work_date', label: 'Date', type: 'date', width: 108, render: (r) => fmtD(r.work_date) || <span className="muted">–</span> },
     { key: 'vehicle', label: 'Vehicle (unit / trailer)', type: 'select', options: vehicles.map(vehicleLabel), width: 170, raw: (r) => labelOf(r.vehicle_id), render: (r) => <b>{labelOf(r.vehicle_id)}</b> },
@@ -77,7 +79,7 @@ export default function MaintenanceSection({ vehicles, canChange, flash }) {
       editable: (r) => r.payment_method === 'PDC',
       render: (r) => (r.payment_method === 'PDC' ? <Due date={r.pdc_date} done={r.status === 'Paid'} /> : <span className="muted">–</span>)
     },
-    { key: 'next_due', label: 'Next due', type: 'date', width: 130, render: (r) => <Due date={r.next_due} done={rows.some((o) => o.id !== r.id && o.vehicle_id === r.vehicle_id && o.work === r.work && o.work_date > r.work_date)} /> },
+    { key: 'paid_to', label: 'Paid To', type: 'combo', options: paidToList, width: 200, placeholder: 'Name of shop, garage or person', render: (r) => r.paid_to || <span className="muted">–</span> },
     { key: 'status', label: 'Payment', type: 'select', options: ['Pending', 'Paid'], width: 100, render: (r) => <span className={`tag ${r.status === 'Pending' ? 'due' : 'ok'}`}>{r.status || 'Pending'}</span> },
     { key: 'notes', label: 'Notes', type: 'text', width: 180 }
   ];
@@ -108,7 +110,7 @@ export default function MaintenanceSection({ vehicles, canChange, flash }) {
       />
       <p className="note">
         PDC: set the cheque date. A reminder shows on the Home page 7 days before, and the alarm rings daily from 3 days before until you set Payment to Paid.
-        Next due: the date of the next service (e.g. next greasing). The reminder stops when you add the next row for the same vehicle and work.
+        Paid To: the shop, garage or person who was paid (any text). Names you type are kept in the list.
       </p>
       {del && (
         <Modal title="Delete maintenance?" onClose={() => setDel(null)}>
