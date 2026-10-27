@@ -2,8 +2,16 @@ import './globals.css';
 import { THEME_BOOT } from '@/lib/theme';
 
 export const metadata = {
+  metadataBase: new URL('https://tudo-inventory.vercel.app'),
   title: 'Tudo Num Office Systems',
-  description: 'Office supplies, kitchen, sanitary stock and bills for Tudo office'
+  description: 'Office inventory and transport expense for Modern City for Express Services LLC',
+  openGraph: {
+    title: 'Tudo Num Office Systems',
+    description: 'Office inventory and transport expense for Modern City for Express Services LLC',
+    siteName: 'Tudo Num Office Systems',
+    type: 'website'
+  },
+  twitter: { card: 'summary_large_image', title: 'Tudo Num Office Systems' }
 };
 
 export default function RootLayout({ children }) {
