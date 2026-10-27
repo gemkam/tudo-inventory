@@ -275,6 +275,17 @@ function ExpensesPage() {
 
       {switcher}
 
+      {companyOf(co).logo && (
+        <div className="print-letterhead print-only">
+          <img src={companyOf(co).logo} alt={companyOf(co).short} />
+          <div>
+            <b>{companyOf(co).name}</b>
+            <span>{companyOf(co).cr}</span>
+            <span>{companyOf(co).address}</span>
+          </div>
+        </div>
+      )}
+
       <div className="company-head">
         <span className="company-name">{EXP_COMPANY}</span>
         <h1>Office Expense</h1>
