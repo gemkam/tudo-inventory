@@ -23,19 +23,24 @@ function Letterhead() {
 function Home() {
   const [inv, setInv] = useState(null);
   const [tr, setTr] = useState(null);
+  const [ex, setEx] = useState(null);
 
   useEffect(() => {
     (async () => {
       const s = sb();
-      const [c, d, e] = await Promise.all([
+      const [c, d, e, x] = await Promise.all([
         s.from('categories').select('id, name, items(quantity, min_qty)').order('sort'),
         s.from('transport_drivers').select('id, name').order('sort'),
-        s.from('transport_entries').select('entry_date').order('entry_date', { ascending: false }).limit(1)
+        s.from('transport_entries').select('entry_date').order('entry_date', { ascending: false }).limit(1),
+        s.from('exp_entries').select('entry_date, paid')
       ]);
       const cats = c.data || [];
       const items = cats.flatMap((x) => x.items || []);
       setInv({ sections: cats.map((x) => x.name), items: items.length, low: items.filter(isLow).length });
-      setTr({ drivers: (d.data || []).map((x) => x.name), last: e.data?.[0]?.entry_date || null });
+      setTr({ drivers: (d.data || []).map((y) => y.name), last: e.data?.[0]?.entry_date || null });
+      const ex2 = x.data || [];
+      const lastMonth = ex2.map((r) => String(r.entry_date).slice(0, 7)).sort().pop();
+      setEx({ bills: ex2.length, month: lastMonth, paid: ex2.filter((r) => String(r.entry_date).startsWith(lastMonth || '-')).reduce((t, r) => t + Number(r.paid || 0), 0) });
     })();
   }, []);
 
@@ -63,6 +68,15 @@ function Home() {
           <span className="hub-sub">Trips · Diesel · Tolls · Maintenance · Salaries</span>
           <span className="hub-meta">
             {tr ? <>{tr.drivers.length} drivers{tr.drivers.length > 0 && `: ${tr.drivers.join(', ')}`}</> : ' '}
+          </span>
+        </Link>
+        <Link href="/expenses" className="hub-tile">
+          <Letterhead />
+          <span className="hub-kicker">Sumptuosity Tropical LLC</span>
+          <span className="hub-title">Office Expense</span>
+          <span className="hub-sub">Bills · Salary · Petrol · Utility · Marketing · VAT</span>
+          <span className="hub-meta">
+            {ex ? (ex.bills ? <>{ex.bills} bills · {ex.month ? new Date(`${ex.month}-01T00:00:00`).toLocaleString('en-GB', { month: 'long' }) : ''}: {ex.paid.toFixed(3)} OMR</> : 'No bills yet') : ' '}
           </span>
         </Link>
       </div>

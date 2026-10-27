@@ -86,6 +86,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
       ['/', 'Home'],
       ['/inventory', 'Inventory'],
       ['/transport', 'Transport'],
+      ['/expenses', 'Expenses'],
       ...(user.isAdmin ? [['/entry', 'Data entry']] : []),
       ...(user.isAdmin ? [['/settings', 'Settings']] : []),
       ...(user.isOwner ? [['/users', 'Users']] : [])
