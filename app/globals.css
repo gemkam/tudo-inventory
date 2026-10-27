@@ -368,7 +368,7 @@ input, select {
 .hub { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
 @media screen and (max-width: 680px) { .hub { grid-template-columns: 1fr; } }
 .hub-tile {
-  position: relative; display: grid; align-content: end; gap: 6px; min-height: 260px; padding: 28px;
+  position: relative; display: grid; align-content: end; gap: 6px; min-height: 290px; padding: 28px;
   border-radius: 14px; text-decoration: none; color: var(--cream); overflow: hidden;
   background: radial-gradient(120% 90% at 100% 0%, var(--brown-hover) 0%, var(--brown) 55%, var(--brown-deep) 100%);
   box-shadow: 0 2px 4px rgba(var(--shadow-rgb), .18);
@@ -1067,3 +1067,12 @@ body .btn.in:hover { background: var(--brown-deep); border-color: var(--brown-de
 
 /* Payment received on a later day than the trip */
 .late-pay { color: var(--brown); font-weight: 600; }
+
+/* Company logo badge on the Transport tile (top left) */
+.hub-logo {
+  position: absolute; top: 28px; left: 28px; z-index: 1;
+  display: grid; place-items: center; width: 92px; height: 82px; padding: 8px;
+  background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, .18);
+}
+.hub-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+@media screen and (max-width: 680px) { .hub-logo { top: 22px; left: 22px; width: 76px; height: 68px; } }

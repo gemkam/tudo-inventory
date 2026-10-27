@@ -39,6 +39,7 @@ function Home() {
           </span>
         </Link>
         <Link href="/transport" className="hub-tile">
+          <span className="hub-logo"><img src="/tudonum-logo.png" alt="Tudo Num" /></span>
           <span className="hub-kicker">Transport Division</span>
           <span className="hub-title">Transport Expense</span>
           <span className="hub-sub">Trips · Diesel · Tolls · Maintenance · Salaries</span>
