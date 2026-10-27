@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import AuthGate from '@/components/AuthGate';
+import TruckAnim from '@/components/TruckAnim';
 import { sb, isLow } from '@/lib/supabase';
 
 function Letterhead() {
@@ -54,6 +55,7 @@ function Home() {
         </Link>
         <Link href="/transport" className="hub-tile">
           <Letterhead />
+          <TruckAnim />
           <span className="hub-kicker">Transport Division</span>
           <span className="hub-title">Transport Expense</span>
           <span className="hub-sub">Trips · Diesel · Tolls · Maintenance · Salaries</span>

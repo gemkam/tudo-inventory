@@ -368,7 +368,7 @@ input, select {
 .hub { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
 @media screen and (max-width: 680px) { .hub { grid-template-columns: 1fr; } }
 .hub-tile {
-  position: relative; display: grid; align-content: end; gap: 6px; min-height: 290px; padding: 28px;
+  position: relative; display: grid; align-content: end; gap: 6px; min-height: 330px; padding: 28px;
   border-radius: 14px; text-decoration: none; color: var(--cream); overflow: hidden;
   background: radial-gradient(120% 90% at 100% 0%, var(--brown-hover) 0%, var(--brown) 55%, var(--brown-deep) 100%);
   box-shadow: 0 2px 4px rgba(var(--shadow-rgb), .18);
@@ -1117,10 +1117,32 @@ body .btn.in:hover { background: var(--brown-deep); border-color: var(--brown-de
   font-size: 11px; letter-spacing: .04em; color: var(--muted); pointer-events: none;
   animation: breathe 3.2s ease-in-out infinite;
 }
-.powered-by b { color: var(--heading); font-weight: 700; }
+.powered-by b { color: inherit; font-weight: 800; }
 @keyframes breathe {
   0%, 100% { opacity: .45; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.06); }
 }
 @media (prefers-reduced-motion: reduce) { .powered-by { animation: none; opacity: .8; } }
 @media print { .powered-by { display: none; } }
+
+/* Transport tile: trailer truck coming towards the viewer */
+.truck-anim { position: absolute; right: 30px; top: 96px; z-index: 0; color: #d9443a; pointer-events: none; }
+.truck-anim svg { display: block; width: 150px; height: 103px; overflow: visible; }
+.ta-truck { transform-box: view-box; transform-origin: 80px 30px; animation: ta-come 3.8s cubic-bezier(.5, 0, .85, .7) infinite; }
+.ta-dashes { animation: ta-road .6s linear infinite; }
+.ta-glow { animation: ta-flicker 1.2s ease-in-out infinite alternate; }
+@keyframes ta-come {
+  0% { transform: scale(.15); opacity: 0; }
+  10% { opacity: 1; }
+  82% { transform: scale(1.35); opacity: 1; }
+  100% { transform: scale(1.75); opacity: 0; }
+}
+@keyframes ta-road { from { transform: translateY(0); } to { transform: translateY(14px); } }
+@keyframes ta-flicker { from { opacity: .55; } to { opacity: 1; } }
+@media screen and (max-width: 680px) {
+  .truck-anim { top: 92px; right: 18px; }
+  .truck-anim svg { width: 120px; height: 82px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ta-truck, .ta-dashes, .ta-glow { animation: none; }
+}
