@@ -1110,3 +1110,17 @@ body .btn.in:hover { background: var(--brown-deep); border-color: var(--brown-de
 
 /* Nothing printed on top of the invoice paper */
 .iv-mark { display: none !important; }
+
+/* Home: "Powered by KS TECH LLC" bottom right, breathing */
+.powered-by {
+  position: fixed; right: max(14px, env(safe-area-inset-right, 0px)); bottom: max(10px, env(safe-area-inset-bottom, 0px)); z-index: 5;
+  font-size: 11px; letter-spacing: .04em; color: var(--muted); pointer-events: none;
+  animation: breathe 3.2s ease-in-out infinite;
+}
+.powered-by b { color: var(--heading); font-weight: 700; }
+@keyframes breathe {
+  0%, 100% { opacity: .45; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+@media (prefers-reduced-motion: reduce) { .powered-by { animation: none; opacity: .8; } }
+@media print { .powered-by { display: none; } }

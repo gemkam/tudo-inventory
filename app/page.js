@@ -62,6 +62,7 @@ function Home() {
           </span>
         </Link>
       </div>
+      <div className="powered-by" aria-label="Powered by KS TECH LLC">Powered by <b>KS TECH LLC</b></div>
     </>
   );
 }
