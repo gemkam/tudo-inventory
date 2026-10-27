@@ -1246,3 +1246,15 @@ tr.muted-row td { opacity: .55; }
 [data-theme="dark"] .exp-alerts .soon { background: rgba(240, 160, 40, .16); color: #ffcf8a; border-color: rgba(255, 207, 138, .4); }
 [data-theme="dark"] .exp-bad { color: #ffb4ab; }
 [data-theme="dark"] .exp-soon { color: #ffcf8a; }
+
+/* Omani Rial symbol (follows the text colour) */
+.omr { display: inline-flex; align-items: baseline; gap: .18em; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.omr-sign {
+  display: inline-block; width: .82em; height: .8em; flex: none; align-self: center;
+  background-color: currentColor;
+  -webkit-mask: url('/omr-sign.svg') center / contain no-repeat; mask: url('/omr-sign.svg') center / contain no-repeat;
+}
+td.num .omr, .num .omr { justify-content: flex-end; }
+@media print { .omr-sign { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+/* the amount keeps the size and colour of where it sits (cards use "span" for labels) */
+span.omr { font-size: inherit !important; font-weight: inherit !important; letter-spacing: inherit !important; text-transform: none !important; color: inherit !important; opacity: 1; margin: 0; }

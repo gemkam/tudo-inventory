@@ -9,6 +9,7 @@ import { sb } from '@/lib/supabase';
 import { num, fmtAmt, monthKey, monthLabel, monthStart, exportStamp, exportExcel, exportPdf, evaluate } from '@/lib/sheet';
 import { SALARY_FIELDS, salaryTotal, salaryPayable } from '@/lib/transport';
 import CompanyHeader, { COMPANY_NAME } from '@/components/CompanyHeader';
+import Omr from '@/components/Omr';
 
 const COMPANY = `${COMPANY_NAME} · Transport Division`;
 
@@ -291,11 +292,11 @@ function TransportPage() {
       <CompanyHeader title="Transport Expense" detail={`Period: ${monthLabel(month)}  |  ${drivers.length} trucks  |  Currency: OMR`} />
 
       <div className="kpi-row">
-        <div className="kpi"><span>Work amount</span><strong>{fmtAmt(t.work)}</strong><small>{t.trips} trips · OMR</small></div>
-        <div className="kpi"><span>Received</span><strong className="pos">{fmtAmt(t.received)}</strong><small>OMR</small></div>
-        <div className="kpi"><span>Receivable</span><strong className={t.receivable > 0 ? 'neg' : ''}>{fmtAmt(t.receivable)}</strong><small>Still to collect</small></div>
-        <div className="kpi"><span>Total expenses</span><strong>{fmtAmt(t.expenses)}</strong><small>Diesel, toll, maintenance, salary</small></div>
-        <div className="kpi hero"><span>Profit</span><strong>{fmtAmt(t.profit)}</strong><small>OMR · {monthLabel(month)}</small></div>
+        <div className="kpi"><span>Work amount</span><strong><Omr v={t.work} /></strong><small>{t.trips} trips · OMR</small></div>
+        <div className="kpi"><span>Received</span><strong className="pos"><Omr v={t.received} /></strong><small>OMR</small></div>
+        <div className="kpi"><span>Receivable</span><strong className={t.receivable > 0 ? 'neg' : ''}><Omr v={t.receivable} /></strong><small>Still to collect</small></div>
+        <div className="kpi"><span>Total expenses</span><strong><Omr v={t.expenses} /></strong><small>Diesel, toll, maintenance, salary</small></div>
+        <div className="kpi hero"><span>Profit</span><strong><Omr v={t.profit} /></strong><small>OMR · {monthLabel(month)}</small></div>
       </div>
 
       <div className="driver-cards">
@@ -307,8 +308,8 @@ function TransportPage() {
             </div>
             <dl>
               <div><dt>Trips</dt><dd>{r.trips}</dd></div>
-              <div><dt>Work</dt><dd>{fmtAmt(r.work)}</dd></div>
-              <div><dt>Profit</dt><dd className={r.profit < 0 ? 'neg' : 'pos'}>{fmtAmt(r.profit)}</dd></div>
+              <div><dt>Work</dt><dd><Omr v={r.work} /></dd></div>
+              <div><dt>Profit</dt><dd className={r.profit < 0 ? 'neg' : 'pos'}><Omr v={r.profit} /></dd></div>
             </dl>
             <div className="card-links">
               <Link href={`/transport/${r.driver.id}`} className="open stretch">Open trip sheet →</Link>

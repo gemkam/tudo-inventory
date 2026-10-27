@@ -5,6 +5,7 @@ import Link from 'next/link';
 import AuthGate, { useUser } from '@/components/AuthGate';
 import Modal from '@/components/Modal';
 import { sb, fmtOMR, fmtDate } from '@/lib/supabase';
+import Omr from '@/components/Omr';
 
 function today() {
   const d = new Date();
@@ -86,14 +87,14 @@ function BillsPage() {
       {msg && <div className="ok-msg">{msg}</div>}
 
       <div className="stats">
-        <div className="stat"><div className="label">This month</div><div className="value">{fmtOMR(sum(thisMonth))}</div></div>
-        <div className="stat"><div className="label">This year</div><div className="value">{fmtOMR(sum(thisYear))}</div></div>
+        <div className="stat"><div className="label">This month</div><div className="value"><Omr v={sum(thisMonth)} /></div></div>
+        <div className="stat"><div className="label">This year</div><div className="value"><Omr v={sum(thisYear)} /></div></div>
         {accounts.map((a) => {
           const last = payments.find((p) => p.account_id === a.id);
           return (
             <div className="stat" key={a.id}>
               <div className="label">{a.name}{a.payment_type ? ` (${a.payment_type})` : ''}</div>
-              <div className="value" style={{ fontSize: 18 }}>{last ? fmtOMR(last.amount) : 'No payments'}</div>
+              <div className="value" style={{ fontSize: 18 }}>{last ? <Omr v={last.amount} /> : 'No payments'}</div>
               {last && <div className="sub" style={{ fontSize: 13 }}>Last paid {fmtDate(last.paid_on)}</div>}
             </div>
           );
@@ -150,7 +151,7 @@ function BillsPage() {
                     <td>{fmtDate(p.paid_on)}</td>
                     <td>{p.bill_accounts?.name}</td>
                     <td>{p.period || ''}</td>
-                    <td className="num">{fmtOMR(p.amount)}</td>
+                    <td className="num"><Omr v={p.amount} /></td>
                     <td>{p.note || ''}</td>
                     {isAdmin && <td><div className="actions"><button className="btn small ghost" onClick={() => setDel(p)}>Delete</button></div></td>}
                   </tr>

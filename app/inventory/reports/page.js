@@ -11,7 +11,7 @@ import { RANGES, rangeBounds, inRange, rangeNote, lastNDays } from '@/lib/ranges
 const RANGE_KEYS = ['today', 'yesterday', 'week', 'month', 'lastmonth', 'all'];
 const UNIT = { packets: 'Packets', pcs: 'Pieces', roll: 'Rolls', box: 'Box', carton: 'Carton', ream: 'Ream', bottle: 'Bottle', set: 'Set', kg: 'Kg', litre: 'Litre' };
 const unit = (u) => UNIT[u] || u || '';
-const money = (v) => fmtMoney(v) || '0 Bz';
+const money = (v) => fmtMoney(v) || '0.000 OMR';
 const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 
 function InventoryReports() {
@@ -188,7 +188,7 @@ function InventoryReports() {
           <div className="rp-card">
             <div className="rp-card-title">Where the stock value is <span className="rp-card-note">· today</span></div>
             <div className="rp-takeaway">{r.stockValue > 0 ? `${topCat.label} holds ${Math.round((topCat.value / r.stockValue) * 100)}% of the stock value.` : 'Add prices to items to see stock value.'}</div>
-            <Donut slices={r.catValue} fmt={money} centerBig={r.stockValue >= 1 ? r.stockValue.toFixed(0) : String(Math.round(r.stockValue * 1000))} centerSmall={r.stockValue >= 1 ? 'Rials' : 'Bz'} />
+            <Donut slices={r.catValue} fmt={money} centerBig={r.stockValue.toFixed(3)} centerSmall="OMR" />
           </div>
           <div className="rp-card">
             <div className="rp-card-title">Stock health <span className="rp-card-note">· today</span></div>

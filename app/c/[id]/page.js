@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import AuthGate, { useUser } from '@/components/AuthGate';
 import Modal from '@/components/Modal';
 import { sb, isLow, fmtDateTime } from '@/lib/supabase';
+import Omr from '@/components/Omr';
 
 /*
   Sheet columns.
@@ -54,12 +55,11 @@ function evaluate(raw, current) {
   return num(relative ? Number(current) + value : value);
 }
 
-/* Omani money: below 1 OMR shows Baisa (Bz), 1 OMR and above shows Rials */
+/* Omani money: always 3 decimals, e.g. 0.800 OMR, 1.000 OMR */
 function fmtMoney(v) {
   const n = num(v);
   if (n <= 0) return '';
-  if (n < 1) return `${Math.round(n * 1000)} Bz`;
-  return `${n.toFixed(3)} ${n === 1 ? 'Rial' : 'Rials'}`;
+  return `${n.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} OMR`;
 }
 
 /* Units shown in the Unit dropdown */
@@ -673,11 +673,11 @@ function SheetPage() {
         return (
           <div className="qty">
             {canChange && stepper(`Lower price of ${it.name}`, Number(it.price) <= 0, () => setPrice(it, Math.max(0, num(Number(it.price) - PRICE_STEP))))}
-            <span className={Number(it.price) > 0 ? 'money' : 'muted'}>{fmtMoney(it.price) || '–'}</span>
+            {Number(it.price) > 0 ? <Omr v={it.price} className="money" /> : <span className="muted">–</span>}
             {canChange && stepper(`Raise price of ${it.name}`, false, () => setPrice(it, num(Number(it.price) + PRICE_STEP)))}
           </div>
         );
-      case 'value': return <span className={valueOf(it) > 0 ? 'money strong' : 'muted'}>{fmtMoney(valueOf(it)) || '–'}</span>;
+      case 'value': return valueOf(it) > 0 ? <Omr v={valueOf(it)} className="money strong" /> : <span className="muted">–</span>;
       case 'min_qty': return <span>{num(it.min_qty)}</span>;
       case 'in_m': return <span className={st.in ? 'pos' : 'muted'}>{st.in ? `+${st.in}` : '0'}</span>;
       case 'out_m': return <span className={st.out ? 'neg' : 'muted'}>{st.out ? `−${st.out}` : '0'}</span>;
@@ -714,7 +714,7 @@ function SheetPage() {
           </p>
         </div>
         <div className="sheet-kpis">
-          <div><span>Stock value</span><strong>{fmtMoney(stockValue) || '0'}</strong></div>
+          <div><span>Stock value</span><strong><Omr v={stockValue} /></strong></div>
           <div><span>In this month</span><strong className="pos">{monthIn ? `+${monthIn}` : 0}</strong></div>
           <div><span>Out this month</span><strong className="neg">{monthOut ? `−${monthOut}` : 0}</strong></div>
         </div>
@@ -788,7 +788,7 @@ function SheetPage() {
                   <div className="foot-sum">
                     <span>{items.length} items</span>
                     <span className={lowCount ? 'neg' : ''}>{lowCount} low</span>
-                    <span>Value {fmtMoney(stockValue) || '0'}</span>
+                    <span>Value <Omr v={stockValue} /></span>
                     <span className="pos">In {monthIn ? `+${monthIn}` : 0}</span>
                     <span className="neg">Out {monthOut ? `−${monthOut}` : 0}</span>
                   </div>
@@ -802,7 +802,7 @@ function SheetPage() {
           {!isAdmin
             ? 'View only. Ask Administrator to make changes.'
             : editMode
-              ? 'Type 10 to set, +5 to add, -2 to subtract, =4*3 to calculate. Price is in OMR, e.g. 0.800 shows as 800 Bz. Packets work out from "In 1 packet".'
+              ? 'Type 10 to set, +5 to add, -2 to subtract, =4*3 to calculate. Price is in OMR with 3 decimals, e.g. 0.800 or 1.000. Packets work out from "In 1 packet".'
               : 'Click Edit to change items, stock and prices.'}
         </p>
       </section>

@@ -9,6 +9,7 @@ import Modal from '@/components/Modal';
 import CompanyHeader, { COMPANY_NAME } from '@/components/CompanyHeader';
 import { sb } from '@/lib/supabase';
 import { num, fmtAmt, fmtDay, fmtFullDate, monthKey, monthLabel, monthStart, todayISO, exportStamp, exportExcel, exportPdf } from '@/lib/sheet';
+import Omr from '@/components/Omr';
 
 const NUM_KEYS = ['rent', 'received', 'driver_allowance', 'diesel', 'toll', 'maintenance'];
 
@@ -215,10 +216,10 @@ function DriverSheet() {
 
       <div className="kpi-row">
         <div className="kpi"><span>Trips</span><strong>{totals.trips}</strong><small>{monthLabel(month)}</small></div>
-        <div className="kpi"><span>Work amount</span><strong>{fmtAmt(totals.rent)}</strong><small>OMR</small></div>
-        <div className="kpi"><span>Balance to collect</span><strong className={totals.balance > 0 ? 'neg' : ''}>{fmtAmt(totals.balance)}</strong><small>Rent − received</small></div>
-        <div className="kpi"><span>Trip costs</span><strong>{fmtAmt(totals.costs)}</strong><small>Diesel, toll, maintenance</small></div>
-        <div className="kpi hero"><span>Net before salary</span><strong>{fmtAmt(totals.net)}</strong><small>OMR</small></div>
+        <div className="kpi"><span>Work amount</span><strong><Omr v={totals.rent} /></strong><small>OMR</small></div>
+        <div className="kpi"><span>Balance to collect</span><strong className={totals.balance > 0 ? 'neg' : ''}><Omr v={totals.balance} /></strong><small>Rent − received</small></div>
+        <div className="kpi"><span>Trip costs</span><strong><Omr v={totals.costs} /></strong><small>Diesel, toll, maintenance</small></div>
+        <div className="kpi hero"><span>Net before salary</span><strong><Omr v={totals.net} /></strong><small>OMR</small></div>
       </div>
 
       <section className={`sheet ${editMode ? 'is-editing' : ''}`}>

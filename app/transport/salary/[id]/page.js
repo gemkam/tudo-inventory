@@ -9,6 +9,7 @@ import { monthKey, monthLabel } from '@/lib/sheet';
 import { SALARY_FIELDS, salaryTotal, salaryPayable } from '@/lib/transport';
 import { omrInWords } from '@/lib/words';
 import { useShare } from '@/components/ShareModal';
+import Omr from '@/components/Omr';
 
 const COMPANY = {
   name: 'MODERN CITY FOR EXPRESS SERVICES LLC',
@@ -148,7 +149,7 @@ function SlipPage() {
               <span>Net pay</span>
               <small>{omrInWords(net)}</small>
             </div>
-            <strong>{m3(net)} <em>OMR</em></strong>
+            <strong><Omr v={net} /></strong>
           </div>
 
           <p className="slip-foot">This is a computer generated salary slip from Tudo Num Office Systems.</p>
