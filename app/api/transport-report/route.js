@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import nodemailer from 'nodemailer';
 import { buildTransportPdf, fmt3, mlabel } from '@/lib/transportReportPdf';
+import { GROUP_SOURCES, buildLines, buildIncome, computeGroup, shiftMonth, fmt as gfmt } from '@/lib/groupSummary';
+import { buildGroupPdf } from '@/lib/groupSummaryPdf';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -49,13 +51,49 @@ async function send(note) {
     'This email is sent automatically by Tudo Num Office Systems.'
   ].filter((l, i, a) => l !== '' || a[i - 1] !== '').join('\n');
 
+  // Group Summary for last month (all companies + transport). Never stops the transport email.
+  const attachments = [{ filename: `Transport Expense Report ${stamp}.pdf`, content: pdf, contentType: 'application/pdf' }];
+  let groupText = '';
+  try {
+    const g = await anon().rpc('report_group_data', { p_key: key });
+    if (g.error) throw g.error;
+    const src = { exp: g.data.exp || [], te: data.entries || [], ts: data.salaries || [], tx: data.extras || [], drivers: data.drivers || [] };
+    const lines = buildLines(src);
+    const income = buildIncome(src);
+    const today = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Muscat' }).slice(0, 10);
+    const months = [...new Set(lines.map((l) => l.month))].sort();
+    let period = shiftMonth(today.slice(0, 7), -1);
+    if (!months.includes(period) && months.length) period = months.filter((mo) => mo <= period).pop() || months[months.length - 1];
+    const G = computeGroup({ lines, income, budgets: g.data.budgets || [], pick: GROUP_SOURCES.map((x) => x.key), period, today });
+    let logo = null;
+    const host = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+    if (host) {
+      try {
+        const res = await fetch(`https://${host}/tudonum-group.png`);
+        if (res.ok) logo = `data:image/png;base64,${Buffer.from(await res.arrayBuffer()).toString('base64')}`;
+      } catch { /* no logo */ }
+    }
+    const gdoc = buildGroupPdf(G, { periodLabel: mlabel(period), monthLabel: mlabel, logo });
+    attachments.push({ filename: `Group Summary ${mlabel(period)}.pdf`, content: Buffer.from(gdoc.output('arraybuffer')), contentType: 'application/pdf' });
+    groupText = [
+      '',
+      `Group Summary ${mlabel(period)} (OMR, attached):`,
+      `Total spent: ${gfmt(G.grand.spent)}`,
+      G.grand.unpaid ? `Unpaid: ${gfmt(G.grand.unpaid)}` : '',
+      G.budgetTotal.budget ? `Budget used: ${Math.round((G.budgetTotal.actual / G.budgetTotal.budget) * 100)}%` : '',
+      ...G.alerts.slice(0, 5).map((a) => `- ${a.text.replace(/[^\x20-\x7E]/g, '').trim()}`)
+    ].filter(Boolean).join('\n');
+  } catch (e) {
+    console.error('group summary pdf error', e);
+  }
+
   const mailer = nodemailer.createTransport({ service: 'gmail', auth: { user, pass } });
   await mailer.sendMail({
     from: `Tudo Num Office Systems <${user}>`,
     to,
-    subject: `Transport Expense Report · ${stamp}`,
-    text,
-    attachments: [{ filename: `Transport Expense Report ${stamp}.pdf`, content: pdf, contentType: 'application/pdf' }]
+    subject: `${groupText ? "Transport Expense Report and Group Summary" : "Transport Expense Report"} · ${stamp}`,
+    text: groupText ? text.replace('\nThis email is sent automatically', `${groupText}\n\nThis email is sent automatically`) : text,
+    attachments
   });
   return Response.json({ ok: true, to, note, bytes: pdf.length });
 }

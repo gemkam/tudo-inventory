@@ -21,7 +21,8 @@ function useTip() {
 }
 
 /* Donut with legend. slices: [{ label, value, color }] */
-export function Donut({ slices, fmt = (v) => v, centerBig, centerSmall }) {
+export function Donut({ slices, fmt = (v) => v, centerBig, centerSmall, onPick }) {
+  const click = (i) => (onPick ? { onClick: () => onPick(i, slices[i]), style: { cursor: 'pointer' } } : {});
   const { show, hide, node } = useTip();
   const total = slices.reduce((t, s) => t + (s.value > 0 ? s.value : 0), 0);
   const cx = 100, cy = 100, r = 78, w = 26;
@@ -35,9 +36,9 @@ export function Donut({ slices, fmt = (v) => v, centerBig, centerSmall }) {
       const a1 = a0 + frac * Math.PI * 2;
       const tipText = <><b>{s.label}</b><br />{fmt(s.value)} · {Math.round(frac * 100)}%</>;
       if (frac >= 0.999) {
-        arcs.push(<circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={s.color} strokeWidth={w} onMouseMove={(e) => show(e, tipText)} onMouseLeave={hide} />);
+        arcs.push(<circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={s.color} strokeWidth={w} onMouseMove={(e) => show(e, tipText)} onMouseLeave={hide} {...click(i)} />);
       } else {
-        arcs.push(<path key={i} d={`M ${p(a0)} A ${r} ${r} 0 ${a1 - a0 > Math.PI ? 1 : 0} 1 ${p(a1)}`} fill="none" stroke={s.color} strokeWidth={w} onMouseMove={(e) => show(e, tipText)} onMouseLeave={hide} />);
+        arcs.push(<path key={i} d={`M ${p(a0)} A ${r} ${r} 0 ${a1 - a0 > Math.PI ? 1 : 0} 1 ${p(a1)}`} fill="none" stroke={s.color} strokeWidth={w} onMouseMove={(e) => show(e, tipText)} onMouseLeave={hide} {...click(i)} />);
         arcs.push(<line key={`g${i}`} x1={cx + (r - w / 2 - 1) * Math.cos(a1)} y1={cy + (r - w / 2 - 1) * Math.sin(a1)} x2={cx + (r + w / 2 + 1) * Math.cos(a1)} y2={cy + (r + w / 2 + 1) * Math.sin(a1)} stroke="#ffffff" strokeWidth="2.5" />);
       }
       a0 = a1;
@@ -51,8 +52,8 @@ export function Donut({ slices, fmt = (v) => v, centerBig, centerSmall }) {
         <text x={cx} y={cy + 22} textAnchor="middle" fill="var(--muted)" fontSize="12" fontFamily="var(--body)">{centerSmall}</text>
       </svg>
       <div className="rp-legend">
-        {slices.map((s) => (
-          <div className="rp-leg-row" key={s.label}>
+        {slices.map((s, i) => (
+          <div className={`rp-leg-row${onPick ? ' pickable' : ''}`} key={s.label} {...click(i)}>
             <span className="rp-leg-dot" style={{ background: s.color }} />
             <span className="rp-leg-name">{s.label}</span>
             <span className="rp-leg-val"><b>{total ? Math.round((Math.max(s.value, 0) / total) * 100) : 0}%</b> · {fmt(s.value)}</span>
@@ -65,7 +66,7 @@ export function Donut({ slices, fmt = (v) => v, centerBig, centerSmall }) {
 }
 
 /* Vertical bars, one series, best bar highlighted. Negative values drop below the baseline. */
-export function Bars({ labels, values, fmt = (v) => v, highlight = -1, labelAll = false, height = 200 }) {
+export function Bars({ labels, values, fmt = (v) => v, highlight = -1, labelAll = false, height = 200, onPick }) {
   const ref = useRef(null);
   const [W, setW] = useState(640);
   const { show, hide, node } = useTip();
@@ -107,7 +108,7 @@ export function Bars({ labels, values, fmt = (v) => v, highlight = -1, labelAll 
                 <text x={x + bw / 2} y={v >= 0 ? y - 6 : base + h + 13} textAnchor="middle" fontSize="11.5" fontWeight={i === highlight ? 700 : 500} fill={i === highlight ? 'var(--ink)' : 'var(--muted)'}>{fmt(v)}</text>
               )}
               {showLbl && <text x={x + bw / 2} y={H - 8} textAnchor="middle" fontSize="11" fontWeight={i === highlight ? 700 : 400} fill={i === highlight ? 'var(--ink)' : 'var(--muted)'}>{labels[i]}</text>}
-              <rect x={i * slot} y="0" width={slot} height={H} fill="transparent" onMouseMove={(e) => show(e, <><b>{labels[i]}</b><br />{fmt(v)}</>)} onMouseLeave={hide} />
+              <rect x={i * slot} y="0" width={slot} height={H} fill="transparent" onMouseMove={(e) => show(e, <><b>{labels[i]}</b><br />{fmt(v)}</>)} onMouseLeave={hide} onClick={onPick ? () => onPick(i) : undefined} style={onPick ? { cursor: 'pointer' } : undefined} />
             </g>
           );
         })}
@@ -119,7 +120,7 @@ export function Bars({ labels, values, fmt = (v) => v, highlight = -1, labelAll 
 }
 
 /* Two series side by side per label (e.g. In vs Out, Work vs Expenses). */
-export function PairBars({ labels, a, b, aLabel, bLabel, aColor = SERIES[0], bColor = SERIES[1], fmt = (v) => v, height = 210 }) {
+export function PairBars({ labels, a, b, aLabel, bLabel, aColor = SERIES[0], bColor = SERIES[1], fmt = (v) => v, height = 210, onPick }) {
   const ref = useRef(null);
   const [W, setW] = useState(640);
   const { show, hide, node } = useTip();
@@ -153,7 +154,7 @@ export function PairBars({ labels, a, b, aLabel, bLabel, aColor = SERIES[0], bCo
               {bar(x0, a[i], aColor, 'a', aLabel)}
               {bar(x0 + bw + 2, b[i], bColor, 'b', bLabel)}
               <text x={i * slot + slot / 2} y={H - 8} textAnchor="middle" fontSize="11" fill="var(--muted)">{l}</text>
-              <rect x={i * slot} y="0" width={slot} height={H} fill="transparent" onMouseMove={(e) => show(e, <><b>{l}</b><br />{aLabel}: {fmt(a[i])}<br />{bLabel}: {fmt(b[i])}</>)} onMouseLeave={hide} />
+              <rect x={i * slot} y="0" width={slot} height={H} fill="transparent" onMouseMove={(e) => show(e, <><b>{l}</b><br />{aLabel}: {fmt(a[i])}<br />{bLabel}: {fmt(b[i])}</>)} onMouseLeave={hide} onClick={onPick ? () => onPick(i) : undefined} style={onPick ? { cursor: 'pointer' } : undefined} />
             </g>
           );
         })}
@@ -164,13 +165,13 @@ export function PairBars({ labels, a, b, aLabel, bLabel, aColor = SERIES[0], bCo
 }
 
 /* Horizontal bars for ranked lists with long names. rows: [{ label, value, sub }] */
-export function HBars({ rows, fmt = (v) => v, color = BAR }) {
+export function HBars({ rows, fmt = (v) => v, color = BAR, onPick }) {
   const max = Math.max(0, ...rows.map((r) => r.value));
   if (!max) return <div className="rp-empty">Nothing to show for this period yet.</div>;
   return (
     <div className="rp-hbars">
       {rows.map((r, i) => (
-        <div className="rp-hbar" key={r.label} title={`${r.label}: ${fmt(r.value)}`}>
+        <div className={`rp-hbar${onPick ? ' pickable' : ''}`} key={r.label} title={`${r.label}: ${fmt(r.value)}`} onClick={onPick ? () => onPick(i, r) : undefined}>
           <span className="rp-hbar-name">{r.label}</span>
           <span className="rp-hbar-track">
             <span className="rp-hbar-fill" style={{ width: `${Math.max(2, (r.value / max) * 100)}%`, background: i === 0 ? color : BAR_MUTED }} />

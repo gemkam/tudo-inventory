@@ -1,47 +1,59 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import AuthGate from '@/components/AuthGate';
+import AuthGate, { useUser } from '@/components/AuthGate';
 import Omr from '@/components/Omr';
+import Modal from '@/components/Modal';
 import { useShare } from '@/components/ShareModal';
+import { Donut, Bars, PairBars, SERIES } from '@/components/Charts';
 import { sb } from '@/lib/supabase';
-import { fmtAmt, monthKey, monthLabel, todayISO, exportStamp } from '@/lib/sheet';
-import { COMPANIES, n, r3 } from '@/lib/expenses';
-import { salaryPayable } from '@/lib/transport';
-import { Donut, Bars, SERIES } from '@/components/Charts';
+import { fmtAmt, monthLabel, todayISO, exportStamp } from '@/lib/sheet';
+import { COMPANIES, HEADS, r3 } from '@/lib/expenses';
+import { buildReminders, whenText } from '@/lib/reminders';
+import { GROUP_SOURCES as SOURCES, TRANSPORT_HEADS, buildLines, buildIncome, computeGroup, periodLabelOf, shiftMonth } from '@/lib/groupSummary';
 
-/* Sources the user can pick: the three companies + Transport Expense */
-const SOURCES = [
-  ...COMPANIES.map((c) => ({ key: c.key, label: c.short, full: c.name, kind: 'company' })),
-  { key: 'transport', label: 'Transport Expense', full: 'MODERN CITY FOR EXPRESS SERVICES L.L.C (Transport Division)', kind: 'transport' }
-];
 const PICK_KEY = 'tudo-summary-pick';
+const dmy = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
+const labelOf = (key) => SOURCES.find((s) => s.key === key)?.label || key;
+const pct = (v, t) => (t ? Math.round((v / t) * 100) : 0);
+const fmtO = (v) => `${fmtAmt(v)} OMR`;
+const shortM = (m) => new Date(`${m}-01T00:00:00`).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
 
 function SummaryPage() {
+  const { isAdmin } = useUser();
   const [data, setData] = useState(null);
   const [pick, setPick] = useState(SOURCES.map((s) => s.key));
   const [period, setPeriod] = useState('');
   const [open, setOpen] = useState(false);
+  const [drill, setDrill] = useState(null);
+  const [budgetOpen, setBudgetOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
   const ddRef = useRef(null);
   const { open: openShare, modal } = useShare();
+
+  const load = useCallback(async () => {
+    const s = sb();
+    const [e, te, ts, tx, dr, bu, ve, ma] = await Promise.all([
+      s.from('exp_entries').select('company, entry_date, bill_no, description, category, head, paid, unpaid, vat'),
+      s.from('transport_entries').select('entry_date, received_date, driver_id, from_place, to_place, description, rent, received, diesel, toll, maintenance'),
+      s.from('transport_salaries').select('*'),
+      s.from('transport_extras').select('driver_id, month, description, amount'),
+      s.from('transport_drivers').select('id, name'),
+      s.from('exp_budgets').select('*'),
+      s.from('transport_vehicles').select('*'),
+      s.from('vehicle_maintenance').select('*')
+    ]);
+    setData({ exp: e.data || [], te: te.data || [], ts: ts.data || [], tx: tx.data || [], drivers: dr.data || [], budgets: bu.data || [], vehicles: ve.data || [], maint: ma.data || [] });
+  }, []);
 
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(PICK_KEY) || 'null');
       if (Array.isArray(saved) && saved.length) setPick(saved.filter((k) => SOURCES.some((s) => s.key === k)));
     } catch { /* ignore */ }
-    (async () => {
-      const s = sb();
-      const [e, te, ts, tx] = await Promise.all([
-        s.from('exp_entries').select('company, entry_date, head, paid, unpaid, vat'),
-        s.from('transport_entries').select('entry_date, rent, received, diesel, toll, maintenance'),
-        s.from('transport_salaries').select('*'),
-        s.from('transport_extras').select('month, amount')
-      ]);
-      setData({ exp: e.data || [], te: te.data || [], ts: ts.data || [], tx: tx.data || [] });
-    })();
-  }, []);
+    load();
+  }, [load]);
 
   useEffect(() => {
     function close(ev) { if (ddRef.current && !ddRef.current.contains(ev.target)) setOpen(false); }
@@ -49,121 +61,103 @@ function SummaryPage() {
     return () => document.removeEventListener('mousedown', close);
   }, []);
 
-  function toggle(k) {
-    setPick((p) => {
-      const next = p.includes(k) ? p.filter((x) => x !== k) : [...p, k];
-      try { localStorage.setItem(PICK_KEY, JSON.stringify(next)); } catch { /* ignore */ }
-      return next;
-    });
-  }
-  function setAll(on) {
-    const next = on ? SOURCES.map((s) => s.key) : [];
+  function savePick(next) {
     setPick(next);
     try { localStorage.setItem(PICK_KEY, JSON.stringify(next)); } catch { /* ignore */ }
   }
+  const toggle = (k) => savePick(pick.includes(k) ? pick.filter((x) => x !== k) : [...pick, k]);
 
-  /* One list of expense lines from every source: { src, month, head, amount, unpaid, vat } */
-  const lines = useMemo(() => {
-    if (!data) return [];
-    const out = data.exp.map((r) => ({ src: r.company || 'sumptuosity', month: monthKey(r.entry_date), head: r.head || 'Other', amount: n(r.paid), unpaid: n(r.unpaid), vat: n(r.vat) }));
-    for (const r of data.te) {
-      const m = monthKey(r.entry_date);
-      if (n(r.diesel)) out.push({ src: 'transport', month: m, head: 'Diesel', amount: n(r.diesel) });
-      if (n(r.toll)) out.push({ src: 'transport', month: m, head: 'Toll + visa exit fee', amount: n(r.toll) });
-      if (n(r.maintenance)) out.push({ src: 'transport', month: m, head: 'Vehicle Running and Maintenance', amount: n(r.maintenance) });
-    }
-    for (const s of data.ts) out.push({ src: 'transport', month: monthKey(s.month), head: 'Salary', amount: salaryPayable(s) });
-    for (const x of data.tx) if (n(x.amount)) out.push({ src: 'transport', month: monthKey(x.month), head: 'Other (trailer rent etc.)', amount: n(x.amount) });
-    return out.filter((l) => l.amount || l.unpaid || l.vat);
-  }, [data]);
+  const lines = useMemo(() => (data ? buildLines(data) : []), [data]);
+  const income = useMemo(() => (data ? buildIncome(data) : []), [data]);
+  const today = todayISO();
+  const thisMonth = today.slice(0, 7);
+  const lastMonth = shiftMonth(thisMonth, -1);
 
-  const income = useMemo(() => {
-    if (!data) return [];
-    return data.te.map((r) => ({ month: monthKey(r.entry_date), work: n(r.rent), received: n(r.received) }));
-  }, [data]);
+  const allMonths = useMemo(() => [...new Set([...lines.map((l) => l.month), ...income.map((i) => i.month)])].filter(Boolean).sort(), [lines, income]);
+  useEffect(() => { if (!period && allMonths.length) setPeriod(allMonths[allMonths.length - 1]); }, [allMonths, period]);
 
-  const months = useMemo(() => [...new Set([...lines.map((l) => l.month), ...income.map((i) => i.month)])].filter(Boolean).sort(), [lines, income]);
-  const years = useMemo(() => [...new Set(months.map((m) => m.slice(0, 4)))], [months]);
+  const G = useMemo(() => (data && period ? computeGroup({ lines, income, budgets: data.budgets, pick, period, today }) : null), [data, lines, income, pick, period, today]);
 
-  useEffect(() => { if (!period && months.length) setPeriod(months[months.length - 1]); }, [months, period]);
+  // vehicle reminders (VOC, Mulkiya, PDC) join the alerts when Transport is chosen
+  const vehicleAlerts = useMemo(() => {
+    if (!data || !pick.includes('transport')) return [];
+    return buildReminders(data.vehicles, data.maint).map((r) => ({
+      level: r.urgent ? 'bad' : 'warn', icon: r.kind === 'pay' ? '💳' : r.kind === 'renew' ? '📄' : '🔧',
+      text: `${r.title}: ${r.detail}, ${whenText(r.left)} (${dmy(r.date)}).`, link: '/transport/vehicles'
+    }));
+  }, [data, pick]);
 
-  const inPeriod = (m) => period === 'all' || (period.length === 4 ? m.startsWith(period) : m === period);
-  const chosen = SOURCES.filter((s) => pick.includes(s.key));
-  const sel = lines.filter((l) => pick.includes(l.src) && inPeriod(l.month));
-  const sum = (arr, k = 'amount') => r3(arr.reduce((t, x) => t + n(x[k]), 0));
+  if (!data || !period || !G) return <div className="loading">Loading summary...</div>;
 
-  const perSource = chosen.map((s) => {
-    const ls = sel.filter((l) => l.src === s.key);
-    const row = { ...s, spent: sum(ls), unpaid: sum(ls, 'unpaid'), vat: sum(ls, 'vat'), count: ls.length };
-    if (s.kind === 'transport') {
-      const inc = income.filter((i) => inPeriod(i.month));
-      row.work = r3(inc.reduce((t, i) => t + i.work, 0));
-      row.received = r3(inc.reduce((t, i) => t + i.received, 0));
-      row.profit = r3(row.work - row.spent);
-    }
-    return row;
-  });
-  const grand = { spent: r3(perSource.reduce((t, s) => t + s.spent, 0)), unpaid: r3(perSource.reduce((t, s) => t + s.unpaid, 0)), vat: r3(perSource.reduce((t, s) => t + s.vat, 0)) };
-
-  const heads = [...new Set(sel.map((l) => l.head))]
-    .map((h) => ({ head: h, vals: chosen.map((s) => sum(sel.filter((l) => l.head === h && l.src === s.key))), total: sum(sel.filter((l) => l.head === h)) }))
-    .sort((a, b) => b.total - a.total);
-
-  const periodMonths = months.filter(inPeriod);
-  const byMonth = periodMonths.map((m) => ({ month: m, vals: chosen.map((s) => sum(sel.filter((l) => l.month === m && l.src === s.key))), total: sum(sel.filter((l) => l.month === m)) }));
-
-  const periodLabel = period === 'all' ? 'All months' : period.length === 4 ? `Year ${period}` : monthLabel(period);
-
-  /* ---- report style (same as the Snooker Cafe dashboard) ---- */
-  const fmtO = (v) => `${fmtAmt(v)} OMR`;
-  const pct = (v, t) => (t ? Math.round((v / t) * 100) : 0);
-  const thisMonth = todayISO().slice(0, 7);
-  const lastMonth = (() => { const d = new Date(`${thisMonth}-01T00:00:00`); d.setMonth(d.getMonth() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; })();
-  const prevPeriod = period === 'all' ? null : period.length === 4 ? String(Number(period) - 1)
-    : (() => { const d = new Date(`${period}-01T00:00:00`); d.setMonth(d.getMonth() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; })();
-  const prevSpent = prevPeriod ? sum(lines.filter((l) => pick.includes(l.src) && (prevPeriod.length === 4 ? l.month.startsWith(prevPeriod) : l.month === prevPeriod))) : null;
-  const change = prevSpent ? Math.round(((grand.spent - prevSpent) / prevSpent) * 100) : null;
-  const ranked = [...perSource].sort((a, b) => b.spent - a.spent);
+  const periodLabel = periodLabelOf(period, monthLabel);
+  const years = [...new Set(allMonths.map((m) => m.slice(0, 4)))];
+  const alerts = [...G.alerts.filter((a) => a.level !== 'info'), ...vehicleAlerts, ...G.alerts.filter((a) => a.level === 'info')];
+  const ranked = [...G.perSource].sort((a, b) => b.spent - a.spent);
   const topCo = ranked[0];
-  const topHead = heads[0];
-  const transportRow = perSource.find((s) => s.kind === 'transport');
-  const coSlices = perSource.map((s, i) => ({ label: s.label, value: s.spent, color: SERIES[i % SERIES.length] }));
-  const headTop = heads.slice(0, 5);
-  const headRest = r3(heads.slice(5).reduce((t, h) => t + h.total, 0));
+  const topHead = G.heads[0];
+  const tRow = G.perSource.find((s) => s.kind === 'transport');
+  const coSlices = G.perSource.map((s, i) => ({ label: s.label, value: s.spent, color: SERIES[i % SERIES.length], key: s.key }));
+  const headTop = G.heads.slice(0, 5);
+  const headRest = r3(G.heads.slice(5).reduce((t, h) => t + h.total, 0));
   const headSlices = [...headTop.map((h, i) => ({ label: h.head, value: h.total, color: SERIES[i] })), ...(headRest ? [{ label: 'Everything else', value: headRest, color: '#9aa5a1' }] : [])];
-  const barMonths = months.slice(-12);
-  const barVals = barMonths.map((m) => sum(lines.filter((l) => pick.includes(l.src) && l.month === m)));
-  const shortM = (m) => new Date(`${m}-01T00:00:00`).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
+  const barMonths = allMonths.slice(-12);
+  const barVals = barMonths.map((m) => r3(lines.filter((l) => pick.includes(l.src) && l.month === m).reduce((t, l) => t + l.amount, 0)));
   let barHi = barMonths.indexOf(period);
   if (barHi < 0) barHi = barVals.indexOf(Math.max(...barVals));
   const maxIdx = barVals.indexOf(Math.max(...barVals));
-  const paidPart = r3(grand.spent);
-  const statusSlices = [
-    { label: 'Paid', value: paidPart, color: SERIES[2] },
-    { label: 'Unpaid', value: grand.unpaid, color: SERIES[7] }
-  ];
+  const bt = G.budgetTotal;
+  const cashNetIdx = G.cash.net.length - 1;
 
-  function share() {
-    const lines2 = [
-      `Group Summary · ${periodLabel}`,
-      ...perSource.map((s) => `${s.label}: ${fmtAmt(s.spent)} OMR${s.kind === 'transport' ? ` (work ${fmtAmt(s.work)}, profit ${fmtAmt(s.profit)})` : ''}`),
-      `Total spent: ${fmtAmt(grand.spent)} OMR`,
-      grand.unpaid ? `Unpaid: ${fmtAmt(grand.unpaid)} OMR` : '',
-      grand.vat ? `VAT: ${fmtAmt(grand.vat)} OMR` : '',
-      '',
-      'Top heads:',
-      ...heads.slice(0, 6).map((h) => `${h.head}: ${fmtAmt(h.total)} OMR`)
-    ].filter((x, i, a) => x !== '' || a[i - 1] !== '');
-    openShare({ title: `Group Summary ${periodLabel}`, text: lines2.join('\n') });
+  /* drill down: list of bills behind a number */
+  function openDrill(title, filter, from = G.sel) {
+    const ls = from.filter(filter).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    setDrill({ title, lines: ls });
+  }
+  const drillHead = (head) => openDrill(`${head} · ${periodLabel}`, (l) => l.head === head);
+  const drillCompany = (key) => openDrill(`${labelOf(key)} · ${periodLabel}`, (l) => l.src === key);
+  const drillMonth = (m) => openDrill(`${monthLabel(m)} · all chosen`, (l) => l.month === m, lines.filter((l) => pick.includes(l.src)));
+  function drillAlert(a) {
+    if (a.link) { window.location.href = a.link; return; }
+    if (a.pick?.head) drillHead(a.pick.head);
+    else if (a.pick?.unpaidOld) setDrill({ title: 'Unpaid bills older than 30 days', lines: G.unpaidBills.filter((l) => l.age > 30), unpaid: true });
   }
 
-  if (!data || !period) return <div className="loading">Loading summary...</div>;
+  function share() {
+    const t = [
+      `Group Summary · ${periodLabel}`,
+      ...G.perSource.map((s) => `${s.label}: ${fmtAmt(s.spent)} OMR${s.kind === 'transport' ? ` (work ${fmtAmt(s.work)}, profit ${fmtAmt(s.profit)})` : ''}`),
+      `Total spent: ${fmtAmt(G.grand.spent)} OMR`,
+      G.grand.unpaid ? `Unpaid: ${fmtAmt(G.grand.unpaid)} OMR` : '',
+      bt.budget ? `Budget used: ${pct(bt.actual, bt.budget)}% (${fmtAmt(bt.actual)} of ${fmtAmt(bt.budget)})` : '',
+      '',
+      ...(alerts.length ? ['Alerts:', ...alerts.slice(0, 5).map((a) => `- ${a.text}`), ''] : []),
+      'Top heads:',
+      ...G.heads.slice(0, 6).map((h) => `${h.head}: ${fmtAmt(h.total)} OMR`)
+    ].filter((x, i, a) => x !== '' || a[i - 1] !== '');
+    openShare({ title: `Group Summary ${periodLabel}`, text: t.join('\n') });
+  }
+
+  async function downloadPdf() {
+    setBusy(true);
+    try {
+      const { buildGroupPdf } = await import('@/lib/groupSummaryPdf');
+      let logo = null;
+      try {
+        const blob = await (await fetch('/tudonum-group.png')).blob();
+        logo = await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(blob); });
+      } catch { /* no logo */ }
+      const doc = buildGroupPdf(G, { periodLabel, monthLabel, logo, extraAlerts: vehicleAlerts });
+      doc.save(`Group Summary ${periodLabel}.pdf`);
+    } finally { setBusy(false); }
+  }
 
   return (
     <>
       <div className="page-tools">
         <Link href="/expenses" className="crumb">← Office Expense</Link>
         <div className="tools">
+          {isAdmin && <button type="button" className="btn ghost" onClick={() => setBudgetOpen(true)}>🎯 Budgets</button>}
+          <button type="button" className="btn ghost" onClick={downloadPdf} disabled={busy}>{busy ? 'Making PDF...' : '⬇ PDF'}</button>
           <button type="button" className="btn ghost" onClick={share}>📤 Share</button>
           <button type="button" className="btn ghost" onClick={() => window.print()}>🖨 Print</button>
         </div>
@@ -177,17 +171,17 @@ function SummaryPage() {
       <div className="company-head">
         <span className="company-name">Tudo Num Group</span>
         <h1>Group Summary</h1>
-        <p className="sub">{periodLabel} · {chosen.length ? chosen.map((s) => s.label).join(', ') : 'Nothing selected'} · OMR</p>
+        <p className="sub">{periodLabel} · {G.chosen.length ? G.chosen.map((s) => s.label).join(', ') : 'Nothing selected'} · OMR</p>
       </div>
 
       <div className="sum-controls no-print">
         <div className="sum-dd" ref={ddRef}>
           <button type="button" className="btn" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
-            Show: {chosen.length === SOURCES.length ? 'All' : chosen.length ? chosen.map((s) => s.label).join(', ') : 'Choose...'} ▾
+            Show: {G.chosen.length === SOURCES.length ? 'All' : G.chosen.length ? G.chosen.map((s) => s.label).join(', ') : 'Choose...'} ▾
           </button>
           {open && (
             <div className="sum-dd-menu" role="menu">
-              <label className="check"><input type="checkbox" checked={chosen.length === SOURCES.length} onChange={(e) => setAll(e.target.checked)} /> <b>All</b></label>
+              <label className="check"><input type="checkbox" checked={G.chosen.length === SOURCES.length} onChange={(e) => savePick(e.target.checked ? SOURCES.map((s) => s.key) : [])} /> <b>All</b></label>
               {SOURCES.map((s) => (
                 <label key={s.key} className="check"><input type="checkbox" checked={pick.includes(s.key)} onChange={() => toggle(s.key)} /> {s.label}</label>
               ))}
@@ -209,48 +203,119 @@ function SummaryPage() {
         <div className="month-select">
           <label htmlFor="sum-period">Period</label>
           <select id="sum-period" value={period} onChange={(e) => setPeriod(e.target.value)}>
-            {[...months].reverse().map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
+            {[...allMonths].reverse().map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
             {years.map((y) => <option key={y} value={y}>Year {y}</option>)}
             <option value="all">All months</option>
           </select>
         </div>
       </div>
 
-      {chosen.length === 0 ? (
+      {G.chosen.length === 0 ? (
         <div className="panel"><p className="empty">Choose one or more from the list above.</p></div>
       ) : (
-        <>
-          <div className="sum-report">
+        <div className="sum-report">
+          {alerts.length > 0 && (
+            <section className="sum-alerts" aria-label="Alerts">
+              <div className="sum-alerts-title">🔔 Needs attention <span>({alerts.length})</span></div>
+              {alerts.map((a, i) => (
+                <button type="button" key={i} className={`sum-alert ${a.level}`} onClick={() => drillAlert(a)} disabled={!a.pick && !a.link}>
+                  <span className="sum-alert-icon">{a.icon}</span><span>{a.text}</span>{(a.pick || a.link) && <span className="sum-alert-go no-print">View ›</span>}
+                </button>
+              ))}
+            </section>
+          )}
+
           <div className="rp-tiles">
-            <div className="rp-tile hero"><div className="rp-tile-label">💰 Total spent</div><div className="rp-tile-num"><Omr v={grand.spent} /></div>
-              <div className="rp-tile-sub">{change == null ? periodLabel : `${change > 0 ? '▲' : change < 0 ? '▼' : '='} ${Math.abs(change)}% vs ${prevPeriod.length === 4 ? prevPeriod : monthLabel(prevPeriod)}`}</div></div>
-            <div className="rp-tile"><div className="rp-tile-label">⏳ Unpaid</div><div className={`rp-tile-num ${grand.unpaid ? 'neg' : ''}`}><Omr v={grand.unpaid} /></div><div className="rp-tile-sub">{grand.unpaid ? 'Still to pay' : 'All bills paid'}</div></div>
-            <div className="rp-tile"><div className="rp-tile-label">🧾 VAT 5%</div><div className="rp-tile-num"><Omr v={grand.vat} /></div><div className="rp-tile-sub">On bills</div></div>
-            <div className="rp-tile"><div className="rp-tile-label">🏢 Spent the most</div><div className="rp-tile-num sm">{topCo?.spent ? topCo.label : '–'}</div><div className="rp-tile-sub">{topCo?.spent ? `${fmtO(topCo.spent)} · ${pct(topCo.spent, grand.spent)}%` : 'No spending'}</div></div>
-            <div className="rp-tile"><div className="rp-tile-label">🏆 Top expense</div><div className="rp-tile-num sm">{topHead ? topHead.head : '–'}</div><div className="rp-tile-sub">{topHead ? `${fmtO(topHead.total)} · ${pct(topHead.total, grand.spent)}%` : 'No spending'}</div></div>
-            {transportRow ? (
-              <div className="rp-tile"><div className="rp-tile-label">🚚 Transport profit</div><div className={`rp-tile-num ${transportRow.profit < 0 ? 'neg' : 'pos'}`}><Omr v={transportRow.profit} /></div><div className="rp-tile-sub">Work {fmtO(transportRow.work)}</div></div>
+            <div className="rp-tile hero"><div className="rp-tile-label">💰 Total spent</div><div className="rp-tile-num"><Omr v={G.grand.spent} /></div>
+              <div className="rp-tile-sub">{G.change == null ? periodLabel : `${G.change > 0 ? '▲' : G.change < 0 ? '▼' : '='} ${Math.abs(G.change)}% vs ${G.prevPeriod.length === 4 ? G.prevPeriod : monthLabel(G.prevPeriod)}`}</div></div>
+            <div className="rp-tile"><div className="rp-tile-label">🎯 Budget used</div>
+              <div className={`rp-tile-num ${bt.budget && bt.actual > bt.budget ? 'neg' : ''}`}>{bt.budget ? `${pct(bt.actual, bt.budget)}%` : '–'}</div>
+              <div className="rp-tile-sub">{bt.budget ? `${fmtO(bt.actual)} of ${fmtO(bt.budget)}` : isAdmin ? 'Press 🎯 Budgets to set' : 'No budgets set yet'}</div></div>
+            <div className="rp-tile"><div className="rp-tile-label">⏳ Unpaid</div><div className={`rp-tile-num ${G.grand.unpaid ? 'neg' : ''}`}><Omr v={G.grand.unpaid} /></div><div className="rp-tile-sub">{G.grand.unpaid ? 'Still to pay' : 'All bills paid'}</div></div>
+            <div className="rp-tile"><div className="rp-tile-label">🧾 VAT 5%</div><div className="rp-tile-num"><Omr v={G.grand.vat} /></div><div className="rp-tile-sub">On bills</div></div>
+            <div className="rp-tile"><div className="rp-tile-label">🏢 Spent the most</div><div className="rp-tile-num sm">{topCo?.spent ? topCo.label : '–'}</div><div className="rp-tile-sub">{topCo?.spent ? `${fmtO(topCo.spent)} · ${pct(topCo.spent, G.grand.spent)}%` : 'No spending'}</div></div>
+            <div className="rp-tile"><div className="rp-tile-label">🏆 Top expense</div><div className="rp-tile-num sm">{topHead ? topHead.head : '–'}</div><div className="rp-tile-sub">{topHead ? `${fmtO(topHead.total)} · ${pct(topHead.total, G.grand.spent)}%` : 'No spending'}</div></div>
+            <div className="rp-tile"><div className="rp-tile-label">💵 Cash in minus out</div><div className={`rp-tile-num ${G.cash.totalNet < 0 ? 'neg' : 'pos'}`}><Omr v={G.cash.totalNet} /></div><div className="rp-tile-sub">In {fmtAmt(G.cash.totalIn)} · Out {fmtAmt(G.cash.totalOut)}</div></div>
+            {tRow ? (
+              <div className="rp-tile"><div className="rp-tile-label">🚚 Transport profit</div><div className={`rp-tile-num ${tRow.profit < 0 ? 'neg' : 'pos'}`}><Omr v={tRow.profit} /></div><div className="rp-tile-sub">Work {fmtO(tRow.work)}</div></div>
             ) : (
-              <div className="rp-tile"><div className="rp-tile-label">📄 Bills</div><div className="rp-tile-num">{sel.length}</div><div className="rp-tile-sub">Lines counted</div></div>
+              <div className="rp-tile"><div className="rp-tile-label">📄 Bills</div><div className="rp-tile-num">{G.sel.length}</div><div className="rp-tile-sub">Lines counted</div></div>
             )}
           </div>
+
+          <p className="note no-print sum-hint">Tip: click any chart, row or alert to see the bills behind it.</p>
 
           <div className="rp-grid">
             <div className="rp-card">
               <div className="rp-card-title">Where the money goes</div>
-              <div className="rp-takeaway">{topCo?.spent ? `${topCo.label} spent the most: ${pct(topCo.spent, grand.spent)}% of the total.` : 'Nothing spent in this period.'}</div>
-              <Donut slices={coSlices} fmt={fmtO} centerBig={Math.round(grand.spent).toLocaleString("en-GB")} centerSmall="OMR spent" />
+              <div className="rp-takeaway">{topCo?.spent ? `${topCo.label} spent the most: ${pct(topCo.spent, G.grand.spent)}% of the total.` : 'Nothing spent in this period.'}</div>
+              <Donut slices={coSlices} fmt={fmtO} centerBig={Math.round(G.grand.spent).toLocaleString('en-GB')} centerSmall="OMR spent" onPick={(i) => drillCompany(coSlices[i].key)} />
             </div>
             <div className="rp-card">
               <div className="rp-card-title">What it was spent on</div>
-              <div className="rp-takeaway">{topHead ? `${topHead.head} is the biggest expense: ${pct(topHead.total, grand.spent)}%.` : 'Nothing spent in this period.'}</div>
-              <Donut slices={headSlices} fmt={fmtO} centerBig={String(heads.length)} centerSmall="heads" />
+              <div className="rp-takeaway">{topHead ? `${topHead.head} is the biggest expense: ${pct(topHead.total, G.grand.spent)}%.` : 'Nothing spent in this period.'}</div>
+              <Donut slices={headSlices} fmt={fmtO} centerBig={String(G.heads.length)} centerSmall="heads"
+                onPick={(i, s) => (s.label === 'Everything else' ? openDrill(`Other heads · ${periodLabel}`, (l) => !headTop.some((h) => h.head === l.head)) : drillHead(s.label))} />
             </div>
+
+            <div className="rp-card rp-wide">
+              <div className="rp-card-title">🎯 Budget vs actual <span className="rp-card-note">({G.nMonths} month{G.nMonths === 1 ? '' : 's'} of budget)</span></div>
+              {G.budgetHeads.length ? (
+                <>
+                  <div className="rp-takeaway">{G.overBudget.length ? `${G.overBudget.length} head${G.overBudget.length === 1 ? ' is' : 's are'} over budget.` : `All heads within budget. ${fmtO(r3(bt.budget - bt.actual))} left.`}</div>
+                  <div className="bva">
+                    {G.budgetHeads.map((b) => {
+                      const max = Math.max(b.budget, b.actual);
+                      const cls = b.actual > b.budget ? 'over' : b.pct >= 85 ? 'near' : 'ok';
+                      return (
+                        <button type="button" className="bva-row" key={b.head} onClick={() => drillHead(b.head)}>
+                          <span className="bva-name">{b.head}</span>
+                          <span className="bva-track">
+                            <span className={`bva-fill ${cls}`} style={{ width: `${Math.max(1, (b.actual / max) * 100)}%` }} />
+                            <span className="bva-mark" style={{ left: `${(b.budget / max) * 100}%` }} title={`Budget ${fmtO(b.budget)}`} />
+                          </span>
+                          <span className={`bva-val ${cls}`}><b>{b.pct}%</b> {fmtAmt(b.actual)} / {fmtAmt(b.budget)}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="rp-mini-legend bva-legend"><span><i className="ok" />Under 85%</span><span><i className="near" />85% to 100%</span><span><i className="over" />Over budget</span><span><i className="mark" />Budget line</span></div>
+                </>
+              ) : (
+                <div className="rp-empty">No budgets yet. {isAdmin ? <button type="button" className="btn" onClick={() => setBudgetOpen(true)}>🎯 Set monthly budgets</button> : 'Ask the Administrator to set monthly budgets.'}</div>
+              )}
+            </div>
+
+            <div className="rp-card rp-wide">
+              <div className="rp-card-title">💵 Cash flow <span className="rp-card-note">(money in from transport vs money spent, by month)</span></div>
+              <div className="rp-takeaway">
+                {G.cash.months.length ? `${G.cash.totalNet >= 0 ? 'More came in than went out' : 'More went out than came in'}: ${fmtO(Math.abs(G.cash.totalNet))} over ${G.cash.months.length} month${G.cash.months.length === 1 ? '' : 's'}.${cashNetIdx >= 0 ? ` ${monthLabel(G.cash.months[cashNetIdx])}: ${G.cash.net[cashNetIdx] >= 0 ? '+' : ''}${fmtAmt(G.cash.net[cashNetIdx])}.` : ''}` : ' '}
+                {!pick.includes('transport') && ' Choose Transport Expense to see money in.'}
+              </div>
+              <PairBars labels={G.cash.months.map(shortM)} a={G.cash.in} b={G.cash.out} aLabel="Money in (received)" bLabel="Money spent" aColor={SERIES[2]} bColor={SERIES[1]} fmt={fmtO} onPick={(i) => drillMonth(G.cash.months[i])} />
+              {G.owed > 0 && <p className="note">Still to receive from transport work: <b>{fmtO(G.owed)}</b></p>}
+            </div>
+
             <div className="rp-card">
-              <div className="rp-card-title">Paid and unpaid</div>
-              <div className="rp-takeaway">{grand.unpaid ? `${fmtO(grand.unpaid)} is still unpaid.` : 'Everything is paid.'}</div>
-              <Donut slices={statusSlices} fmt={fmtO} centerBig={`${pct(grand.unpaid, grand.spent + grand.unpaid)}%`} centerSmall="unpaid" />
+              <div className="rp-card-title">⏳ Unpaid bills by age</div>
+              <div className="rp-takeaway">{G.unpaidBills.length ? `${G.unpaidBills.length} unpaid bill${G.unpaidBills.length === 1 ? '' : 's'}: ${fmtO(G.unpaidAll)}. Pay the oldest first.` : 'No unpaid bills. 👍'}</div>
+              <div className="age-bars">
+                {G.ageing.map((a, i) => (
+                  <button type="button" key={a.label} className={`age-row a${i}`} onClick={() => a.count && setDrill({ title: `Unpaid bills ${a.label}`, lines: a.lines, unpaid: true })} disabled={!a.count}>
+                    <span className="age-name">{a.label}</span>
+                    <span className="rp-hbar-track"><span className="rp-hbar-fill" style={{ width: `${G.unpaidAll ? Math.max(a.amount ? 3 : 0, (a.amount / G.unpaidAll) * 100) : 0}%` }} /></span>
+                    <span className="age-val"><b>{fmtAmt(a.amount)}</b> <small>{a.count} bill{a.count === 1 ? '' : 's'}</small></span>
+                  </button>
+                ))}
+              </div>
+              {G.unpaidBills.length > 0 && (
+                <table className="rp-block-table age-list">
+                  <thead><tr><th>Oldest</th><th>Company</th><th className="num">Unpaid</th><th className="num">Days</th></tr></thead>
+                  <tbody>{G.unpaidBills.slice(0, 5).map((l, i) => <tr key={i}><td>{dmy(l.date)} {l.desc ? <small className="muted">{l.desc.slice(0, 28)}</small> : null}</td><td>{labelOf(l.src)}</td><td className="num">{fmtAmt(l.unpaid)}</td><td className="num">{l.age}</td></tr>)}</tbody>
+                </table>
+              )}
             </div>
+
             <div className="rp-card">
               <div className="rp-card-title">Company ranking</div>
               <div className="rp-takeaway">{ranked.length > 1 && ranked[1].spent ? `${ranked[0].label} spent ${fmtO(r3(ranked[0].spent - ranked[1].spent))} more than ${ranked[1].label}.` : ' '}</div>
@@ -258,18 +323,29 @@ function SummaryPage() {
                 <thead><tr><th>#</th><th>Company</th><th className="num">Spent</th><th className="num">Share</th></tr></thead>
                 <tbody>
                   {ranked.map((s, i) => (
-                    <tr key={s.key} className={i === 0 && s.spent ? 'top' : ''}><td>{i + 1}</td><td>{s.label}</td><td className="num">{fmtAmt(s.spent)}</td><td className="num">{pct(s.spent, grand.spent)}%</td></tr>
+                    <tr key={s.key} className={`pickable ${i === 0 && s.spent ? 'top' : ''}`} onClick={() => drillCompany(s.key)}><td>{i + 1}</td><td>{s.label}</td><td className="num">{fmtAmt(s.spent)}</td><td className="num">{pct(s.spent, G.grand.spent)}%</td></tr>
                   ))}
-                  <tr className="sum"><td /><td>Total</td><td className="num">{fmtAmt(grand.spent)}</td><td className="num">100%</td></tr>
+                  <tr className="sum"><td /><td>Total</td><td className="num">{fmtAmt(G.grand.spent)}</td><td className="num">100%</td></tr>
                 </tbody>
               </table>
             </div>
+
             <div className="rp-card rp-wide">
               <div className="rp-card-title">Money spent each month <span className="rp-card-note">(last {barMonths.length} months, chosen companies)</span></div>
               <div className="rp-takeaway">{barVals[maxIdx] ? `Highest month: ${monthLabel(barMonths[maxIdx])} with ${fmtO(barVals[maxIdx])}.` : ' '}</div>
-              <Bars labels={barMonths.map(shortM)} values={barVals} fmt={(v) => fmtAmt(v)} highlight={barHi} labelAll={barMonths.length <= 8} />
+              <Bars labels={barMonths.map(shortM)} values={barVals} fmt={(v) => fmtAmt(v)} highlight={barHi} labelAll={barMonths.length <= 8} onPick={(i) => drillMonth(barMonths[i])} />
             </div>
-          </div>
+
+            <div className="rp-card rp-wide">
+              <div className="rp-card-title">📅 Year on year <span className="rp-card-note">({G.yoy.prevYear} vs {G.yoy.year}, same months)</span></div>
+              <div className="rp-takeaway">
+                {G.yoy.hasPrev
+                  ? `${G.yoy.year} so far: ${fmtO(G.yoy.curTotal)} vs ${fmtO(G.yoy.prevTotal)} in ${G.yoy.prevYear} (${G.yoy.curTotal >= G.yoy.prevTotal ? '▲' : '▼'} ${Math.abs(pct(G.yoy.curTotal - G.yoy.prevTotal, G.yoy.prevTotal))}%).`
+                  : `No ${G.yoy.prevYear} data yet. This comparison fills in by itself from next year.`}
+              </div>
+              <PairBars labels={G.yoy.labels} a={G.yoy.prev} b={G.yoy.cur} aLabel={G.yoy.prevYear} bLabel={G.yoy.year} aColor="#9aa5a1" bColor={SERIES[0]} fmt={fmtO}
+                onPick={(i) => drillMonth(`${G.yoy.year}-${String(i + 1).padStart(2, '0')}`)} />
+            </div>
           </div>
 
           <section className="panel">
@@ -278,8 +354,8 @@ function SummaryPage() {
               <table className="summary-table">
                 <thead><tr><th>Company</th><th className="num">Spent</th><th className="num">Unpaid</th><th className="num">VAT</th><th className="num">Work amount</th><th className="num">Profit</th></tr></thead>
                 <tbody>
-                  {perSource.map((s) => (
-                    <tr key={s.key}>
+                  {G.perSource.map((s) => (
+                    <tr key={s.key} className="pickable" onClick={() => drillCompany(s.key)}>
                       <td><b>{s.label}</b><div className="note">{s.full}</div></td>
                       <td className="num">{fmtAmt(s.spent)}</td>
                       <td className="num">{s.unpaid ? fmtAmt(s.unpaid) : <span className="muted">–</span>}</td>
@@ -288,7 +364,7 @@ function SummaryPage() {
                       <td className={`num ${s.profit < 0 ? 'neg' : 'pos'}`}>{s.kind === 'transport' ? fmtAmt(s.profit) : <span className="muted">–</span>}</td>
                     </tr>
                   ))}
-                  <tr className="sum"><td>Total</td><td className="num">{fmtAmt(grand.spent)}</td><td className="num">{fmtAmt(grand.unpaid)}</td><td className="num">{fmtAmt(grand.vat)}</td><td /><td /></tr>
+                  <tr className="sum"><td>Total</td><td className="num">{fmtAmt(G.grand.spent)}</td><td className="num">{fmtAmt(G.grand.unpaid)}</td><td className="num">{fmtAmt(G.grand.vat)}</td><td /><td /></tr>
                 </tbody>
               </table>
             </div>
@@ -298,37 +374,120 @@ function SummaryPage() {
             <h2>By head of account</h2>
             <div className="table-wrap">
               <table className="summary-table">
-                <thead><tr><th>Head of account</th>{chosen.map((s) => <th key={s.key} className="num">{s.label}</th>)}<th className="num">Total</th></tr></thead>
+                <thead><tr><th>Head of account</th>{G.chosen.map((s) => <th key={s.key} className="num">{s.label}</th>)}<th className="num">Total</th></tr></thead>
                 <tbody>
-                  {heads.map((h) => (
-                    <tr key={h.head}><td>{h.head}</td>{h.vals.map((v, i) => <td key={i} className="num">{v ? fmtAmt(v) : <span className="muted">–</span>}</td>)}<td className="num"><b>{fmtAmt(h.total)}</b></td></tr>
+                  {G.heads.map((h) => (
+                    <tr key={h.head} className="pickable" onClick={() => drillHead(h.head)}><td>{h.head}</td>{h.vals.map((v, i) => <td key={i} className="num">{v ? fmtAmt(v) : <span className="muted">–</span>}</td>)}<td className="num"><b>{fmtAmt(h.total)}</b></td></tr>
                   ))}
-                  <tr className="sum"><td>Total</td>{perSource.map((s) => <td key={s.key} className="num">{fmtAmt(s.spent)}</td>)}<td className="num">{fmtAmt(grand.spent)}</td></tr>
+                  <tr className="sum"><td>Total</td>{G.perSource.map((s) => <td key={s.key} className="num">{fmtAmt(s.spent)}</td>)}<td className="num">{fmtAmt(G.grand.spent)}</td></tr>
                 </tbody>
               </table>
             </div>
           </section>
 
-          {byMonth.length > 1 && (
+          {G.byMonth.length > 1 && (
             <section className="panel">
               <h2>By month</h2>
               <div className="table-wrap">
                 <table className="summary-table">
-                  <thead><tr><th>Month</th>{chosen.map((s) => <th key={s.key} className="num">{s.label}</th>)}<th className="num">Total</th></tr></thead>
+                  <thead><tr><th>Month</th>{G.chosen.map((s) => <th key={s.key} className="num">{s.label}</th>)}<th className="num">Total</th></tr></thead>
                   <tbody>
-                    {byMonth.map((m) => (
-                      <tr key={m.month}><td>{monthLabel(m.month)}</td>{m.vals.map((v, i) => <td key={i} className="num">{v ? fmtAmt(v) : <span className="muted">–</span>}</td>)}<td className="num"><b>{fmtAmt(m.total)}</b></td></tr>
+                    {G.byMonth.map((m) => (
+                      <tr key={m.month} className="pickable" onClick={() => drillMonth(m.month)}><td>{monthLabel(m.month)}</td>{m.vals.map((v, i) => <td key={i} className="num">{v ? fmtAmt(v) : <span className="muted">–</span>}</td>)}<td className="num"><b>{fmtAmt(m.total)}</b></td></tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             </section>
           )}
-          <p className="note print-only">Printed {exportStamp()} · Tudo Num Office Systems · {todayISO()}</p>
-        </>
+          <p className="note print-only">Printed {exportStamp()} · Tudo Num Office Systems</p>
+        </div>
       )}
+
+      {drill && <DrillModal drill={drill} onClose={() => setDrill(null)} />}
+      {budgetOpen && <BudgetModal budgets={data.budgets} onClose={() => setBudgetOpen(false)} onSaved={load} />}
       {modal}
     </>
+  );
+}
+
+function DrillModal({ drill, onClose }) {
+  const total = r3(drill.lines.reduce((t, l) => t + (drill.unpaid ? l.unpaid : l.amount), 0));
+  return (
+    <Modal title={drill.title} onClose={onClose}>
+      <div className="drill">
+        <p className="note" style={{ margin: 0 }}>{drill.lines.length} line{drill.lines.length === 1 ? '' : 's'} · Total <b>{fmtAmt(total)} OMR</b></p>
+        <div className="table-wrap drill-wrap">
+          <table className="summary-table drill-table">
+            <thead><tr><th>Date</th><th>Company</th><th>Head</th><th>Details</th><th className="num">{drill.unpaid ? 'Unpaid' : 'Amount'}</th>{drill.unpaid && <th className="num">Days</th>}</tr></thead>
+            <tbody>
+              {drill.lines.map((l, i) => (
+                <tr key={i}>
+                  <td>{dmy(l.date)}</td><td>{labelOf(l.src)}</td><td>{l.head}</td>
+                  <td>{l.ref ? <b>#{l.ref} </b> : null}{l.desc || <span className="muted">–</span>}</td>
+                  <td className="num">{fmtAmt(drill.unpaid ? l.unpaid : l.amount)}</td>{drill.unpaid && <td className="num">{l.age}</td>}
+                </tr>
+              ))}
+              {!drill.lines.length && <tr><td colSpan={6} className="muted">Nothing here.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+        <div className="modal-actions"><button type="button" className="btn" onClick={onClose}>Close</button></div>
+      </div>
+    </Modal>
+  );
+}
+
+function BudgetModal({ budgets, onClose, onSaved }) {
+  const [vals, setVals] = useState(() => Object.fromEntries(budgets.map((b) => [`${b.source}|${b.head}`, String(Number(b.monthly) || '')])));
+  const [msg, setMsg] = useState('');
+  const rows = [...new Set([...HEADS, ...TRANSPORT_HEADS, ...budgets.map((b) => b.head)])];
+  // companies use the office heads; transport uses its own heads (Salary and Maintenance are shared)
+  const applies = (src, head) => (src === 'transport' ? TRANSPORT_HEADS.includes(head) : HEADS.includes(head));
+
+  async function save(src, head) {
+    const key = `${src}|${head}`;
+    const v = Number(vals[key] || 0);
+    const before = Number(budgets.find((b) => b.source === src && b.head === head)?.monthly || 0);
+    if (v === before) return;
+    const s = sb();
+    const { error } = v > 0
+      ? await s.from('exp_budgets').upsert({ source: src, head, monthly: r3(v), updated_at: new Date().toISOString() }, { onConflict: 'source,head' })
+      : await s.from('exp_budgets').delete().eq('source', src).eq('head', head);
+    setMsg(error ? error.message : `Saved: ${labelOf(src)} · ${head}`);
+    if (!error) onSaved();
+  }
+  const colTotal = (src) => r3(rows.reduce((t, h) => t + Number(vals[`${src}|${h}`] || 0), 0));
+
+  return (
+    <Modal title="🎯 Monthly budgets (OMR)" onClose={onClose}>
+      <div className="drill">
+        <p className="note" style={{ margin: 0 }}>Type the budget for one month. It saves when you leave the box. Leave it empty for no budget. For a year or all months it is multiplied by the number of months.</p>
+        <div className="table-wrap drill-wrap">
+          <table className="summary-table budget-table">
+            <thead><tr><th>Head of account</th>{SOURCES.map((s) => <th key={s.key} className="num">{s.label}</th>)}</tr></thead>
+            <tbody>
+              {rows.map((h) => (
+                <tr key={h}>
+                  <td>{h}</td>
+                  {SOURCES.map((s) => (
+                    <td key={s.key} className="num">
+                      {applies(s.key, h) ? (
+                        <input className="budget-in" inputMode="decimal" value={vals[`${s.key}|${h}`] || ''} placeholder="–"
+                          onChange={(e) => setVals((o) => ({ ...o, [`${s.key}|${h}`]: e.target.value.replace(/[^\d.]/g, '') }))}
+                          onBlur={() => save(s.key, h)} aria-label={`${s.label} ${h} monthly budget`} />
+                      ) : <span className="muted">–</span>}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+              <tr className="sum"><td>Total per month</td>{SOURCES.map((s) => <td key={s.key} className="num">{fmtAmt(colTotal(s.key))}</td>)}</tr>
+            </tbody>
+          </table>
+        </div>
+        <div className="modal-actions"><span className="note" style={{ marginRight: 'auto' }}>{msg}</span><button type="button" className="btn" onClick={onClose}>Done</button></div>
+      </div>
+    </Modal>
   );
 }
 
