@@ -298,7 +298,7 @@ function TransportPage() {
 
       <div className="driver-cards">
         {summary.map((r) => (
-          <Link key={r.driver.id} href={`/transport/${r.driver.id}`} className="driver-card">
+          <div key={r.driver.id} className="driver-card">
             <div>
               <h3>{r.driver.name}</h3>
               <div className="veh">Vehicle # {r.driver.vehicle_no || '–'}</div>
@@ -308,8 +308,11 @@ function TransportPage() {
               <div><dt>Work</dt><dd>{fmtAmt(r.work)}</dd></div>
               <div><dt>Profit</dt><dd className={r.profit < 0 ? 'neg' : 'pos'}>{fmtAmt(r.profit)}</dd></div>
             </dl>
-            <span className="open">Open trip sheet →</span>
-          </Link>
+            <div className="card-links">
+              <Link href={`/transport/${r.driver.id}`} className="open stretch">Open trip sheet →</Link>
+              <Link href={`/transport/salary/${r.driver.id}?m=${month === 'all' ? '' : month}`} className="slip-link">🧾 Salary slip</Link>
+            </div>
+          </div>
         ))}
       </div>
 
