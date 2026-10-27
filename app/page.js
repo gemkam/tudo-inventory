@@ -26,7 +26,7 @@ function Home() {
 
   return (
     <>
-      <h1 className="center">Tudo Office Inventory System</h1>
+      <h1 className="center">Tudo Num Office Systems</h1>
       <div className="hub">
         <Link href="/inventory" className="hub-tile">
           <span className="hub-logo center"><img src="/tudonum-logo-lg.png" alt="Tudo Num" /></span>
