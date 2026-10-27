@@ -5,7 +5,7 @@ import { evaluate, num } from '@/lib/sheet';
 
 /*
   Excel-style grid used by the Transport pages.
-  columns: [{ key, label, type: 'text'|'number'|'date'|'select'|'calc', width, align, options, render(row), raw(row), placeholder }]
+  columns: [{ key, label, type: 'text'|'number'|'date'|'select'|'combo' (pick or type)|'calc', width, align, options, render(row), raw(row), placeholder }]
   rows: [{ id, ... }]
   canEdit: Edit mode is on
   onSave(row, key, value): value is a number for 'number', 'YYYY-MM-DD' for 'date', string otherwise
@@ -51,7 +51,7 @@ export default function DataGrid({ columns, rows, canEdit, onSave, onAdd, addLab
   function startEdit(r, c, typed) {
     if (!editable(r, c)) return;
     const col = columns[c];
-    const useTyped = typed !== undefined && (col.type === 'text' || col.type === 'number');
+    const useTyped = typed !== undefined && (col.type === 'text' || col.type === 'number' || col.type === 'combo');
     setSel({ r, c });
     setEditing({ r, c, value: useTyped ? typed : rawOf(rows[r], col), typed: useTyped });
   }
@@ -131,6 +131,22 @@ export default function DataGrid({ columns, rows, canEdit, onSave, onAdd, addLab
           <option value="">–</option>
           {list.map((o) => <option key={o} value={o}>{o}</option>)}
         </select>
+      );
+    }
+    if (col.type === 'combo') {
+      const id = `dl-${col.key}`;
+      return (
+        <>
+          <input
+            {...common}
+            list={id}
+            placeholder={col.placeholder || 'Pick or type'}
+            value={editing.value}
+            onChange={(e) => setEditing({ ...editing, value: e.target.value })}
+            onFocus={(e) => { const el = e.target; if (editing.typed) { const n = el.value.length; el.setSelectionRange(n, n); } else el.select(); }}
+          />
+          <datalist id={id}>{(col.options || []).map((o) => <option key={o} value={o} />)}</datalist>
+        </>
       );
     }
     if (col.type === 'date') {

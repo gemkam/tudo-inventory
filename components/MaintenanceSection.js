@@ -63,10 +63,13 @@ export default function MaintenanceSection({ vehicles, canChange, flash }) {
 
   if (!rows) return <section className="panel" id="maintenance"><p className="empty">Loading maintenance...</p></section>;
 
+  // Work list: the standard ones plus anything typed before (saved with the rows)
+  const workList = [...new Set([...WORK_TYPES, ...rows.map((r) => (r.work || '').trim()).filter(Boolean)])];
+
   const columns = [
     { key: 'work_date', label: 'Date', type: 'date', width: 108, render: (r) => fmtD(r.work_date) || <span className="muted">–</span> },
     { key: 'vehicle', label: 'Vehicle (unit / trailer)', type: 'select', options: vehicles.map(vehicleLabel), width: 170, raw: (r) => labelOf(r.vehicle_id), render: (r) => <b>{labelOf(r.vehicle_id)}</b> },
-    { key: 'work', label: 'Work', type: 'select', options: WORK_TYPES, width: 130 },
+    { key: 'work', label: 'Work', type: 'combo', options: workList, width: 150, placeholder: 'Pick or type work' },
     { key: 'amount', label: 'Charges', type: 'number', min: 0, width: 110, render: (r) => (Number(r.amount) ? <Omr v={r.amount} /> : <span className="muted">–</span>) },
     { key: 'payment_method', label: 'Paid by', type: 'select', options: PAY_METHODS, width: 130, render: (r) => (r.payment_method ? <span className={`tag ${r.payment_method === 'PDC' ? 'warn' : 'ok'}`}>{r.payment_method}</span> : '') },
     {
