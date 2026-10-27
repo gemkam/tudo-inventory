@@ -5,6 +5,19 @@ import Link from 'next/link';
 import AuthGate from '@/components/AuthGate';
 import { sb, isLow } from '@/lib/supabase';
 
+function Letterhead() {
+  return (
+    <span className="hub-letterhead">
+      <img src="/tudonum-logo.png" alt="Tudo Num" />
+      <span className="hub-co">
+        <b>MODERN CITY FOR EXPRESS SERVICES LLC</b>
+        <span>CR No. 1404742 · VAT Registration No. OM11008665</span>
+        <span>PO Box 149, PC 133, Sultanate of Oman · www.tudonumgroup.com</span>
+      </span>
+    </span>
+  );
+}
+
 function Home() {
   const [inv, setInv] = useState(null);
   const [tr, setTr] = useState(null);
@@ -29,7 +42,7 @@ function Home() {
       <h1 className="center">Tudo Num Office Systems</h1>
       <div className="hub">
         <Link href="/inventory" className="hub-tile">
-          <span className="hub-logo center"><img src="/tudonum-logo-lg.png" alt="Tudo Num" /></span>
+          <Letterhead />
           <span className="hub-kicker">Office</span>
           <span className="hub-title">Inventory</span>
           <span className="hub-sub">
@@ -40,14 +53,7 @@ function Home() {
           </span>
         </Link>
         <Link href="/transport" className="hub-tile">
-          <span className="hub-letterhead">
-            <img src="/tudonum-logo.png" alt="Tudo Num" />
-            <span className="hub-co">
-              <b>MODERN CITY FOR EXPRESS SERVICES LLC</b>
-              <span>CR No. 1404742 · VAT Registration No. OM11008665</span>
-              <span>PO Box 149, PC 133, Sultanate of Oman · www.tudonumgroup.com</span>
-            </span>
-          </span>
+          <Letterhead />
           <span className="hub-kicker">Transport Division</span>
           <span className="hub-title">Transport Expense</span>
           <span className="hub-sub">Trips · Diesel · Tolls · Maintenance · Salaries</span>
