@@ -1227,3 +1227,22 @@ body .btn.in:hover { background: var(--brown-deep); border-color: var(--brown-de
 }
 /* Salary slip: every word starts with a capital (Travel Food, Gross Earnings) */
 .slip-t td:first-child, .slip-net small { text-transform: capitalize; }
+
+/* Drivers and Vehicles pages */
+.row-links { display: inline-flex; gap: 12px; }
+.row-links a { color: var(--brown); font-weight: 600; font-size: 12.5px; text-decoration: none; }
+.row-links a:hover { text-decoration: underline; }
+tr.muted-row td { opacity: .55; }
+.exp { display: inline-flex; flex-direction: column; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.exp small { font-size: 10.5px; font-weight: 600; }
+.exp-bad { color: #b3261e; font-weight: 700; }
+.exp-soon { color: #a15c00; font-weight: 700; }
+.exp-alerts { display: flex; flex-wrap: wrap; gap: 8px; }
+.exp-alerts span { font-size: 12.5px; padding: 6px 12px; border-radius: 999px; border: 1px solid; }
+.exp-alerts .bad { color: #b3261e; border-color: #f0b8b3; background: #fdecea; }
+.exp-alerts .soon { color: #8a4f00; border-color: #f3d29b; background: #fff4e0; }
+.kpi.kpi-bad strong { color: #b3261e; }
+[data-theme="dark"] .exp-alerts .bad { background: rgba(179, 38, 30, .18); color: #ffb4ab; border-color: rgba(255, 180, 171, .4); }
+[data-theme="dark"] .exp-alerts .soon { background: rgba(240, 160, 40, .16); color: #ffcf8a; border-color: rgba(255, 207, 138, .4); }
+[data-theme="dark"] .exp-bad { color: #ffb4ab; }
+[data-theme="dark"] .exp-soon { color: #ffcf8a; }
