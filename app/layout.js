@@ -2,7 +2,7 @@ import './globals.css';
 import { THEME_BOOT } from '@/lib/theme';
 
 export const metadata = {
-  title: 'Tudo Office Inventory System',
+  title: 'Tudo Num Office Systems',
   description: 'Office supplies, kitchen, sanitary stock and bills for Tudo office'
 };
 

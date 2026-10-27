@@ -43,7 +43,7 @@ button, input, select, textarea { font: inherit; }
 /* Watermark behind every page: small repeated text */
 .watermark {
   position: fixed; inset: 0; z-index: 0; pointer-events: none; user-select: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='340' height='220'><g fill='%230a6654' fill-opacity='0.06' font-family='Georgia,serif' font-weight='700' font-size='20'><text x='10' y='90' transform='rotate(-24 95 85)'>Tudonum Inventory</text><text x='150' y='165' transform='rotate(-24 235 160)'>Tudonum Inventory</text></g></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='340' height='220'><g fill='%230a6654' fill-opacity='0.06' font-family='Georgia,serif' font-weight='700' font-size='20'><text x='10' y='90' transform='rotate(-24 95 85)'>Tudo Num Office Systems</text><text x='150' y='165' transform='rotate(-24 235 160)'>Tudo Num Office Systems</text></g></svg>");
   background-repeat: repeat; background-size: 340px 220px;
 }
 .content { position: relative; z-index: 1; }
@@ -440,7 +440,7 @@ input, select {
 
 /* ================= Green theme (whole app) ================= */
 body .watermark {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='340' height='220'><g fill='%230a6654' fill-opacity='0.06' font-family='Georgia,serif' font-weight='700' font-size='20'><text x='10' y='90' transform='rotate(-24 95 85)'>Tudonum Inventory</text><text x='150' y='165' transform='rotate(-24 235 160)'>Tudonum Inventory</text></g></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='340' height='220'><g fill='%230a6654' fill-opacity='0.06' font-family='Georgia,serif' font-weight='700' font-size='20'><text x='10' y='90' transform='rotate(-24 95 85)'>Tudo Num Office Systems</text><text x='150' y='165' transform='rotate(-24 235 160)'>Tudo Num Office Systems</text></g></svg>");
 }
 body .topbar { border-top: 0; }
 h1, h2 { color: var(--heading); }
@@ -941,7 +941,7 @@ body .btn.in:hover { background: var(--brown-deep); border-color: var(--brown-de
 [data-theme="dark"] .grid td.cell.selected, [data-theme="dark"] .grid td.cell.editing, [data-theme="dark"] .grid td.cell.editing input { background: var(--surface); color: var(--ink); }
 [data-theme="dark"] .iv-kind { color: var(--heading); }
 [data-theme="dark"] h3, [data-theme="dark"] .driver-card h3, [data-theme="dark"] .driver-card .open, [data-theme="dark"] .crumb:hover { color: var(--heading); }
-[data-theme="dark"] .watermark { filter: none; opacity: 1; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='340' height='220'><g fill='%23ffffff' fill-opacity='0.035' font-family='Georgia,serif' font-weight='700' font-size='20'><text x='10' y='90' transform='rotate(-24 95 85)'>Tudonum Inventory</text><text x='150' y='165' transform='rotate(-24 235 160)'>Tudonum Inventory</text></g></svg>"); }
+[data-theme="dark"] .watermark { filter: none; opacity: 1; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='340' height='220'><g fill='%23ffffff' fill-opacity='0.035' font-family='Georgia,serif' font-weight='700' font-size='20'><text x='10' y='90' transform='rotate(-24 95 85)'>Tudo Num Office Systems</text><text x='150' y='165' transform='rotate(-24 235 160)'>Tudo Num Office Systems</text></g></svg>"); }
 
 /* ================= Invoice v2: centred title, editable labels ================= */
 .iv-head { grid-template-columns: auto 1fr; }
@@ -1102,12 +1102,11 @@ body .btn.in:hover { background: var(--brown-deep); border-color: var(--brown-de
 .watermark, body .watermark, [data-theme="dark"] .watermark {
   background-image: none; filter: none;
   background-color: var(--wm-color, var(--brown)); opacity: var(--wm-opacity, .2);
-  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='440' height='250'><g fill='black' font-family='Georgia,serif' font-weight='700' font-size='20'><text x='20' y='105' transform='rotate(-24 115 100)'>Tudonum Inventory</text><text x='240' y='215' transform='rotate(-24 335 210)'>Tudonum Inventory</text></g></svg>");
-  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='440' height='250'><g fill='black' font-family='Georgia,serif' font-weight='700' font-size='20'><text x='20' y='105' transform='rotate(-24 115 100)'>Tudonum Inventory</text><text x='240' y='215' transform='rotate(-24 335 210)'>Tudonum Inventory</text></g></svg>");
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='560' height='300'><g fill='black' font-family='Georgia,serif' font-weight='700' font-size='20'><text x='25' y='120' transform='rotate(-24 150 115)'>Tudo Num Office Systems</text><text x='305' y='225' transform='rotate(-24 430 220)'>Tudo Num Office Systems</text></g></svg>");
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='560' height='300'><g fill='black' font-family='Georgia,serif' font-weight='700' font-size='20'><text x='25' y='120' transform='rotate(-24 150 115)'>Tudo Num Office Systems</text><text x='305' y='225' transform='rotate(-24 430 220)'>Tudo Num Office Systems</text></g></svg>");
   -webkit-mask-repeat: repeat; mask-repeat: repeat;
-  -webkit-mask-size: 440px 250px; mask-size: 440px 250px;
+  -webkit-mask-size: 560px 300px; mask-size: 560px 300px;
 }
-
 /* Nothing printed on top of the invoice paper */
 .iv-mark { display: none !important; }
 

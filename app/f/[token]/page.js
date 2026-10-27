@@ -29,7 +29,7 @@ export default function PublicEntry() {
     <>
       <header className="topbar">
         <div className="topbar-inner">
-          <span className="brand">Tudo Office Inventory</span>
+          <span className="brand">Tudo Num Office Systems</span>
         </div>
       </header>
       <main className="page">

@@ -38,7 +38,7 @@ export default function LoginPage() {
   return (
     <div className="login">
       <form className="login-card panel" onSubmit={submit}>
-        <h1>Tudo Office Inventory System</h1>
+        <h1>Tudo Num Office Systems</h1>
         {error && <div className="error">{error}</div>}
         <div className="field">
           <label htmlFor="username">Username</label>

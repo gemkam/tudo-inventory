@@ -431,7 +431,7 @@ function SheetPage() {
       flash('Preparing Excel file...');
       const ExcelJS = (await import('exceljs')).default;
       const wb = new ExcelJS.Workbook();
-      wb.creator = 'Tudo Office Inventory';
+      wb.creator = 'Tudo Num Office Systems';
       const ws = wb.addWorksheet((cat?.name || 'Inventory').slice(0, 31), { views: [{ state: 'frozen', ySplit: 4 }] });
       ws.columns = [
         { key: 'n', width: 6 }, { key: 'name', width: 30 }, { key: 'unit', width: 11 }, { key: 'per', width: 12 },
@@ -439,7 +439,7 @@ function SheetPage() {
         { key: 'min', width: 11 }, { key: 'in', width: 14 }, { key: 'out', width: 14 }
       ];
       ws.mergeCells('A1:K1');
-      ws.getCell('A1').value = `Tudo Office Inventory · ${cat?.name || ''}`;
+      ws.getCell('A1').value = `Tudo Num Office Systems · ${cat?.name || ''}`;
       ws.getCell('A1').font = { bold: true, size: 16, color: { argb: 'FF4A2E1C' } };
       ws.mergeCells('A2:K2');
       ws.getCell('A2').value = `Exported ${exportDate()} · Prices in OMR`;
@@ -501,7 +501,7 @@ function SheetPage() {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       doc.setTextColor(122, 95, 74);
-      doc.text(`Tudo Office Inventory  |  Exported ${exportDate()}  |  ${data.length} items, ${low} low  |  Stock value ${fmtMoney(totalValue) || '0'}`, 40, 68);
+      doc.text(`Tudo Num Office Systems  |  Exported ${exportDate()}  |  ${data.length} items, ${low} low  |  Stock value ${fmtMoney(totalValue) || '0'}`, 40, 68);
       autoTable(doc, {
         startY: 84,
         head: [['#', 'Item', 'Unit', 'In 1 packet', 'Packets', 'Pieces', 'Price', 'Value', 'Minimum', 'In (month)', 'Out (month)']],

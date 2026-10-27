@@ -99,7 +99,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
     <UserCtx.Provider value={user}>
       <header className="topbar">
         <div className="topbar-inner">
-          <Link href={user.isEntry ? '/entry' : '/'} className="brand">Tudo Office Inventory</Link>
+          <Link href={user.isEntry ? '/entry' : '/'} className="brand">Tudo Num Office Systems</Link>
           <nav className="topnav">
             {nav.map(([href, label]) => (
               <Link key={href} href={href} className={(href === '/' ? path === '/' : path.startsWith(href)) ? 'active' : ''}>{label}</Link>

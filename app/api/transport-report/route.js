@@ -46,12 +46,12 @@ async function send(note) {
     '',
     `All months total profit: ${fmt3(S.grand.profit)} OMR`,
     '',
-    'This email is sent automatically by Tudo Office Inventory System.'
+    'This email is sent automatically by Tudo Num Office Systems.'
   ].filter((l, i, a) => l !== '' || a[i - 1] !== '').join('\n');
 
   const mailer = nodemailer.createTransport({ service: 'gmail', auth: { user, pass } });
   await mailer.sendMail({
-    from: `Tudo Office Inventory <${user}>`,
+    from: `Tudo Num Office Systems <${user}>`,
     to,
     subject: `Transport Expense Report · ${stamp}`,
     text,

@@ -106,7 +106,7 @@ function InventoryReports() {
     setBusy('pdf');
     try {
       await exportReportPdf(`${fileBase}.pdf`, {
-        title: 'Tudo Office Inventory: Report',
+        title: 'Tudo Num Office Systems: Report',
         note: `${RANGES[range]} · ${rangeNote(range)} Stock value and stock health are as of today.`,
         area: areaRef.current,
         tables: [
