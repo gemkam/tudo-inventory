@@ -1085,15 +1085,15 @@ body .btn.in:hover { background: var(--brown-deep); border-color: var(--brown-de
   display: flex; align-items: center; gap: 14px;
 }
 .hub-letterhead img {
-  width: 76px; height: auto; flex: none;
-  filter: drop-shadow(0 0 1px rgba(255, 255, 255, .9)) drop-shadow(0 0 6px rgba(255, 255, 255, .35));
+  width: 84px; height: auto; flex: none; padding: 7px;
+  background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, .18);
 }
 .hub-co { display: grid; gap: 3px; min-width: 0; }
 .hub-co b { font-size: 14px; letter-spacing: .02em; line-height: 1.2; }
 .hub-co span { font-size: 11.5px; opacity: .8; line-height: 1.35; }
 @media screen and (max-width: 680px) {
   .hub-letterhead { top: 22px; left: 22px; right: 22px; gap: 10px; }
-  .hub-letterhead img { width: 58px; }
+  .hub-letterhead img { width: 66px; padding: 5px; }
   .hub-co b { font-size: 12.5px; }
   .hub-co span { font-size: 10.5px; }
 }
