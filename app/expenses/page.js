@@ -156,7 +156,7 @@ function ExpensesPage() {
       {COMPANIES.map((c) => (
         <button key={c.key} type="button" role="tab" aria-selected={co === c.key} className={co === c.key ? 'on' : ''} onClick={() => switchCo(c.key)}>{c.short}</button>
       ))}
-      <Link href="/expenses/summary" className="co-tab co-sum">📊 Summary</Link>
+      <Link href="/expenses/summary" className="co-tab co-sum">📊 Group Summary</Link>
     </div>
   );
   if (!co || !rows || !month) return <>{co && switcher}<div className="loading">Loading expenses...</div></>;

@@ -1395,3 +1395,13 @@ span.omr { font-size: inherit !important; font-weight: inherit !important; lette
 @media print {
   .rp-hbar-fill, .rp-hbar-track, .kpi.hero, .company-head, .summary-table th, .grid thead th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* ---- Group Summary (uses the shared report styles above) ---- */
+.sum-report .rp-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 14px 0 12px; }
+@media screen and (max-width: 900px) { .sum-report .rp-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.sum-report .rp-grid { margin-bottom: 16px; }
+.rp-tile-num.sm { font-size: 19px; }
+@media print {
+  .sum-report .rp-tile, .sum-report .rp-card { break-inside: avoid; }
+  .sum-report .rp-tile.hero, .sum-report .rp-leg-dot, .sum-report svg { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
