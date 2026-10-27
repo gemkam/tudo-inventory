@@ -71,7 +71,7 @@ function Home() {
           </span>
         </Link>
         <Link href="/expenses" className="hub-tile">
-          <Letterhead />
+          <span className="hub-brand"><img src="/tudonum-group.png" alt="Tudo Num Group" /></span>
           <span className="hub-kicker">Modern City · Abu Wasif · Sumptuosity</span>
           <span className="hub-title">Office Expense</span>
           <span className="hub-sub">Bills · Salary · Petrol · Utility · Marketing · VAT</span>

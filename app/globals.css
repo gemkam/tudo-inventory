@@ -1360,3 +1360,8 @@ span.omr { font-size: inherit !important; font-weight: inherit !important; lette
   .hub-tile .truck-anim { width: 110px; height: 74px; }
   .hub-tile .truck-anim svg { width: 110px; height: 76px; }
 }
+
+/* Office Expense tile: Tudo Num Group logo (no background) */
+.hub-brand { position: absolute; top: 26px; left: 28px; z-index: 1; pointer-events: none; }
+.hub-brand img { display: block; width: 210px; max-width: 62vw; height: auto; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .35)); }
+@media screen and (max-width: 680px) { .hub-brand { top: 22px; left: 22px; } .hub-brand img { width: 170px; } }
