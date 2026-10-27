@@ -34,7 +34,7 @@ function AlarmClock({ ringing }) {
 
 const ICON = { pay: '💳', maintain: '🔧', renew: '📄' };
 
-/* Home page reminders: PDC to pay, maintenance due, insurance / mulkiya renewals */
+/* Home page reminders: PDC to pay, maintenance due, VOC / Mulkiya renewals */
 export default function Reminders() {
   const [list, setList] = useState(null);
   const [popup, setPopup] = useState(false);
@@ -43,7 +43,7 @@ export default function Reminders() {
     (async () => {
       const s = sb();
       const [v, m] = await Promise.all([
-        s.from('transport_vehicles').select('id, name, part, plate_no, insurance_expiry, mulkiya_expiry'),
+        s.from('transport_vehicles').select('id, name, part, plate_no, voc_expiry, mulkiya_expiry'),
         s.from('vehicle_maintenance').select('*')
       ]);
       if (v.error || m.error) { setList([]); return; }

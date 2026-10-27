@@ -104,27 +104,25 @@ function VehiclesPage() {
     ...(part === 'Trailer' ? [{ key: 'model', label: 'Model', type: 'text', width: 130 }] : []),
     { key: 'ownership', label: 'Own / Rent', type: 'select', options: ['Own', 'Rent'], width: 100, render: (r) => <span className={`tag ${r.ownership === 'Rent' ? 'info' : 'ok'}`}>{r.ownership || 'Own'}</span> },
     { key: 'driver', label: 'Driver', type: 'select', options: ['', ...drivers.map((d) => d.name)], width: 130, raw: (r) => driverName(r.driver_id), render: (r) => driverName(r.driver_id) || <span className="muted">–</span> },
-    dateCol('insurance_issue', 'Insurance issue', false),
-    dateCol('insurance_expiry', 'Insurance expiry', true),
-    dateCol('mulkiya_issue', 'Mulkiya issue', false),
+    dateCol('voc_expiry', 'VOC expiry', true),
     dateCol('mulkiya_expiry', 'Mulkiya expiry', true),
     { key: 'notes', label: 'Notes', type: 'text', width: 180 }
   ];
 
   const units = vehicles.filter((v) => v.part === 'Unit');
   const trailers = vehicles.filter((v) => v.part === 'Trailer');
-  const alerts = vehicles.flatMap((v) => [['Insurance', v.insurance_expiry], ['Mulkiya', v.mulkiya_expiry]]
+  const alerts = vehicles.flatMap((v) => [['VOC', v.voc_expiry], ['Mulkiya', v.mulkiya_expiry]]
     .filter(([, d]) => d && daysLeft(d) <= 30)
     .map(([what, d]) => ({ v, what, d, left: daysLeft(d) })))
     .sort((a, b) => a.left - b.left);
 
   async function doExcel() {
     const row = (v) => [v.part, v.name || '', v.plate_no || '', v.model || '', v.trailer_type || '', v.ownership || '', driverName(v.driver_id),
-      fmtD(v.insurance_issue), fmtD(v.insurance_expiry), fmtD(v.mulkiya_issue), fmtD(v.mulkiya_expiry), v.notes || ''];
+      fmtD(v.voc_expiry), fmtD(v.mulkiya_expiry), v.notes || ''];
     await exportExcel(`Vehicles ${exportStamp()}.xlsx`, [{
       name: 'Vehicles', title: 'Vehicles (Units and Trailers)', subtitle: 'Modern City for Express Services LLC · Transport Division',
-      head: ['Part', 'Name', 'Number plate', 'Model', 'Trailer type', 'Own / Rent', 'Driver', 'Insurance issue', 'Insurance expiry', 'Mulkiya issue', 'Mulkiya expiry', 'Notes'],
-      rows: [...units, ...trailers].map(row), numCols: [], widths: [9, 18, 14, 18, 16, 10, 16, 14, 14, 14, 14, 24]
+      head: ['Part', 'Name', 'Number plate', 'Model', 'Trailer type', 'Own / Rent', 'Driver', 'VOC expiry', 'Mulkiya expiry', 'Notes'],
+      rows: [...units, ...trailers].map(row), numCols: [], widths: [9, 18, 14, 18, 16, 10, 16, 14, 14, 24]
     }]);
     flash('Excel file downloaded');
   }
@@ -141,13 +139,13 @@ function VehiclesPage() {
       </div>
       <div>
         <h1>Vehicles</h1>
-        <p className="sub">Each truck has two parts: the Unit (head) and the Trailer. Each part has its own Insurance and Mulkiya.</p>
+        <p className="sub">Each truck has two parts: the Unit (head) and the Trailer. Each part has its own VOC and Mulkiya.</p>
       </div>
 
       <div className="kpi-row">
         <div className="kpi"><span>Units</span><strong>{units.length}</strong><small>{units.filter((u) => u.ownership === 'Rent').length} on rent</small></div>
         <div className="kpi"><span>Trailers</span><strong>{trailers.length}</strong><small>{TRAILER_TYPES.map((t) => `${trailers.filter((x) => x.trailer_type === t).length} × ${t.replace('Flatbed ', '')}`).join(' · ')}</small></div>
-        <div className={`kpi ${alerts.some((a) => a.left < 0) ? 'kpi-bad' : ''}`}><span>Expired</span><strong>{alerts.filter((a) => a.left < 0).length}</strong><small>Insurance or Mulkiya</small></div>
+        <div className={`kpi ${alerts.some((a) => a.left < 0) ? 'kpi-bad' : ''}`}><span>Expired</span><strong>{alerts.filter((a) => a.left < 0).length}</strong><small>VOC or Mulkiya</small></div>
         <div className="kpi"><span>Expiring in 30 days</span><strong>{alerts.filter((a) => a.left >= 0).length}</strong><small>Renew soon</small></div>
       </div>
 
