@@ -118,10 +118,11 @@ function SlipPage() {
 
           <dl className="slip-info">
             <div><dt>Employee name</dt><dd>{driver.name}</dd></div>
+            <div><dt>Resident Card No.</dt><dd>{driver.resident_card || '–'}</dd></div>
             <div><dt>Designation</dt><dd>Driver</dd></div>
             <div><dt>Vehicle No.</dt><dd>{driver.vehicle_no || '–'}</dd></div>
             <div><dt>Slip No.</dt><dd>{slipNo}</dd></div>
-            <div><dt>Pay period</dt><dd>01.{month.slice(5)}.{month.slice(0, 4)} to {dmy(lastDay(month))}</dd></div>
+            <div className="wide"><dt>Pay period</dt><dd>01.{month.slice(5)}.{month.slice(0, 4)} to {dmy(lastDay(month))}</dd></div>
             <div><dt>Trips this month</dt><dd>{trips}</dd></div>
           </dl>
 
@@ -150,11 +151,6 @@ function SlipPage() {
             <strong>{m3(net)} <em>OMR</em></strong>
           </div>
 
-          <div className="slip-sign">
-            <div><span className="line" /> Prepared by</div>
-            <div><span className="line" /> Approved by</div>
-            <div><span className="line" /> Employee signature</div>
-          </div>
           <p className="slip-foot">This is a computer generated salary slip from Tudo Num Office Systems.</p>
         </article>
       )}

@@ -1211,3 +1211,19 @@ body .btn.in:hover { background: var(--brown-deep); border-color: var(--brown-de
   .slip-paper, .slip-paper * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .powered-by { display: none !important; }
 }
+/* Salary slip info: 4 columns x 2 rows (pay period spans 2) */
+.slip-info { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.slip-info div, .slip-info div:nth-child(3n) { border-right: 1px solid var(--sl-line); border-bottom: 1px solid var(--sl-line); }
+.slip-info div:nth-child(4), .slip-info div:last-child { border-right: 0; }
+.slip-info div:nth-child(n+5) { border-bottom: 0; }
+.slip-info div.wide { grid-column: span 2; }
+.slip-foot { margin-top: 28px; }
+@media screen and (max-width: 680px) {
+  .slip-info { grid-template-columns: 1fr 1fr; }
+  .slip-info div, .slip-info div:nth-child(4) { border-right: 1px solid var(--sl-line); border-bottom: 1px solid var(--sl-line); }
+  .slip-info div:nth-child(2n) { border-right: 0; }
+  .slip-info div.wide { grid-column: span 2; border-right: 0; }
+  .slip-info div:last-child { grid-column: span 2; border-bottom: 0; }
+}
+/* Salary slip: every word starts with a capital (Travel Food, Gross Earnings) */
+.slip-t td:first-child, .slip-net small { text-transform: capitalize; }
