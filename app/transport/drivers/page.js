@@ -66,8 +66,8 @@ function DriversPage() {
     { key: 'resident_card', label: 'Resident Card No.', type: 'text', width: 150 },
     { key: 'phone', label: 'Mobile', type: 'text', width: 130 },
     { key: 'vehicle_no', label: 'Vehicle # (shown on sheets)', type: 'text', width: 190 },
-    { key: 'unit', label: 'Unit (from Vehicles)', type: 'calc', width: 140, render: (r) => plates(r.id, 'Unit') || <span className="muted">–</span> },
-    { key: 'trailer', label: 'Trailer (from Vehicles)', type: 'calc', width: 150, render: (r) => plates(r.id, 'Trailer') || <span className="muted">–</span> },
+    { key: 'unit', label: 'Unit (from Vehicles)', type: 'calc', align: 'left', width: 140, render: (r) => plates(r.id, 'Unit') || <span className="muted">–</span> },
+    { key: 'trailer', label: 'Trailer (from Vehicles)', type: 'calc', align: 'left', width: 150, render: (r) => plates(r.id, 'Trailer') || <span className="muted">–</span> },
     { key: 'status', label: 'Status', type: 'select', options: ['Active', 'Inactive'], width: 100, render: (r) => <span className={`tag ${r.status === 'Inactive' ? 'warn' : 'ok'}`}>{r.status || 'Active'}</span> },
     { key: 'notes', label: 'Notes', type: 'text', width: 200 },
     {
