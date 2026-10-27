@@ -1341,3 +1341,22 @@ span.omr { font-size: inherit !important; font-weight: inherit !important; lette
 .co-switch button { font: inherit; font-weight: 600; font-size: 14px; border: 0; cursor: pointer; padding: 9px 18px; border-radius: 999px; background: transparent; color: var(--ink); transition: background .2s ease, color .2s ease; }
 .co-switch button:hover { background: var(--tint); color: var(--brown); }
 .co-switch button.on { background: var(--brown); color: #fff; box-shadow: 0 2px 6px rgba(var(--shadow-rgb), .25); }
+
+/* Truck animation: sits in its own space on the right (never over the letterhead or the title) */
+.hub-tile .truck-anim {
+  position: relative; top: auto; right: auto; justify-self: end; align-self: end;
+  width: 128px; height: 86px; overflow: hidden; border-radius: 10px; margin: 4px 0 -2px;
+}
+.hub-tile .truck-anim svg { width: 128px; height: 88px; }
+.ta-truck { animation-name: ta-come-small; }
+@keyframes ta-come-small {
+  0% { transform: scale(.15); opacity: 0; }
+  10% { opacity: 1; }
+  80% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1.3); opacity: 0; }
+}
+.hub-tile { min-height: 360px; }
+@media screen and (max-width: 680px) {
+  .hub-tile .truck-anim { width: 110px; height: 74px; }
+  .hub-tile .truck-anim svg { width: 110px; height: 76px; }
+}
