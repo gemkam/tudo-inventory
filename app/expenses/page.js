@@ -8,6 +8,7 @@ import Modal from '@/components/Modal';
 import Omr from '@/components/Omr';
 import EditToggle from '@/components/EditToggle';
 import { HBars } from '@/components/Charts';
+import { useShare } from '@/components/ShareModal';
 import { sb } from '@/lib/supabase';
 import { num, fmtAmt, monthKey, monthLabel, todayISO, exportExcel, exportPdf, exportStamp, fmtFullDate } from '@/lib/sheet';
 import { HEADS, CATEGORIES, COMPANIES, companyOf, n, r3, staffGross, staffNet } from '@/lib/expenses';
@@ -28,6 +29,7 @@ function ExpensesPage() {
   const [toast, setToast] = useState(null);
   const [error, setError] = useState('');
   const timer = useRef(null);
+  const { open: openShare, modal: shareModal } = useShare();
 
   const flash = useCallback((text, kind = 'ok') => {
     setToast({ text, kind });
@@ -154,6 +156,7 @@ function ExpensesPage() {
       {COMPANIES.map((c) => (
         <button key={c.key} type="button" role="tab" aria-selected={co === c.key} className={co === c.key ? 'on' : ''} onClick={() => switchCo(c.key)}>{c.short}</button>
       ))}
+      <Link href="/expenses/summary" className="co-tab co-sum">📊 Summary</Link>
     </div>
   );
   if (!co || !rows || !month) return <>{co && switcher}<div className="loading">Loading expenses...</div></>;
@@ -198,6 +201,19 @@ function ExpensesPage() {
       numCols: [6, 7, 8]
     };
   }
+  function shareIt() {
+    const label = month === 'all' ? 'All months' : monthLabel(month);
+    const text = [
+      `${companyOf(co).short} · Office Expense · ${label}`,
+      `Total paid: ${fmtAmt(TM.paid)} OMR (${monthRows.length} bills)`,
+      TM.unpaid ? `Unpaid: ${fmtAmt(TM.unpaid)} OMR` : '',
+      TM.vat ? `VAT: ${fmtAmt(TM.vat)} OMR` : '',
+      '',
+      ...byHead.map(([h, v]) => `${h}: ${fmtAmt(v)} OMR`)
+    ].filter((x, i, a) => x !== '' || a[i - 1] !== '').join('\n');
+    openShare({ title: `${companyOf(co).short} expenses ${label}`, text });
+  }
+
   async function doExcel() {
     try {
       const sheets = [];
@@ -252,6 +268,8 @@ function ExpensesPage() {
           </div>
           <button type="button" className="btn ghost" onClick={doExcel}>Export Excel</button>
           <button type="button" className="btn ghost" onClick={doPdf}>Export PDF</button>
+          <button type="button" className="btn ghost" onClick={shareIt}>📤 Share</button>
+          <button type="button" className="btn ghost" onClick={() => window.print()}>🖨 Print</button>
         </div>
       </div>
 
@@ -352,6 +370,7 @@ function ExpensesPage() {
         </Modal>
       )}
       {toast && <div className={`toast ${toast.kind}`} role="status">{toast.text}</div>}
+      {shareModal}
     </>
   );
 }

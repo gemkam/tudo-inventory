@@ -1365,3 +1365,22 @@ span.omr { font-size: inherit !important; font-weight: inherit !important; lette
 .hub-brand { position: absolute; top: 26px; left: 28px; z-index: 1; pointer-events: none; }
 .hub-brand img { display: block; width: 210px; max-width: 62vw; height: auto; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .35)); }
 @media screen and (max-width: 680px) { .hub-brand { top: 22px; left: 22px; } .hub-brand img { width: 170px; } }
+
+/* Summary pill in the company switch + Summary page */
+.co-switch a.co-tab, .co-switch span.co-tab { font-weight: 600; font-size: 14px; padding: 9px 18px; border-radius: 999px; text-decoration: none; color: var(--ink); transition: background .2s ease, color .2s ease; }
+.co-switch a.co-tab:hover { background: var(--tint); color: var(--brown); }
+.co-switch .co-tab.on { background: var(--brown); color: #fff; }
+.co-switch .co-sum { border: 1px dashed var(--pill-line); }
+.sum-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.sum-dd { position: relative; }
+.sum-dd-menu { position: absolute; z-index: 40; top: calc(100% + 6px); left: 0; min-width: 240px; display: grid; gap: 4px; padding: 10px; background: var(--surface); border: 1px solid var(--frame); border-radius: 12px; box-shadow: 0 14px 30px rgba(var(--shadow-rgb), .2); }
+.sum-dd-menu .check { padding: 6px 8px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+.sum-dd-menu .check:hover { background: var(--tint); }
+.sum-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.print-only { display: none; }
+@media print {
+  .print-only { display: block; }
+  .co-switch, .sum-controls, .powered-by, .head-chips, .grid .add-row, .row-actions { display: none !important; }
+  .panel, .sheet, .company-head, .kpi { box-shadow: none !important; break-inside: avoid; }
+  .kpi.hero { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
