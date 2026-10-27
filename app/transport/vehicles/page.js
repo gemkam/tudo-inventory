@@ -7,6 +7,7 @@ import DataGrid from '@/components/DataGrid';
 import Modal from '@/components/Modal';
 import { sb } from '@/lib/supabase';
 import { todayISO, exportExcel, exportStamp } from '@/lib/sheet';
+import MaintenanceSection from '@/components/MaintenanceSection';
 
 const TRAILER_TYPES = ['Flatbed 40 Feet', 'Flatbed 45 Feet'];
 const fmtD = (d) => (d ? d.split('-').reverse().join('.') : '');
@@ -137,6 +138,7 @@ function VehiclesPage() {
               {editMode ? '✓ Done editing' : 'Edit'}
             </button>
           )}
+          <a href="#maintenance" className="btn">🔧 Maintenance</a>
           <Link href="/transport/drivers" className="btn">👤 Drivers</Link>
           <button type="button" className="btn ghost" onClick={doExcel}>Export Excel</button>
         </div>
@@ -171,6 +173,8 @@ function VehiclesPage() {
         <h2>🛻 Trailers (flatbed 40 / 45 feet)</h2>
         <DataGrid columns={cols('Trailer')} rows={trailers} canEdit={canChange} onSave={save} onAdd={() => addRow('Trailer')} addLabel="+ Add trailer" onDelete={(r) => setDel(r)} emptyText="No trailers yet." flash={flash} />
       </section>
+
+      <MaintenanceSection vehicles={[...units, ...trailers]} canChange={canChange} flash={flash} />
 
       {del && (
         <Modal title="Delete vehicle?" onClose={() => setDel(null)}>

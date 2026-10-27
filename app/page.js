@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import AuthGate from '@/components/AuthGate';
 import TruckAnim from '@/components/TruckAnim';
+import Reminders from '@/components/Reminders';
 import { sb, isLow } from '@/lib/supabase';
 
 function Letterhead() {
@@ -41,6 +42,7 @@ function Home() {
   return (
     <>
       <h1 className="center">Tudo Num Office Systems</h1>
+      <Reminders />
       <div className="hub">
         <Link href="/inventory" className="hub-tile">
           <Letterhead />

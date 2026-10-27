@@ -1258,3 +1258,34 @@ td.num .omr, .num .omr { justify-content: flex-end; }
 @media print { .omr-sign { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 /* the amount keeps the size and colour of where it sits (cards use "span" for labels) */
 span.omr { font-size: inherit !important; font-weight: inherit !important; letter-spacing: inherit !important; text-transform: none !important; color: inherit !important; opacity: 1; margin: 0; }
+
+/* ================= Reminders (Home) and alarm clock ================= */
+.reminders { background: var(--surface); border: 1px solid var(--frame); border-radius: 14px; padding: 16px 18px; box-shadow: 0 2px 4px rgba(var(--shadow-rgb), .08); }
+.reminders.has-urgent { border-color: #e9a29b; box-shadow: 0 0 0 3px rgba(217, 68, 58, .08); }
+.rem-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.rem-head > div { flex: 1 1 200px; }
+.rem-head h2 { margin: 0; font-size: 20px; }
+.rem-head p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+.rem-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+.rem-list li { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; background: var(--row-alt); border: 1px solid var(--line); }
+.rem-list li.urgent { background: #fdecea; border-color: #f0b8b3; }
+.rem-ico { font-size: 20px; flex: none; }
+.rem-text { flex: 1; min-width: 0; display: grid; }
+.rem-text small, .rem-when small { color: var(--muted); font-size: 12px; }
+.rem-when { text-align: right; display: grid; white-space: nowrap; }
+.rem-list li.urgent .rem-when b { color: #b3261e; }
+[data-theme="dark"] .rem-list li.urgent { background: rgba(179, 38, 30, .18); border-color: rgba(255, 180, 171, .35); }
+[data-theme="dark"] .rem-list li.urgent .rem-when b { color: #ffb4ab; }
+.alarm { color: var(--brown); flex: none; overflow: visible; }
+.alarm.ringing { color: #d9443a; animation: alarm-shake .5s ease-in-out infinite; transform-origin: 50% 60%; }
+.alarm.ringing .alarm-bells { animation: alarm-bells .25s linear infinite alternate; transform-origin: 32px 14px; transform-box: view-box; }
+.alarm-waves { animation: alarm-waves .8s ease-out infinite; }
+@keyframes alarm-shake { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(-12deg); } 40% { transform: rotate(10deg); } 60% { transform: rotate(-8deg); } 80% { transform: rotate(6deg); } }
+@keyframes alarm-bells { from { transform: translateY(0); } to { transform: translateY(-2px); } }
+@keyframes alarm-waves { from { opacity: 1; } to { opacity: 0; } }
+.alarm-card { text-align: center; max-width: 520px; }
+.alarm-card .alarm { width: 84px; height: 84px; margin: 4px auto 0; display: block; }
+.alarm-card h2 { margin: 6px 0 0; }
+.alarm-card .rem-list { text-align: left; }
+@media (prefers-reduced-motion: reduce) { .alarm.ringing, .alarm.ringing .alarm-bells, .alarm-waves { animation: none; } }
+.page > .reminders { margin-bottom: 4px; }
