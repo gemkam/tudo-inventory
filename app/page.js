@@ -72,7 +72,7 @@ function Home() {
         </Link>
         <Link href="/expenses" className="hub-tile">
           <Letterhead />
-          <span className="hub-kicker">Sumptuosity Tropical LLC</span>
+          <span className="hub-kicker">Modern City · Abu Wasif · Sumptuosity</span>
           <span className="hub-title">Office Expense</span>
           <span className="hub-sub">Bills · Salary · Petrol · Utility · Marketing · VAT</span>
           <span className="hub-meta">

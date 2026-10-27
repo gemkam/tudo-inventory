@@ -10,13 +10,14 @@ import EditToggle from '@/components/EditToggle';
 import { HBars } from '@/components/Charts';
 import { sb } from '@/lib/supabase';
 import { num, fmtAmt, monthKey, monthLabel, todayISO, exportExcel, exportPdf, exportStamp, fmtFullDate } from '@/lib/sheet';
-import { EXP_COMPANY, HEADS, CATEGORIES, n, r3, staffGross, staffNet } from '@/lib/expenses';
+import { HEADS, CATEGORIES, COMPANIES, companyOf, n, r3, staffGross, staffNet } from '@/lib/expenses';
 
 const fmtD = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
 const monthName = (k) => new Date(`${k}-01T00:00:00`).toLocaleString('en-GB', { month: 'short' });
 
 function ExpensesPage() {
   const { isAdmin, name: me } = useUser();
+  const [co, setCo] = useState(null);
   const [rows, setRows] = useState(null);
   const [staff, setStaff] = useState([]);
   const [month, setMonth] = useState(null);
@@ -34,17 +35,32 @@ function ExpensesPage() {
     timer.current = setTimeout(() => setToast(null), 2200);
   }, []);
 
+  useEffect(() => {
+    let k = '';
+    try { k = new URLSearchParams(window.location.search).get('co') || localStorage.getItem('tudo-exp-co') || ''; } catch { /* ignore */ }
+    setCo(COMPANIES.some((c) => c.key === k) ? k : 'sumptuosity');
+  }, []);
+
+  function switchCo(k) {
+    if (k === co) return;
+    setCo(k); setRows(null); setStaff([]); setMonth(null); setHead(''); setEditRows(false); setEditStaff(false);
+    try { localStorage.setItem('tudo-exp-co', k); window.history.replaceState(null, '', `/expenses?co=${k}`); } catch { /* ignore */ }
+  }
+
   const load = useCallback(async () => {
+    if (!co) return;
     const s = sb();
     const [e, st] = await Promise.all([
-      s.from('exp_entries').select('*').order('entry_date').order('sort').order('created_at'),
-      s.from('exp_staff').select('*').order('sort').order('name')
+      s.from('exp_entries').select('*').eq('company', co).order('entry_date').order('sort').order('created_at'),
+      s.from('exp_staff').select('*').eq('company', co).order('sort').order('name')
     ]);
     if (e.error) { setError(e.error.message); setRows([]); return; }
     setRows(e.data || []);
     setStaff(st.data || []);
-  }, []);
+  }, [co]);
   useEffect(() => { load(); }, [load]);
+
+  const EXP_COMPANY = companyOf(co).name;
 
   const months = useMemo(() => {
     const set = new Set((rows || []).map((r) => monthKey(r.entry_date)));
@@ -97,7 +113,7 @@ function ExpensesPage() {
     const date = month === 'all' || month === monthKey(todayISO()) ? todayISO() : `${month}-01`;
     const sort = (rows || []).reduce((m, x) => Math.max(m, x.sort || 0), 0) + 1;
     const { data, error: err } = await sb().from('exp_entries')
-      .insert({ entry_date: date, head: head || HEADS[5], category: '', description: '', paid: 0, sort, account: 'P & L', entered_by: me || null })
+      .insert({ company: co, entry_date: date, head: head || HEADS[5], category: '', description: '', paid: 0, sort, account: 'P & L', entered_by: me || null })
       .select().single();
     if (err) { flash(err.message, 'err'); return; }
     setRows((list) => [...list, data]);
@@ -121,7 +137,7 @@ function ExpensesPage() {
   }
   async function addStaff() {
     const sort = staff.reduce((m, x) => Math.max(m, x.sort || 0), 0) + 1;
-    const { data, error: err } = await sb().from('exp_staff').insert({ name: 'New staff', department: 'Ansab Head Office', basic: 0, working_days: 30, sort }).select().single();
+    const { data, error: err } = await sb().from('exp_staff').insert({ company: co, name: 'New staff', department: '', basic: 0, working_days: 30, sort }).select().single();
     if (err) { flash(err.message, 'err'); return; }
     setStaff((list) => [...list, data]);
   }
@@ -133,7 +149,14 @@ function ExpensesPage() {
   }
 
   if (error) return <div className="error">Could not load expenses: {error}</div>;
-  if (!rows || !month) return <div className="loading">Loading expenses...</div>;
+  const switcher = (
+    <div className="co-switch" role="tablist" aria-label="Company">
+      {COMPANIES.map((c) => (
+        <button key={c.key} type="button" role="tab" aria-selected={co === c.key} className={co === c.key ? 'on' : ''} onClick={() => switchCo(c.key)}>{c.short}</button>
+      ))}
+    </div>
+  );
+  if (!co || !rows || !month) return <>{co && switcher}<div className="loading">Loading expenses...</div></>;
 
   const headList = [...new Set([...HEADS, ...rows.map((r) => r.head).filter(Boolean)])];
   const catList = [...new Set([...CATEGORIES, ...rows.map((r) => r.category).filter(Boolean)])];
@@ -232,6 +255,8 @@ function ExpensesPage() {
         </div>
       </div>
 
+      {switcher}
+
       <div className="company-head">
         <span className="company-name">{EXP_COMPANY}</span>
         <h1>Office Expense</h1>
@@ -272,7 +297,7 @@ function ExpensesPage() {
           addLabel="+ Add bill"
           onDelete={(r) => setDel(r)}
           rowClass={(r) => (n(r.unpaid) > 0 ? 'due-row' : '')}
-          emptyText="No bills in this month."
+          emptyText={rows.length ? 'No bills in this month.' : 'No bills yet for this company. Press ✏️ Edit, then + Add bill.'}
           footer={{ description: `${shown.length} bills`, paid: <Omr v={T.paid} />, unpaid: fmtAmt(T.unpaid), vat: fmtAmt(T.vat) }}
           flash={flash}
         />
@@ -311,7 +336,7 @@ function ExpensesPage() {
           onAdd={addStaff}
           addLabel="+ Add staff"
           onDelete={deleteStaff}
-          emptyText="No staff yet."
+          emptyText="No staff yet. Press ✏️ Edit, then + Add staff."
           footer={{ net: <Omr v={staffNetTotal} /> }}
           flash={flash}
         />
