@@ -1098,15 +1098,15 @@ body .btn.in:hover { background: var(--brown-deep); border-color: var(--brown-de
   .hub-co span { font-size: 10.5px; }
 }
 
-/* ===== Watermark (27 Oct 2026): follows the chosen colour, a bit stronger, always behind content ===== */
+/* ===== Watermark (27 Oct 2026): follows the chosen colour, clearly visible, always behind content ===== */
 .watermark, body .watermark, [data-theme="dark"] .watermark {
   background-image: none; filter: none;
-  background-color: var(--brown); opacity: .11;
-  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='340' height='220'><g fill='black' font-family='Georgia,serif' font-weight='700' font-size='20'><text x='10' y='90' transform='rotate(-24 95 85)'>Tudonum Inventory</text><text x='150' y='165' transform='rotate(-24 235 160)'>Tudonum Inventory</text></g></svg>");
-  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='340' height='220'><g fill='black' font-family='Georgia,serif' font-weight='700' font-size='20'><text x='10' y='90' transform='rotate(-24 95 85)'>Tudonum Inventory</text><text x='150' y='165' transform='rotate(-24 235 160)'>Tudonum Inventory</text></g></svg>");
+  background-color: var(--brown); opacity: .2;
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='440' height='250'><g fill='black' font-family='Georgia,serif' font-weight='700' font-size='20'><text x='20' y='105' transform='rotate(-24 115 100)'>Tudonum Inventory</text><text x='240' y='215' transform='rotate(-24 335 210)'>Tudonum Inventory</text></g></svg>");
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='440' height='250'><g fill='black' font-family='Georgia,serif' font-weight='700' font-size='20'><text x='20' y='105' transform='rotate(-24 115 100)'>Tudonum Inventory</text><text x='240' y='215' transform='rotate(-24 335 210)'>Tudonum Inventory</text></g></svg>");
   -webkit-mask-repeat: repeat; mask-repeat: repeat;
-  -webkit-mask-size: 340px 220px; mask-size: 340px 220px;
+  -webkit-mask-size: 440px 250px; mask-size: 440px 250px;
 }
-[data-theme="dark"] .watermark { background-color: #ffffff; opacity: .07; }
+[data-theme="dark"] .watermark { background-color: #ffffff; opacity: .1; }
 /* Nothing printed on top of the invoice paper */
 .iv-mark { display: none !important; }
