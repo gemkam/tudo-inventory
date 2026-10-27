@@ -10,6 +10,7 @@ import { num, fmtAmt, monthKey, monthLabel, monthStart, exportStamp, exportExcel
 import { SALARY_FIELDS, salaryTotal, salaryPayable } from '@/lib/transport';
 import CompanyHeader, { COMPANY_NAME } from '@/components/CompanyHeader';
 import Omr from '@/components/Omr';
+import EditToggle from '@/components/EditToggle';
 
 const COMPANY = `${COMPANY_NAME} · Transport Division`;
 
@@ -356,6 +357,7 @@ function TransportPage() {
         <section className="panel">
           <div className="section-head">
             <h2>Salary detail · {monthLabel(month)}</h2>
+            <EditToggle show={isAdmin} on={editMode} onClick={() => setEditMode((v) => !v)} />
             {canChange && drivers.some((d) => !salaryOf(d.id)) && (
               <button type="button" className="btn ghost" onClick={createSalaries}>Create salary for this month</button>
             )}
@@ -418,6 +420,7 @@ function TransportPage() {
           <div className="sheet-title">
             <h2>Other expenses · {monthLabel(month)}</h2>
             <span className="note">Trailer rent and anything not tied to a trip</span>
+            <EditToggle show={isAdmin} on={editMode} onClick={() => setEditMode((v) => !v)} />
           </div>
           <DataGrid
             columns={[

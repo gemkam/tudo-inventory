@@ -5,6 +5,7 @@ import Link from 'next/link';
 import AuthGate, { useUser } from '@/components/AuthGate';
 import Modal from '@/components/Modal';
 import { sb } from '@/lib/supabase';
+import DateInput from '@/components/DateInput';
 
 /* ---------- Company details (shown on the invoice only, every line can be edited on the invoice) ---------- */
 const COMPANY = {
@@ -151,7 +152,7 @@ function D({ value, onChange, ro }) {
   if (ro) return <span className="iv-in iv-date-text">{dmy(value)}</span>;
   return (
     <>
-      <input className="iv-in no-print" type="date" value={value || ''} onChange={(e) => onChange(e.target.value)} />
+      <DateInput className="iv-in no-print iv-date" value={value || ''} onChange={(v) => onChange(v)} />
       <span className="iv-print-only">{dmy(value)}</span>
     </>
   );

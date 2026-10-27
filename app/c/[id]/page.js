@@ -7,6 +7,7 @@ import AuthGate, { useUser } from '@/components/AuthGate';
 import Modal from '@/components/Modal';
 import { sb, isLow, fmtDateTime } from '@/lib/supabase';
 import Omr from '@/components/Omr';
+import EditToggle from '@/components/EditToggle';
 
 /*
   Sheet columns.
@@ -721,9 +722,13 @@ function SheetPage() {
       </div>
 
       <section className={`sheet ${editMode ? 'is-editing' : ''}`}>
+        <div className="sheet-title sheet-edit-bar">
+          <h2>Items</h2>
+          <EditToggle show={isAdmin} on={editMode} onClick={() => setEditMode((v) => !v)} />
+        </div>
         {editMode && (
           <div className="edit-banner">
-            Edit mode is on. Click any cell to change it, then press Enter. Click <strong>Done editing</strong> when finished.
+            Edit mode is on. Click any cell to change it, then press Enter. Click <strong>✓ Done</strong> when finished.
           </div>
         )}
         <div className="grid-wrap" ref={gridRef} tabIndex={0} onKeyDown={onGridKey} aria-label={`${cat.name} sheet`}>

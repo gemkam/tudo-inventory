@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import DateInput from '@/components/DateInput';
 import { evaluate, num } from '@/lib/sheet';
 
 /*
@@ -191,7 +192,17 @@ export default function DataGrid({ columns, rows, canEdit, onSave, onAdd, addLab
       );
     }
     if (col.type === 'date') {
-      return <input {...common} type="date" value={editing.value} onChange={(e) => setEditing({ ...editing, value: e.target.value })} />;
+      return (
+        <DateInput
+          className="cell-date"
+          autoFocus
+          value={editing.value}
+          onChange={(v) => setEditing({ ...editingRef.current, value: v })}
+          onPicked={(v) => { setEditing({ ...editingRef.current, value: v }); commit(); }}
+          onKeyDown={editorKey}
+          onBlur={() => commit()}
+        />
+      );
     }
     return (
       <input

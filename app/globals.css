@@ -1310,3 +1310,17 @@ span.omr { font-size: inherit !important; font-weight: inherit !important; lette
 @keyframes ta-blink { 0% { opacity: 1; } 15% { opacity: 0; } 30% { opacity: 1; } 45% { opacity: 0; } 60%, 100% { opacity: 1; } }
 @keyframes ta-lamp { 0% { fill: #fffbe6; } 15% { fill: #8a8f86; } 30% { fill: #fffbe6; } 45% { fill: #8a8f86; } 60%, 100% { fill: #fffbe6; } }
 @media (prefers-reduced-motion: reduce) { .ta-glow, .ta-lamp { animation: none; } }
+
+/* Day-first date box (dd/mm/yyyy) with calendar button */
+.date-in { position: relative; display: inline-flex; align-items: center; width: 100%; min-width: 0; }
+.date-in input[type="text"] { flex: 1; min-width: 0; width: 100%; padding-right: 30px; font-variant-numeric: tabular-nums; }
+.date-pick { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); border: 0; background: none; cursor: pointer; font-size: 15px; line-height: 1; padding: 4px; opacity: .75; }
+.date-pick:hover { opacity: 1; }
+.date-native { position: absolute; right: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; }
+.cell-date { height: 100%; }
+.cell-date input[type="text"] { border: 0; outline: 0; background: transparent; height: 100%; font: inherit; padding-left: 0; }
+.iv-date input[type="text"] { border: 0; background: transparent; font: inherit; color: inherit; padding: 0 26px 0 0; }
+@media print { .date-pick { display: none; } }
+.sheet-edit-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.sheet-edit-bar h2 { margin: 0; font-size: 18px; }
+.sheet-title .btn.small { margin-left: auto; }

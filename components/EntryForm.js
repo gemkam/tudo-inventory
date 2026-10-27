@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { evaluate, todayISO, fmtFullDate } from '@/lib/sheet';
 import { useShare } from '@/components/ShareModal';
+import DateInput from '@/components/DateInput';
 
 const BLANK = {
   kind: 'trip', driver_id: '', entry_date: '', from_place: '', to_place: '', rent: '', received: '',
@@ -163,7 +164,7 @@ export default function EntryForm({ drivers, lockedDriverId = null, defaultDrive
             </div>
             <div className="field narrow" style={{ flex: '0 1 180px' }}>
               <label htmlFor="e-date">Date *</label>
-              <input id="e-date" type="date" value={f.entry_date} onChange={set('entry_date')} required />
+              <DateInput id="e-date" value={f.entry_date} onChange={(v) => setF((x) => ({ ...x, entry_date: v }))} required />
             </div>
           </div>
         </fieldset>

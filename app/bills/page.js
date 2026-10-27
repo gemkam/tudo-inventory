@@ -6,6 +6,7 @@ import AuthGate, { useUser } from '@/components/AuthGate';
 import Modal from '@/components/Modal';
 import { sb, fmtOMR, fmtDate } from '@/lib/supabase';
 import Omr from '@/components/Omr';
+import DateInput from '@/components/DateInput';
 
 function today() {
   const d = new Date();
@@ -116,7 +117,7 @@ function BillsPage() {
           </div>
           <div className="field narrow">
             <label htmlFor="bp-date">Paid on</label>
-            <input id="bp-date" type="date" required value={form.paid_on} onChange={(e) => setForm({ ...form, paid_on: e.target.value })} />
+            <DateInput id="bp-date" required value={form.paid_on} onChange={(v) => setForm((x) => ({ ...x, paid_on: v }))} />
           </div>
           <div className="field narrow">
             <label htmlFor="bp-period">For month</label>

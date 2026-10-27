@@ -91,7 +91,7 @@ function VehiclesPage() {
   if (!vehicles) return <div className="loading">Loading vehicles...</div>;
 
   const dateCol = (key, label, expiry) => ({
-    key, label, type: 'date', width: expiry ? 140 : 112,
+    key, label, type: 'date', width: expiry ? 140 : 130,
     render: (r) => (expiry ? <Expiry date={r[key]} /> : (r[key] ? fmtD(r[key]) : <span className="muted">–</span>))
   });
 

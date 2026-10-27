@@ -72,7 +72,7 @@ export default function MaintenanceSection({ vehicles, isAdmin, flash }) {
   const paidToList = [...new Set(rows.map((r) => (r.paid_to || '').trim()).filter(Boolean))];
 
   const columns = [
-    { key: 'work_date', label: 'Date', type: 'date', width: 108, render: (r) => fmtD(r.work_date) || <span className="muted">–</span> },
+    { key: 'work_date', label: 'Date', type: 'date', width: 130, render: (r) => fmtD(r.work_date) || <span className="muted">–</span> },
     { key: 'vehicle', label: 'Vehicle (unit / trailer)', type: 'select', options: vehicles.map(vehicleLabel), width: 170, raw: (r) => labelOf(r.vehicle_id), render: (r) => <b>{labelOf(r.vehicle_id)}</b> },
     { key: 'work', label: 'Work', type: 'combo', options: workList, width: 150, placeholder: 'Pick or type work' },
     { key: 'amount', label: 'Charges', type: 'number', min: 0, width: 110, render: (r) => (Number(r.amount) ? <Omr v={r.amount} /> : <span className="muted">–</span>) },

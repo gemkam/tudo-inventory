@@ -10,6 +10,7 @@ import CompanyHeader, { COMPANY_NAME } from '@/components/CompanyHeader';
 import { sb } from '@/lib/supabase';
 import { num, fmtAmt, fmtDay, fmtFullDate, monthKey, monthLabel, monthStart, todayISO, exportStamp, exportExcel, exportPdf } from '@/lib/sheet';
 import Omr from '@/components/Omr';
+import EditToggle from '@/components/EditToggle';
 
 const NUM_KEYS = ['rent', 'received', 'driver_allowance', 'diesel', 'toll', 'maintenance'];
 
@@ -107,12 +108,12 @@ function DriverSheet() {
 
   const amt = (k) => (r) => (Number(r[k]) ? fmtAmt(r[k]) : <span className="muted">–</span>);
   const columns = [
-    { key: 'entry_date', label: 'Date', type: 'date', width: 104, render: (r) => fmtDay(r.entry_date) },
+    { key: 'entry_date', label: 'Date', type: 'date', width: 128, render: (r) => fmtDay(r.entry_date) },
     { key: 'from_place', label: 'From', type: 'text', width: 130 },
     { key: 'to_place', label: 'To', type: 'text', width: 170, render: (r) => r.to_place || (r.description ? <em className="muted">{r.description}</em> : '') },
     { key: 'rent', label: 'Total rent', type: 'number', min: 0, width: 104, render: amt('rent') },
     { key: 'received', label: 'Received', type: 'number', min: 0, width: 104, render: amt('received') },
-    { key: 'received_date', label: 'Received on', type: 'date', width: 108, render: (r) => (r.received_date ? <span className={r.received_date !== r.entry_date ? 'late-pay' : ''}>{fmtDay(r.received_date)}</span> : <span className="muted">–</span>) },
+    { key: 'received_date', label: 'Received on', type: 'date', width: 128, render: (r) => (r.received_date ? <span className={r.received_date !== r.entry_date ? 'late-pay' : ''}>{fmtDay(r.received_date)}</span> : <span className="muted">–</span>) },
     {
       key: 'balance', label: 'Balance', type: 'calc', width: 96,
       render: (r) => { const b = num(Number(r.rent || 0) - Number(r.received || 0)); return b ? <span className={b > 0 ? 'neg' : 'pos'}>{fmtAmt(b)}</span> : <span className="muted">0</span>; }
@@ -223,9 +224,13 @@ function DriverSheet() {
       </div>
 
       <section className={`sheet ${editMode ? 'is-editing' : ''}`}>
+        <div className="sheet-title sheet-edit-bar">
+          <h2>Trip sheet</h2>
+          <EditToggle show={isAdmin} on={editMode} onClick={() => setEditMode((v) => !v)} />
+        </div>
         {editMode && (
           <div className="edit-banner">
-            Edit mode is on. Click any cell to change it, then press Enter. Amounts accept maths like 25+4. Click <strong>Done editing</strong> when finished.
+            Edit mode is on. Click any cell to change it, then press Enter. Amounts accept maths like 25+4. Click <strong>✓ Done</strong> when finished.
           </div>
         )}
         <DataGrid
