@@ -40,7 +40,14 @@ function Home() {
           </span>
         </Link>
         <Link href="/transport" className="hub-tile">
-          <span className="hub-logo"><img src="/tudonum-logo.png" alt="Tudo Num" /></span>
+          <span className="hub-letterhead">
+            <img src="/tudonum-logo.png" alt="Tudo Num" />
+            <span className="hub-co">
+              <b>MODERN CITY FOR EXPRESS SERVICES LLC</b>
+              <span>CR No. 1404742 · VAT Registration No. OM11008665</span>
+              <span>PO Box 149, PC 133, Sultanate of Oman · www.tudonumgroup.com</span>
+            </span>
+          </span>
           <span className="hub-kicker">Transport Division</span>
           <span className="hub-title">Transport Expense</span>
           <span className="hub-sub">Trips · Diesel · Tolls · Maintenance · Salaries</span>
