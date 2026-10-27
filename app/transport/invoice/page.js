@@ -422,7 +422,7 @@ function InvoicePage() {
           <div className="iv-table-wrap">
             <table className="iv-list">
               <thead>
-                <tr><th>No.</th><th>Type</th><th>Date</th><th>Customer / Client</th><th className="num">Total (OMR)</th></tr>
+                <tr><th>No.</th><th>Type</th><th>Date</th><th>Customer / Client</th><th className="num">Total (OMR)</th><th className="num">Action</th></tr>
               </thead>
               <tbody>
                 {shown.map((x) => (
@@ -432,6 +432,11 @@ function InvoicePage() {
                     <td>{dmy(x.invoice_date)}</td>
                     <td>{x.kind === 'interim' ? (x.client || x.project) : x.customer}</td>
                     <td className="num">{money(totals(x).total)}</td>
+                    <td className="num">
+                      <button type="button" className="iv-row-edit" onClick={(e) => { e.stopPropagation(); open(x); }}>
+                        {isAdmin ? '✏️ Edit' : 'Open'}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

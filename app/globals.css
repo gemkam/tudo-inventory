@@ -1289,3 +1289,10 @@ span.omr { font-size: inherit !important; font-weight: inherit !important; lette
 .alarm-card .rem-list { text-align: left; }
 @media (prefers-reduced-motion: reduce) { .alarm.ringing, .alarm.ringing .alarm-bells, .alarm-waves { animation: none; } }
 .page > .reminders { margin-bottom: 4px; }
+/* Invoice list: Edit button on every row */
+.iv-row-edit {
+  font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  padding: 5px 12px; border-radius: 999px; border: 1px solid var(--pill-line); background: var(--surface); color: var(--brown);
+  transition: background .2s ease, color .2s ease, border-color .2s ease;
+}
+.iv-row-edit:hover, .iv-row-edit:focus-visible { background: var(--brown); border-color: var(--brown); color: #fff; }
