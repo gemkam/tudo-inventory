@@ -46,8 +46,8 @@ export default function TruckAnim() {
           {/* headlights with glow */}
           <circle className="ta-glow" cx="63.5" cy="61" r="9" fill="url(#ta-light)" />
           <circle className="ta-glow" cx="96.5" cy="61" r="9" fill="url(#ta-light)" />
-          <rect x="60" y="58.5" width="7" height="5" rx="1.5" fill="#fff8d6" />
-          <rect x="93" y="58.5" width="7" height="5" rx="1.5" fill="#fff8d6" />
+          <rect className="ta-lamp" x="60" y="58.5" width="7" height="5" rx="1.5" fill="#fff8d6" />
+          <rect className="ta-lamp" x="93" y="58.5" width="7" height="5" rx="1.5" fill="#fff8d6" />
           {/* bumper and plate */}
           <rect x="57" y="68" width="46" height="5" rx="1.5" fill="#cfd8d5" />
           <rect x="74" y="68.8" width="12" height="3.4" rx=".6" fill="#ffd34d" />

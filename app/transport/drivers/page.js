@@ -5,6 +5,7 @@ import Link from 'next/link';
 import AuthGate, { useUser } from '@/components/AuthGate';
 import DataGrid from '@/components/DataGrid';
 import Modal from '@/components/Modal';
+import EditToggle from '@/components/EditToggle';
 import { sb } from '@/lib/supabase';
 
 function DriversPage() {
@@ -88,11 +89,6 @@ function DriversPage() {
       <div className="page-tools">
         <Link href="/transport" className="crumb">← Transport</Link>
         <div className="tools">
-          {isAdmin && (
-            <button type="button" className={`btn ${editMode ? 'in' : ''}`} onClick={() => setEditMode((v) => !v)} aria-pressed={editMode}>
-              {editMode ? '✓ Done editing' : 'Edit'}
-            </button>
-          )}
           <Link href="/transport/vehicles" className="btn">🚚 Vehicles</Link>
         </div>
       </div>
@@ -101,6 +97,10 @@ function DriversPage() {
         <p className="sub">{drivers.length} drivers · {active} active. Press Edit to change details or add a driver.</p>
       </div>
       <section className="panel">
+        <div className="section-head">
+          <h2>👤 All drivers</h2>
+          <EditToggle show={isAdmin} on={editMode} onClick={() => setEditMode((v) => !v)} />
+        </div>
         <DataGrid
           columns={columns}
           rows={drivers}

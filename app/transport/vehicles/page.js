@@ -8,6 +8,7 @@ import Modal from '@/components/Modal';
 import { sb } from '@/lib/supabase';
 import { todayISO, exportExcel, exportStamp } from '@/lib/sheet';
 import MaintenanceSection from '@/components/MaintenanceSection';
+import EditToggle from '@/components/EditToggle';
 
 const TRAILER_TYPES = ['Flatbed 40 Feet', 'Flatbed 45 Feet'];
 const fmtD = (d) => (d ? d.split('-').reverse().join('.') : '');
@@ -31,12 +32,12 @@ function VehiclesPage() {
   const { isAdmin } = useUser();
   const [vehicles, setVehicles] = useState(null);
   const [drivers, setDrivers] = useState([]);
-  const [editMode, setEditMode] = useState(false);
+  const [editUnits, setEditUnits] = useState(false);
+  const [editTrailers, setEditTrailers] = useState(false);
   const [toast, setToast] = useState(null);
   const [del, setDel] = useState(null);
   const [error, setError] = useState('');
   const timer = useRef(null);
-  const canChange = isAdmin && editMode;
 
   const flash = useCallback((text, kind = 'ok') => {
     setToast({ text, kind });
@@ -133,11 +134,6 @@ function VehiclesPage() {
       <div className="page-tools">
         <Link href="/transport" className="crumb">← Transport</Link>
         <div className="tools">
-          {isAdmin && (
-            <button type="button" className={`btn ${editMode ? 'in' : ''}`} onClick={() => setEditMode((v) => !v)} aria-pressed={editMode}>
-              {editMode ? '✓ Done editing' : 'Edit'}
-            </button>
-          )}
           <a href="#maintenance" className="btn">🔧 Maintenance</a>
           <Link href="/transport/drivers" className="btn">👤 Drivers</Link>
           <button type="button" className="btn ghost" onClick={doExcel}>Export Excel</button>
@@ -166,15 +162,21 @@ function VehiclesPage() {
       )}
 
       <section className="panel">
-        <h2>🚛 Units (heads)</h2>
-        <DataGrid columns={cols('Unit')} rows={units} canEdit={canChange} onSave={save} onAdd={() => addRow('Unit')} addLabel="+ Add unit" onDelete={(r) => setDel(r)} emptyText="No units yet." flash={flash} />
+        <div className="section-head">
+          <h2>🚛 Units (heads)</h2>
+          <EditToggle show={isAdmin} on={editUnits} onClick={() => setEditUnits((v) => !v)} />
+        </div>
+        <DataGrid columns={cols('Unit')} rows={units} canEdit={isAdmin && editUnits} onSave={save} onAdd={() => addRow('Unit')} addLabel="+ Add unit" onDelete={(r) => setDel(r)} emptyText="No units yet." flash={flash} />
       </section>
       <section className="panel">
-        <h2>🛻 Trailers (flatbed 40 / 45 feet)</h2>
-        <DataGrid columns={cols('Trailer')} rows={trailers} canEdit={canChange} onSave={save} onAdd={() => addRow('Trailer')} addLabel="+ Add trailer" onDelete={(r) => setDel(r)} emptyText="No trailers yet." flash={flash} />
+        <div className="section-head">
+          <h2>🛻 Trailers (flatbed 40 / 45 feet)</h2>
+          <EditToggle show={isAdmin} on={editTrailers} onClick={() => setEditTrailers((v) => !v)} />
+        </div>
+        <DataGrid columns={cols('Trailer')} rows={trailers} canEdit={isAdmin && editTrailers} onSave={save} onAdd={() => addRow('Trailer')} addLabel="+ Add trailer" onDelete={(r) => setDel(r)} emptyText="No trailers yet." flash={flash} />
       </section>
 
-      <MaintenanceSection vehicles={[...units, ...trailers]} canChange={canChange} flash={flash} />
+      <MaintenanceSection vehicles={[...units, ...trailers]} isAdmin={isAdmin} flash={flash} />
 
       {del && (
         <Modal title="Delete vehicle?" onClose={() => setDel(null)}>

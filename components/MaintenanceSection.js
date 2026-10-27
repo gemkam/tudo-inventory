@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import DataGrid from '@/components/DataGrid';
 import Modal from '@/components/Modal';
 import Omr from '@/components/Omr';
+import EditToggle from '@/components/EditToggle';
 import { sb } from '@/lib/supabase';
 import { todayISO, fmtAmt } from '@/lib/sheet';
 import { WORK_TYPES, PAY_METHODS, daysLeft, fmtD, vehicleLabel, whenText } from '@/lib/reminders';
@@ -17,7 +18,9 @@ function Due({ date, done, warnDays = 7 }) {
 }
 
 /* Maintenance of units and trailers: work, charges, PDC / bank transfer, PDC date, next due */
-export default function MaintenanceSection({ vehicles, canChange, flash }) {
+export default function MaintenanceSection({ vehicles, isAdmin, flash }) {
+  const [editOn, setEditOn] = useState(false);
+  const canChange = isAdmin && editOn;
   const [rows, setRows] = useState(null);
   const [del, setDel] = useState(null);
 
@@ -91,6 +94,7 @@ export default function MaintenanceSection({ vehicles, canChange, flash }) {
     <section className="panel" id="maintenance">
       <div className="section-head">
         <h2>🔧 Maintenance (units and trailers)</h2>
+        <EditToggle show={isAdmin} on={editOn} onClick={() => setEditOn((v) => !v)} />
         <p className="note">
           Total charges <b>{fmtAmt(total)} OMR</b> · {pdcOpen.length} PDC cheque{pdcOpen.length === 1 ? '' : 's'} not paid yet
         </p>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { evaluate, num } from '@/lib/sheet';
 
 /*
@@ -13,6 +14,48 @@ import { evaluate, num } from '@/lib/sheet';
   onDelete(row): shows a Delete button per row in Edit mode
   footer: { [key]: node } shown in a totals row
 */
+/* Pick-or-type cell: shows ALL saved choices; typing narrows the list; any new text is kept */
+function ComboEditor({ options, placeholder, value, typed, onChange, onPick, onKeyDown, onBlur }) {
+  const inputRef = useRef(null);
+  const [pos, setPos] = useState(null);
+  const [filtering, setFiltering] = useState(!!typed);
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.focus();
+    if (typed) { const n = el.value.length; el.setSelectionRange(n, n); } else el.select();
+    const place = () => { const r = el.getBoundingClientRect(); setPos({ left: r.left, top: r.bottom + 2, width: Math.max(r.width, 200) }); };
+    place();
+    window.addEventListener('scroll', place, true);
+    window.addEventListener('resize', place);
+    return () => { window.removeEventListener('scroll', place, true); window.removeEventListener('resize', place); };
+  }, [typed]);
+  const q = String(value || '').trim().toLowerCase();
+  const shown = filtering && q ? options.filter((o) => o.toLowerCase().includes(q)) : options;
+  return (
+    <>
+      <input
+        ref={inputRef}
+        className="cell-input"
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => { setFiltering(true); onChange(e.target.value); }}
+        onKeyDown={onKeyDown}
+        onBlur={onBlur}
+      />
+      {pos && shown.length > 0 && typeof document !== 'undefined' && createPortal(
+        <ul className="combo-list" style={{ left: pos.left, top: pos.top, minWidth: pos.width }} role="listbox">
+          {shown.map((o) => (
+            <li key={o} role="option" aria-selected={o === value} className={o === value ? 'on' : ''}
+              onMouseDown={(e) => { e.preventDefault(); onPick(o); }}>{o}</li>
+          ))}
+        </ul>,
+        document.body
+      )}
+    </>
+  );
+}
+
 export default function DataGrid({ columns, rows, canEdit, onSave, onAdd, addLabel = '+ Add new row', onDelete, footer, rowClass, emptyText = 'Nothing here yet.', flash }) {
   const [sel, setSel] = useState({ r: 0, c: 0 });
   const [editing, setEditingState] = useState(null);
@@ -134,19 +177,17 @@ export default function DataGrid({ columns, rows, canEdit, onSave, onAdd, addLab
       );
     }
     if (col.type === 'combo') {
-      const id = `dl-${col.key}`;
       return (
-        <>
-          <input
-            {...common}
-            list={id}
-            placeholder={col.placeholder || 'Pick or type'}
-            value={editing.value}
-            onChange={(e) => setEditing({ ...editing, value: e.target.value })}
-            onFocus={(e) => { const el = e.target; if (editing.typed) { const n = el.value.length; el.setSelectionRange(n, n); } else el.select(); }}
-          />
-          <datalist id={id}>{(col.options || []).map((o) => <option key={o} value={o} />)}</datalist>
-        </>
+        <ComboEditor
+          options={col.options || []}
+          placeholder={col.placeholder || 'Pick or type'}
+          value={editing.value}
+          typed={editing.typed}
+          onChange={(v) => setEditing({ ...editingRef.current, value: v })}
+          onPick={(v) => { setEditing({ ...editingRef.current, value: v }); commit(); }}
+          onKeyDown={editorKey}
+          onBlur={() => commit()}
+        />
       );
     }
     if (col.type === 'date') {
