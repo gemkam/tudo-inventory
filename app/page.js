@@ -29,6 +29,7 @@ function Home() {
       <h1 className="center">Tudo Office Inventory System</h1>
       <div className="hub">
         <Link href="/inventory" className="hub-tile">
+          <span className="hub-logo center"><img src="/tudonum-logo-lg.png" alt="Tudo Num" /></span>
           <span className="hub-kicker">Office</span>
           <span className="hub-title">Inventory</span>
           <span className="hub-sub">

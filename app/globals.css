@@ -1076,3 +1076,5 @@ body .btn.in:hover { background: var(--brown-deep); border-color: var(--brown-de
 }
 .hub-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
 @media screen and (max-width: 680px) { .hub-logo { top: 22px; left: 22px; width: 76px; height: 68px; } }
+.hub-logo.center { left: 50%; transform: translateX(-50%); width: 104px; height: 96px; }
+@media screen and (max-width: 680px) { .hub-logo.center { left: 50%; width: 84px; height: 78px; } }
