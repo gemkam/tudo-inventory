@@ -1670,3 +1670,22 @@ tr.pickable:hover td { background: var(--row-hover); }
 }
 @media screen and (max-width: 680px) { .brand-anim img { width: 170px; } }
 @media (prefers-reduced-motion: reduce) { .brand-anim .ba-swap, .brand-anim .ba-arrow { animation: none; } }
+
+/* Noor face v2: illustrated avatar (replaces the plain eyes and mouth) */
+.noor-core { background: #fff; display: block; padding: 0; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .7), 0 6px 18px rgba(0, 0, 0, .28); }
+.noor-svg { display: block; width: 100%; height: 100%; }
+.noor-svg .nf-eye { transform-box: fill-box; transform-origin: center; animation: nf-blink 4.6s infinite; }
+.noor-svg .nf-eye:nth-child(2) { animation-delay: .04s; }
+.noor-svg .nf-eyes { transition: transform .3s ease; }
+.noor-svg .nf-glint { animation: nf-glint 3s ease-in-out infinite; }
+.noor-svg .nf-pin { transform-box: fill-box; transform-origin: center; animation: noor-twinkle 2.6s ease-in-out infinite; }
+.noor-svg .nf-talk { transform-box: fill-box; transform-origin: center; animation: nf-talk .32s ease-in-out infinite alternate; }
+.noor-face.m-thinking .nf-eyes { animation: nf-look 1.6s ease-in-out infinite; }
+.noor-face.m-thinking .nf-brow { transform: translateY(-.8px); }
+.noor-face.m-listening .nf-eyes { transform: translateY(-.6px) scale(1.04); transform-box: fill-box; transform-origin: center; }
+.noor-face.m-listening .nf-brow { transform: translateY(-1.2px); }
+@keyframes nf-blink { 0%, 46%, 50%, 100% { transform: scaleY(1); } 48% { transform: scaleY(.08); } }
+@keyframes nf-glint { 0%, 100% { opacity: 1; } 50% { opacity: .65; } }
+@keyframes nf-talk { from { transform: scaleY(.35) scaleX(1.05); } to { transform: scaleY(1.15) scaleX(.92); } }
+@keyframes nf-look { 0%, 100% { transform: translateX(0); } 30% { transform: translateX(-2px); } 70% { transform: translateX(2px); } }
+@media (prefers-reduced-motion: reduce) { .noor-svg .nf-eye, .noor-svg .nf-talk, .noor-svg .nf-pin, .noor-svg .nf-glint { animation: none; } }

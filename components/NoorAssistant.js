@@ -73,15 +73,75 @@ function TypeText({ text, fresh, onTick }) {
   return <>{text.slice(0, n)}{n < text.length && <span className="noor-caret" />}</>;
 }
 
+// Noor's face: a friendly young woman in a hijab (hijab follows the chosen theme colour)
+function Avatar({ mode, uid }) {
+  const g = (n) => `${n}-${uid}`;
+  return (
+    <svg className="noor-svg" viewBox="9 8 82 82" aria-hidden="true">
+      <defs>
+        <radialGradient id={g('bg')} cx="50%" cy="35%" r="70%">
+          <stop offset="0" stopColor="#ffffff" />
+          <stop offset="1" stopColor="#dff1ec" />
+        </radialGradient>
+        <linearGradient id={g('hj')} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" style={{ stopColor: 'var(--brown-hover)' }} />
+          <stop offset="1" style={{ stopColor: 'var(--brown-deep)' }} />
+        </linearGradient>
+        <radialGradient id={g('sk')} cx="50%" cy="40%" r="65%">
+          <stop offset="0" stopColor="#ffe3cf" />
+          <stop offset="1" stopColor="#f2c4a4" />
+        </radialGradient>
+        <clipPath id={g('clip')}><circle cx="50" cy="50" r="50" /></clipPath>
+      </defs>
+      <g clipPath={`url(#${g('clip')})`}>
+        <rect width="100" height="100" fill={`url(#${g('bg')})`} />
+        {/* shoulders and hijab */}
+        <path d="M8 104 C10 82 26 74 50 74 C74 74 90 82 92 104 Z" fill={`url(#${g('hj')})`} />
+        <path d="M50 12 C28 12 20 30 21 50 C22 68 32 80 50 82 C68 80 78 68 79 50 C80 30 72 12 50 12 Z" fill={`url(#${g('hj')})`} />
+        <path d="M31 70 C38 80 62 80 69 70 C66 84 58 90 50 90 C42 90 34 84 31 70 Z" fill={`url(#${g('hj')})`} opacity=".9" />
+        {/* face */}
+        <ellipse cx="50" cy="50" rx="19" ry="22.5" fill={`url(#${g('sk')})`} />
+        {/* eyebrows */}
+        <path className="nf-brow" d="M38 41.5 Q42.5 38.8 46.5 41" fill="none" stroke="#6b4636" strokeWidth="1.6" strokeLinecap="round" />
+        <path className="nf-brow" d="M53.5 41 Q57.5 38.8 62 41.5" fill="none" stroke="#6b4636" strokeWidth="1.6" strokeLinecap="round" />
+        {/* eyes */}
+        <g className="nf-eyes">
+          <g className="nf-eye">
+            <ellipse cx="42.3" cy="48.5" rx="3.3" ry="4" fill="#2a1f2d" />
+            <circle className="nf-glint" cx="43.4" cy="47.2" r="1.25" fill="#fff" />
+            <path d="M38.6 46.2 Q42.3 43.4 46 46.2" fill="none" stroke="#2a1f2d" strokeWidth="1.3" strokeLinecap="round" />
+            <path d="M38.8 46.4 L37.2 45.2" stroke="#2a1f2d" strokeWidth="1.1" strokeLinecap="round" />
+          </g>
+          <g className="nf-eye">
+            <ellipse cx="57.7" cy="48.5" rx="3.3" ry="4" fill="#2a1f2d" />
+            <circle className="nf-glint" cx="58.8" cy="47.2" r="1.25" fill="#fff" />
+            <path d="M54 46.2 Q57.7 43.4 61.4 46.2" fill="none" stroke="#2a1f2d" strokeWidth="1.3" strokeLinecap="round" />
+            <path d="M61.2 46.4 L62.8 45.2" stroke="#2a1f2d" strokeWidth="1.1" strokeLinecap="round" />
+          </g>
+        </g>
+        {/* cheeks and nose */}
+        <ellipse cx="38" cy="57" rx="4" ry="2.4" fill="#ff7f96" opacity=".35" />
+        <ellipse cx="62" cy="57" rx="4" ry="2.4" fill="#ff7f96" opacity=".35" />
+        <path d="M50 51 Q48.6 55.5 50.6 56" fill="none" stroke="#d99a7c" strokeWidth="1.1" strokeLinecap="round" />
+        {/* mouth: smile, or talking */}
+        {mode === 'speaking'
+          ? <ellipse className="nf-talk" cx="50" cy="63" rx="3.6" ry="2.6" fill="#b8435e" />
+          : <path d={mode === 'thinking' ? 'M46.5 63 Q50 64 53.5 62.4' : 'M44.5 61.5 Q50 67 55.5 61.5'} fill="none" stroke="#b8435e" strokeWidth="1.8" strokeLinecap="round" />}
+        {/* little sparkle pin on the hijab */}
+        <path className="nf-pin" d="M72 34 l1.2 2.8 2.8 1.2 -2.8 1.2 -1.2 2.8 -1.2 -2.8 -2.8 -1.2 2.8 -1.2z" fill="#fff" />
+      </g>
+    </svg>
+  );
+}
+
+let faceId = 0;
 function Face({ mode, size = 'big' }) {
+  const [uid] = useState(() => `nf${++faceId}`);
   return (
     <span className={`noor-face ${size} m-${mode}`} aria-hidden="true">
       <span className="noor-aura" />
       <span className="noor-ring" />
-      <span className="noor-core">
-        <span className="noor-eyes"><i /><i /></span>
-        <span className="noor-mouth">{mode === 'speaking' ? <><b /><b /><b /><b /><b /></> : null}</span>
-      </span>
+      <span className="noor-core"><Avatar mode={mode} uid={uid} /></span>
       {size === 'big' && <><span className="noor-spark s1" /><span className="noor-spark s2" /><span className="noor-spark s3" /></>}
       {mode === 'listening' && <><span className="noor-wave w1" /><span className="noor-wave w2" /><span className="noor-wave w3" /></>}
     </span>
