@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { appWatchData, appWatchContext } from '@/lib/appWatch';
 import { inventoryData, inventoryContext, transportData, transportContext, systemPrompt, groupPrompt, askAI } from '@/lib/assistant';
 
 export const runtime = 'nodejs';
@@ -30,9 +31,12 @@ export async function POST(req) {
     let system;
     if (scope === 'group') {
       // The Group Summary page sends the numbers it shows (already limited by the database rules for this user)
-      const context = String(body.context || '').slice(0, 32000);
-      if (!context) return Response.json({ error: 'The summary is still loading. Try again in a moment.' }, { status: 400 });
-      system = groupPrompt(context, body.lang === 'ru' ? 'ru' : 'en');
+      const page = String(body.context || '').slice(0, 24000);
+      if (!page) return Response.json({ error: 'The summary is still loading. Try again in a moment.' }, { status: 400 });
+      // Plus the whole app (alerts, money to pay and to receive, renewals, low stock), read on the server as this user
+      let watch = '';
+      try { watch = appWatchContext(await appWatchData(supa)); } catch (e) { console.error('app watch', e); }
+      system = groupPrompt(`${watch}\n\n=== GROUP SUMMARY PAGE ===\n${page}`, body.lang === 'ru' ? 'ru' : 'en');
     } else {
       const context = scope === 'transport' ? transportContext(await transportData(supa)) : inventoryContext(await inventoryData(supa));
       system = systemPrompt(scope, context);

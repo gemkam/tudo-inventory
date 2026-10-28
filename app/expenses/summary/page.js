@@ -82,12 +82,12 @@ function SummaryPage() {
 
   // vehicle reminders (VOC, Mulkiya, PDC) join the alerts when Transport is chosen
   const vehicleAlerts = useMemo(() => {
-    if (!data || !pick.includes('transport')) return [];
+    if (!data) return []; // always: Rauf and the alerts box see renewals and cheques whatever companies are picked
     return buildReminders(data.vehicles, data.maint).map((r) => ({
       level: r.urgent ? 'bad' : 'warn', icon: r.kind === 'pay' ? '💳' : r.kind === 'renew' ? '📄' : '🔧',
       text: `${r.title}: ${r.detail}, ${whenText(r.left)} (${dmy(r.date)}).`, link: '/transport/vehicles'
     }));
-  }, [data, pick]);
+  }, [data]);
 
   // Everything on this page as text, for Noor (the AI assistant)
   const aiContext = useMemo(() => {
