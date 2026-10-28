@@ -11,7 +11,7 @@ import { HBars } from '@/components/Charts';
 import { useShare } from '@/components/ShareModal';
 import { sb } from '@/lib/supabase';
 import { num, fmtAmt, monthKey, monthLabel, todayISO, exportExcel, exportPdf, exportStamp, fmtFullDate } from '@/lib/sheet';
-import { HEADS, CATEGORIES, COMPANIES, companyOf, n, r3, staffGross, staffNet } from '@/lib/expenses';
+import { HEADS, CATEGORIES, COMPANIES, DEPARTMENTS, SOURCE_LABEL, companyOf, n, r3, staffGross, staffNet } from '@/lib/expenses';
 
 const fmtD = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
 const monthName = (k) => new Date(`${k}-01T00:00:00`).toLocaleString('en-GB', { month: 'short' });
@@ -23,6 +23,7 @@ function ExpensesPage() {
   const [staff, setStaff] = useState([]);
   const [month, setMonth] = useState(null);
   const [head, setHead] = useState('');
+  const [dept, setDept] = useState('');
   const [editRows, setEditRows] = useState(false);
   const [editStaff, setEditStaff] = useState(false);
   const [del, setDel] = useState(null);
@@ -45,7 +46,7 @@ function ExpensesPage() {
 
   function switchCo(k) {
     if (k === co) return;
-    setCo(k); setRows(null); setStaff([]); setMonth(null); setHead(''); setEditRows(false); setEditStaff(false);
+    setCo(k); setRows(null); setStaff([]); setMonth(null); setHead(''); setDept(''); setEditRows(false); setEditStaff(false);
     try { localStorage.setItem('tudo-exp-co', k); window.history.replaceState(null, '', `/expenses?co=${k}`); } catch { /* ignore */ }
   }
 
@@ -79,14 +80,20 @@ function ExpensesPage() {
 
   const inMonth = useCallback((r) => month === 'all' || monthKey(r.entry_date) === month, [month]);
   const monthRows = useMemo(() => (rows || []).filter(inMonth), [rows, inMonth]);
-  const shown = useMemo(() => monthRows.filter((r) => !head || r.head === head), [monthRows, head]);
+  const deptRows = useMemo(() => monthRows.filter((r) => !dept || (r.department || 'No department') === dept), [monthRows, dept]);
+  const shown = useMemo(() => deptRows.filter((r) => !head || r.head === head), [deptRows, head]);
+  const byDept = useMemo(() => {
+    const m = {};
+    for (const r of monthRows) { const d = r.department || 'No department'; m[d] = r3((m[d] || 0) + n(r.paid)); }
+    return Object.entries(m).sort((a, b) => b[1] - a[1]);
+  }, [monthRows]);
 
   const total = (list, k) => r3(list.reduce((t, r) => t + n(r[k]), 0));
   const byHead = useMemo(() => {
     const m = {};
-    for (const r of monthRows) { const h = r.head || 'Other'; m[h] = r3((m[h] || 0) + n(r.paid)); }
+    for (const r of deptRows) { const h = r.head || 'Other'; m[h] = r3((m[h] || 0) + n(r.paid)); }
     return Object.entries(m).sort((a, b) => b[1] - a[1]);
-  }, [monthRows]);
+  }, [deptRows]);
 
   /* Year summary: heads x months (like the "1st Quarter Summary" sheet) */
   const year = (month && month !== 'all' ? month : monthKey(todayISO())).slice(0, 4);
@@ -102,7 +109,10 @@ function ExpensesPage() {
   const vatByMonth = yearMonths.map((k) => r3((rows || []).filter((r) => monthKey(r.entry_date) === k).reduce((t, r) => t + n(r.vat), 0)));
 
   /* ---------- Saving ---------- */
+  const lockedMsg = (r) => `This line comes from ${SOURCE_LABEL[r.source] || 'another page'}. Change it there and it updates here by itself.`;
+
   async function save(row, key, value) {
+    if (row.source) { flash(lockedMsg(row), 'err'); return; }
     const patch = { [key]: ['paid', 'unpaid', 'vat'].includes(key) ? (value === null || value === '' ? null : value) : (value === '' ? null : value) };
     if (key === 'paid' && patch.paid === null) patch.paid = 0;
     setRows((list) => list.map((x) => (x.id === row.id ? { ...x, ...patch } : x)));
@@ -115,7 +125,7 @@ function ExpensesPage() {
     const date = month === 'all' || month === monthKey(todayISO()) ? todayISO() : `${month}-01`;
     const sort = (rows || []).reduce((m, x) => Math.max(m, x.sort || 0), 0) + 1;
     const { data, error: err } = await sb().from('exp_entries')
-      .insert({ company: co, entry_date: date, head: head || HEADS[5], category: '', description: '', paid: 0, sort, account: 'P & L', entered_by: me || null })
+      .insert({ company: co, entry_date: date, head: head || HEADS[5], department: dept && dept !== 'No department' ? dept : (DEPARTMENTS[co] || [])[co === 'modern-city' ? 4 : 0] || null, category: '', description: '', paid: 0, sort, account: 'P & L', entered_by: me || null })
       .select().single();
     if (err) { flash(err.message, 'err'); return; }
     setRows((list) => [...list, data]);
@@ -162,13 +172,15 @@ function ExpensesPage() {
   if (!co || !rows || !month) return <>{co && switcher}<div className="loading">Loading expenses...</div></>;
 
   const headList = [...new Set([...HEADS, ...rows.map((r) => r.head).filter(Boolean)])];
+  const deptList = [...new Set([...(DEPARTMENTS[co] || []), ...rows.map((r) => r.department).filter(Boolean)])];
   const catList = [...new Set([...CATEGORIES, ...rows.map((r) => r.category).filter(Boolean)])];
   const amt = (k) => (r) => (r[k] === null || r[k] === undefined || r[k] === '' ? <span className="muted">–</span> : fmtAmt(r[k]));
 
   const columns = [
     { key: 'entry_date', label: 'Date', type: 'date', width: 128, render: (r) => fmtD(r.entry_date) },
     { key: 'bill_no', label: 'Bill No', type: 'text', width: 150 },
-    { key: 'description', label: 'Description', type: 'text', width: 280 },
+    { key: 'description', label: 'Description', type: 'text', width: 280, render: (r) => (r.source ? <span title={lockedMsg(r)}><span className="auto-tag">🔗 Auto</span> {r.description}</span> : r.description) },
+    { key: 'department', label: 'Department', type: 'combo', options: deptList, width: 150 },
     { key: 'category', label: 'Bill category', type: 'combo', options: catList, width: 140 },
     { key: 'head', label: 'Head of account', type: 'combo', options: headList, width: 230 },
     { key: 'paid', label: 'Paid OMR', type: 'number', min: 0, width: 110, render: amt('paid') },
@@ -189,16 +201,17 @@ function ExpensesPage() {
   ];
   const staffNetTotal = r3(staff.reduce((t, s) => t + staffNet(s), 0));
 
+  const TD = total(deptRows, 'paid');
   const T = { paid: total(shown, 'paid'), unpaid: total(shown, 'unpaid'), vat: total(shown, 'vat') };
   const TM = { paid: total(monthRows, 'paid'), unpaid: total(monthRows, 'unpaid'), vat: total(monthRows, 'vat') };
 
   /* ---------- Export ---------- */
   function entryTable(list) {
     return {
-      head: ['SR#', 'Bill No', 'Date', 'Description', 'Bill category', 'Head of account', 'Paid OMR', 'Unpaid OMR', 'VAT 5%', 'VAT Reg No'],
-      rows: list.map((r, i) => [i + 1, r.bill_no || '', fmtD(r.entry_date), r.description || '', r.category || '', r.head || '', num(r.paid), r.unpaid === null ? '' : num(r.unpaid), r.vat === null ? 'NA' : num(r.vat), r.vat_reg_no || 'NA']),
-      totalsRow: ['Total', '', '', `${list.length} bills`, '', '', total(list, 'paid'), total(list, 'unpaid'), total(list, 'vat'), ''],
-      numCols: [6, 7, 8]
+      head: ['SR#', 'Bill No', 'Date', 'Description', 'Department', 'Bill category', 'Head of account', 'Paid OMR', 'Unpaid OMR', 'VAT 5%', 'VAT Reg No'],
+      rows: list.map((r, i) => [i + 1, r.bill_no || '', fmtD(r.entry_date), r.description || '', r.department || '', r.category || '', r.head || '', num(r.paid), r.unpaid === null ? '' : num(r.unpaid), r.vat === null ? 'NA' : num(r.vat), r.vat_reg_no || 'NA']),
+      totalsRow: ['Total', '', '', `${list.length} bills`, '', '', '', total(list, 'paid'), total(list, 'unpaid'), total(list, 'vat'), ''],
+      numCols: [7, 8, 9]
     };
   }
   function shareIt() {
@@ -218,7 +231,7 @@ function ExpensesPage() {
     try {
       const sheets = [];
       const t = entryTable(shown);
-      sheets.push({ name: month === 'all' ? 'All bills' : monthLabel(month), title: `${month === 'all' ? 'All' : monthLabel(month)} EXPENSE (BILLS) ENTRIES`, subtitle: EXP_COMPANY, ...t, widths: [6, 18, 12, 40, 16, 32, 12, 12, 10, 16] });
+      sheets.push({ name: month === 'all' ? 'All bills' : monthLabel(month), title: `${month === 'all' ? 'All' : monthLabel(month)} EXPENSE (BILLS) ENTRIES`, subtitle: EXP_COMPANY, ...t, widths: [6, 18, 12, 40, 18, 16, 32, 12, 12, 10, 16] });
       sheets.push({
         name: `${year} Summary`, title: `${year} EXPENSE SUMMARY`, subtitle: EXP_COMPANY,
         head: ['Head of account', ...yearMonths.map(monthName), 'Total'],
@@ -243,11 +256,12 @@ function ExpensesPage() {
       const t = entryTable(shown);
       const f = (row) => row.map((v, i) => (t.numCols.includes(i) && typeof v === 'number' ? fmtAmt(v) : v));
       await exportPdf(`Office Expense ${month === 'all' ? 'All' : monthLabel(month)}.pdf`, {
-        title: `${month === 'all' ? 'All months' : monthLabel(month)} · Expense (bills) entries${head ? ` · ${head}` : ''}`,
+        title: `${month === 'all' ? 'All months' : monthLabel(month)} · Expense (bills) entries${dept ? ` · ${dept}` : ''}${head ? ` · ${head}` : ''}`,
         subtitle: `${EXP_COMPANY}  |  Exported ${exportStamp()}  |  OMR`,
         sections: [
           { head: t.head, rows: t.rows.map(f), totalsRow: f(t.totalsRow), numCols: t.numCols },
-          { heading: 'By head of account', head: ['Head of account', 'Paid OMR'], rows: byHead.map(([h, v]) => [h, fmtAmt(v)]), totalsRow: ['Total', fmtAmt(TM.paid)], numCols: [1] }
+          { heading: 'By head of account', head: ['Head of account', 'Paid OMR'], rows: byHead.map(([h, v]) => [h, fmtAmt(v)]), totalsRow: ['Total', fmtAmt(total(deptRows, 'paid'))], numCols: [1] },
+          { heading: 'By department', head: ['Department', 'Paid OMR'], rows: byDept.map(([h, v]) => [h, fmtAmt(v)]), totalsRow: ['Total', fmtAmt(TM.paid)], numCols: [1] }
         ]
       });
       flash('PDF downloaded');
@@ -266,6 +280,7 @@ function ExpensesPage() {
               <option value="all">All months</option>
             </select>
           </div>
+          <Link href={`/expenses/docs?co=${co}`} className="btn">🧾 Invoice / Receipt</Link>
           <button type="button" className="btn ghost" onClick={doExcel}>Export Excel</button>
           <button type="button" className="btn ghost" onClick={doPdf}>Export PDF</button>
           <button type="button" className="btn ghost" onClick={shareIt}>📤 Share</button>
@@ -301,10 +316,21 @@ function ExpensesPage() {
 
       <section className="panel">
         <div className="section-head">
+          <h2>By department · {month === 'all' ? 'All months' : monthLabel(month)}</h2>
+          <p className="note">{co === 'modern-city' ? 'Transport costs come in by themselves from the Transport pages (🔗 Auto). ' : ''}Click a department to show only its bills</p>
+        </div>
+        <div className="head-chips">
+          <button type="button" className={`rp-chip ${!dept ? 'active' : ''}`} onClick={() => { setDept(''); setHead(''); }}>All departments · {fmtAmt(TM.paid)}</button>
+          {byDept.map(([d, v]) => <button type="button" key={d} className={`rp-chip ${dept === d ? 'active' : ''}`} onClick={() => { setDept(d); setHead(''); }}>{d} · {fmtAmt(v)}</button>)}
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="section-head">
           <h2>By head of account · {month === 'all' ? 'All months' : monthLabel(month)}</h2>
           <p className="note">Click a head to show only its bills</p>
         </div>
-        <HBars rows={byHead.map(([h, v]) => ({ label: h, value: v, sub: TM.paid ? `${Math.round((v / TM.paid) * 100)}%` : '' }))} fmt={(v) => fmtAmt(v)} />
+        <HBars rows={byHead.map(([h, v]) => ({ label: h, value: v, sub: TD ? `${Math.round((v / TD) * 100)}%` : '' }))} fmt={(v) => fmtAmt(v)} />
         <div className="head-chips">
           <button type="button" className={`rp-chip ${!head ? 'active' : ''}`} onClick={() => setHead('')}>All heads</button>
           {byHead.map(([h]) => <button type="button" key={h} className={`rp-chip ${head === h ? 'active' : ''}`} onClick={() => setHead(h)}>{h}</button>)}
@@ -313,7 +339,7 @@ function ExpensesPage() {
 
       <section className={`sheet ${editRows ? 'is-editing' : ''}`}>
         <div className="sheet-title sheet-edit-bar">
-          <h2>Bills{head ? ` · ${head}` : ''}</h2>
+          <h2>Bills{dept ? ` · ${dept}` : ''}{head ? ` · ${head}` : ''}</h2>
           <EditToggle show={isAdmin} on={editRows} onClick={() => setEditRows((v) => !v)} />
         </div>
         {editRows && <div className="edit-banner">Edit mode is on. Click any cell to change it, then press Enter. Amounts accept maths like 4+2.5. Click <strong>✓ Done</strong> when finished.</div>}
@@ -324,8 +350,8 @@ function ExpensesPage() {
           onSave={save}
           onAdd={addRow}
           addLabel="+ Add bill"
-          onDelete={(r) => setDel(r)}
-          rowClass={(r) => (n(r.unpaid) > 0 ? 'due-row' : '')}
+          onDelete={(r) => (r.source ? flash(lockedMsg(r), 'err') : setDel(r))}
+          rowClass={(r) => [n(r.unpaid) > 0 ? 'due-row' : '', r.source ? 'auto-row' : ''].join(' ')}
           emptyText={rows.length ? 'No bills in this month.' : 'No bills yet for this company. Press ✏️ Edit, then + Add bill.'}
           footer={{ description: `${shown.length} bills`, paid: <Omr v={T.paid} />, unpaid: fmtAmt(T.unpaid), vat: fmtAmt(T.vat) }}
           flash={flash}

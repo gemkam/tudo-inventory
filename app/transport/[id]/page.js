@@ -186,6 +186,37 @@ function DriverSheet() {
     }
   }
 
+  /* Driver copy: only his trips, allowance and diesel. No rent, received, balance or profit. */
+  async function doDriverCopy() {
+    try {
+      flash('Preparing driver copy...');
+      const head = ['Date', 'From', 'To', 'Description', 'Cargo', 'Consignee', 'Status', 'Driver allowance', 'Allowance', 'Diesel'];
+      const list = rows.filter((r) => Number(r.rent) > 0 || Number(r.driver_allowance) > 0 || Number(r.diesel) > 0 || r.to_place);
+      const data = list.map((r) => [
+        fmtFullDate(r.entry_date), r.from_place || '', r.to_place || '', r.description || '', r.cargo || '', r.consignee || '', r.remarks || '',
+        Number(r.driver_allowance) ? fmtAmt(r.driver_allowance) : '', r.allowance_status || '', Number(r.diesel) ? fmtAmt(r.diesel) : ''
+      ]);
+      const allowPaid = num(list.filter((r) => r.allowance_status === 'Paid').reduce((t, r) => t + Number(r.driver_allowance || 0), 0));
+      await exportPdf(`${driver.name} ${monthLabel(month)} driver copy.pdf`, {
+        title: `${driver.name} · Vehicle # ${driver.vehicle_no || ''} · Trip record`,
+        subtitle: `${COMPANY_NAME} · Transport Division  |  ${monthLabel(month)}  |  Printed ${exportStamp()}  |  OMR`,
+        sections: [{
+          head, rows: data,
+          totalsRow: ['Total', `${list.length} trips`, '', '', '', '', '', fmtAmt(totals.driver_allowance), '', fmtAmt(totals.diesel)],
+          numCols: [7, 9]
+        }, {
+          heading: 'Allowance',
+          head: ['Trips', 'Driver allowance', 'Paid', 'Still to pay', 'Diesel given'],
+          rows: [[list.length, fmtAmt(totals.driver_allowance), fmtAmt(allowPaid), fmtAmt(num(totals.driver_allowance - allowPaid)), fmtAmt(totals.diesel)]],
+          numCols: [0, 1, 2, 3, 4], fontSize: 10
+        }]
+      });
+      flash('Driver copy downloaded');
+    } catch {
+      flash('Could not create the driver copy. Please try again.', 'err');
+    }
+  }
+
   /* ---------- Render ---------- */
 
   if (error) return <div className="error">{error} <Link href="/transport">Back to Transport</Link></div>;
@@ -210,6 +241,7 @@ function DriverSheet() {
           )}
           <button type="button" className="btn ghost" onClick={doExcel}>Export Excel</button>
           <button type="button" className="btn ghost" onClick={doPdf}>Export PDF</button>
+          <button type="button" className="btn" onClick={doDriverCopy} title="PDF for the driver: trips, allowance and diesel only. No rent, received or profit.">🚚 Driver copy</button>
         </div>
       </div>
 

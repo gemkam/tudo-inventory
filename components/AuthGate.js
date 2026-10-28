@@ -80,17 +80,8 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
       : (path.startsWith('/inventory') || path.startsWith('/c/') || path.startsWith('/bills') || path.startsWith('/log')) ? 'inventory'
         : null;
 
-  const nav = user.isEntry
-    ? [['/entry', 'Data entry']]
-    : [
-      ['/', 'Home'],
-      ['/inventory', 'Inventory'],
-      ['/transport', 'Transport'],
-      ['/expenses', 'Expenses'],
-      ...(user.isAdmin ? [['/entry', 'Data entry']] : []),
-      ...(user.isAdmin ? [['/settings', 'Settings']] : []),
-      ...(user.isOwner ? [['/users', 'Users']] : [])
-    ];
+  // Top bar: only Home. Inventory, Transport, Expenses, Data entry, Settings and Users open from the Home page.
+  const nav = user.isEntry ? [['/entry', 'Data entry']] : [['/', 'Home']];
 
   let blocked = '';
   if (ownerOnly && !user.isOwner) blocked = 'Only Administrator can open this page.';

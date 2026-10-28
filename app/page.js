@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import AuthGate from '@/components/AuthGate';
+import AuthGate, { useUser } from '@/components/AuthGate';
 import TruckAnim from '@/components/TruckAnim';
 import Reminders from '@/components/Reminders';
 import { sb, isLow } from '@/lib/supabase';
@@ -21,6 +21,7 @@ function Letterhead() {
 }
 
 function Home() {
+  const { isAdmin, isOwner } = useUser();
   const [inv, setInv] = useState(null);
   const [tr, setTr] = useState(null);
   const [ex, setEx] = useState(null);
@@ -86,6 +87,14 @@ function Home() {
           </span>
         </Link>
       </div>
+      {isAdmin && (
+        <div className="hub-links">
+          <Link href="/expenses/docs" className="btn ghost">🧾 Invoices & Receipts</Link>
+          <Link href="/entry" className="btn ghost">✍️ Data entry</Link>
+          <Link href="/settings" className="btn ghost">⚙️ Settings</Link>
+          {isOwner && <Link href="/users" className="btn ghost">👥 Users</Link>}
+        </div>
+      )}
       <div className="powered-by" aria-label="Powered by KS TECH LLC">Powered by <b>KS TECH LLC</b></div>
     </>
   );

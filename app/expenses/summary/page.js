@@ -37,7 +37,7 @@ function SummaryPage() {
   const load = useCallback(async () => {
     const s = sb();
     const [e, te, ts, tx, dr, bu, ve, ma] = await Promise.all([
-      s.from('exp_entries').select('company, entry_date, bill_no, description, category, head, paid, unpaid, vat'),
+      s.from('exp_entries').select('company, entry_date, bill_no, description, category, head, paid, unpaid, vat, department, source_kind'),
       s.from('transport_entries').select('entry_date, received_date, driver_id, from_place, to_place, description, rent, received, diesel, toll, maintenance'),
       s.from('transport_salaries').select('*'),
       s.from('transport_extras').select('driver_id, month, description, amount'),
@@ -114,7 +114,7 @@ function SummaryPage() {
   const headRest = r3(G.heads.slice(5).reduce((t, h) => t + h.total, 0));
   const headSlices = [...headTop.map((h, i) => ({ label: h.head, value: h.total, color: SERIES[i] })), ...(headRest ? [{ label: 'Everything else', value: headRest, color: '#9aa5a1' }] : [])];
   const barMonths = allMonths.slice(-12);
-  const barVals = barMonths.map((m) => r3(lines.filter((l) => pick.includes(l.src) && l.month === m).reduce((t, l) => t + l.amount, 0)));
+  const barVals = barMonths.map((m) => r3(lines.filter((l) => pick.includes(l.src) && !(pick.includes('transport') && l.mirror) && l.month === m).reduce((t, l) => t + l.amount, 0)));
   let barHi = barMonths.indexOf(period);
   if (barHi < 0) barHi = barVals.indexOf(Math.max(...barVals));
   const maxIdx = barVals.indexOf(Math.max(...barVals));
@@ -128,7 +128,7 @@ function SummaryPage() {
   }
   const drillHead = (head) => openDrill(`${head} · ${periodLabel}`, (l) => l.head === head);
   const drillCompany = (key) => openDrill(`${labelOf(key)} · ${periodLabel}`, (l) => l.src === key);
-  const drillMonth = (m) => openDrill(`${monthLabel(m)} · all chosen`, (l) => l.month === m, lines.filter((l) => pick.includes(l.src)));
+  const drillMonth = (m) => openDrill(`${monthLabel(m)} · all chosen`, (l) => l.month === m, lines.filter((l) => pick.includes(l.src) && !(pick.includes('transport') && l.mirror)));
   function drillAlert(a) {
     if (a.link) { window.location.href = a.link; return; }
     if (a.pick?.head) drillHead(a.pick.head);
