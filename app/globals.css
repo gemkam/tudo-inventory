@@ -1654,37 +1654,8 @@ tr.pickable:hover td { background: var(--row-hover); }
 .brand-anim .ba-swap, .brand-anim .ba-arrow { position: absolute; left: 0; top: 0; }
 .brand-anim .ba-swap { filter: none; opacity: 0; animation: ba-swap 8.5s ease-in-out infinite; }
 .brand-anim { --ba-s: 1; }
-/* arrow circles around the blue man and keeps pointing the same way (no spinning) */
-.brand-anim .ba-arrow { filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .3)); animation: ba-orbit 8.5s linear infinite; will-change: transform; }
-@keyframes ba-orbit {
-  0%, 3% { transform: translate(0, 0) scale(1); filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .3)); }
-  5.00% { transform: translate(calc(0.0px * var(--ba-s)), calc(0.0px * var(--ba-s))) scale(1.08); filter: drop-shadow(0 0 11px rgba(140, 255, 90, .9)); }
-  6.17% { transform: translate(calc(5.3px * var(--ba-s)), calc(5.8px * var(--ba-s))) scale(1.08); }
-  7.33% { transform: translate(calc(8.9px * var(--ba-s)), calc(12.7px * var(--ba-s))) scale(1.08); }
-  8.50% { transform: translate(calc(10.6px * var(--ba-s)), calc(20.4px * var(--ba-s))) scale(1.08); }
-  9.67% { transform: translate(calc(10.3px * var(--ba-s)), calc(28.2px * var(--ba-s))) scale(1.08); }
-  10.83% { transform: translate(calc(7.9px * var(--ba-s)), calc(35.7px * var(--ba-s))) scale(1.08); }
-  12.00% { transform: translate(calc(3.7px * var(--ba-s)), calc(42.3px * var(--ba-s))) scale(1.08); }
-  13.17% { transform: translate(calc(-2.1px * var(--ba-s)), calc(47.6px * var(--ba-s))) scale(1.08); }
-  14.33% { transform: translate(calc(-9.0px * var(--ba-s)), calc(51.2px * var(--ba-s))) scale(1.08); }
-  15.50% { transform: translate(calc(-16.7px * var(--ba-s)), calc(52.9px * var(--ba-s))) scale(1.08); }
-  16.67% { transform: translate(calc(-24.5px * var(--ba-s)), calc(52.5px * var(--ba-s))) scale(1.08); }
-  17.83% { transform: translate(calc(-32.0px * var(--ba-s)), calc(50.2px * var(--ba-s))) scale(1.08); }
-  19.00% { transform: translate(calc(-38.6px * var(--ba-s)), calc(46.0px * var(--ba-s))) scale(1.08); filter: drop-shadow(0 0 11px rgba(140, 255, 90, .9)); }
-  20.17% { transform: translate(calc(-43.9px * var(--ba-s)), calc(40.2px * var(--ba-s))) scale(1.08); }
-  21.33% { transform: translate(calc(-47.5px * var(--ba-s)), calc(33.2px * var(--ba-s))) scale(1.08); }
-  22.50% { transform: translate(calc(-49.2px * var(--ba-s)), calc(25.6px * var(--ba-s))) scale(1.08); }
-  23.67% { transform: translate(calc(-48.8px * var(--ba-s)), calc(17.8px * var(--ba-s))) scale(1.08); }
-  24.83% { transform: translate(calc(-46.5px * var(--ba-s)), calc(10.3px * var(--ba-s))) scale(1.08); }
-  26.00% { transform: translate(calc(-42.3px * var(--ba-s)), calc(3.7px * var(--ba-s))) scale(1.08); }
-  27.17% { transform: translate(calc(-36.5px * var(--ba-s)), calc(-1.6px * var(--ba-s))) scale(1.08); }
-  28.33% { transform: translate(calc(-29.5px * var(--ba-s)), calc(-5.2px * var(--ba-s))) scale(1.08); }
-  29.50% { transform: translate(calc(-21.9px * var(--ba-s)), calc(-6.9px * var(--ba-s))) scale(1.08); }
-  30.67% { transform: translate(calc(-14.1px * var(--ba-s)), calc(-6.6px * var(--ba-s))) scale(1.08); }
-  31.83% { transform: translate(calc(-6.6px * var(--ba-s)), calc(-4.2px * var(--ba-s))) scale(1.08); }
-  33.00% { transform: translate(calc(-0.0px * var(--ba-s)), calc(-0.0px * var(--ba-s))) scale(1.08); }
-  38%, 100% { transform: translate(0, 0) scale(1); filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .3)); }
-}
+/* arrow stays still (user asked for no arrow animation) */
+.brand-anim .ba-arrow { filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .3)); animation: none; }
 @keyframes ba-swap {
   0%, 6% { opacity: 0; }
   11%, 17% { opacity: 1; }
