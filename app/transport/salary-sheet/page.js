@@ -5,7 +5,8 @@ import Link from 'next/link';
 import AuthGate, { useUser } from '@/components/AuthGate';
 import { sb } from '@/lib/supabase';
 import { monthKey, monthStart, monthLabel, fmtAmt, num, todayISO, exportExcel, exportStamp } from '@/lib/sheet';
-import { SALARY_FIELDS, salaryTotal, salaryPayable, allowancePlan } from '@/lib/transport';
+import { SALARY_FIELDS, salaryTotal, salaryPayable, allowancePlan, allowanceStory } from '@/lib/transport';
+import AllowanceNotes from '@/components/AllowanceNotes';
 import { useSalaryLabels } from '@/lib/labels';
 import { omrInWords } from '@/lib/words';
 
@@ -13,7 +14,7 @@ import { omrInWords } from '@/lib/words';
   Driver salary sheet (/transport/salary-sheet?m=YYYY-MM): all drivers of one month on one sheet
   with Modern City letterhead, every salary column, totals, net in words, signature column and signature lines.
   Print (A4 landscape) and Excel. Full access can create the missing salaries of the month
-  (same rule as the Drivers page: fixed amounts from the latest month, only Paid driver allowance, earlier months must be Paid).
+  (same rule as the Drivers page: fixed amounts from the latest month, only Paid driver allowance; unpaid shows as "not paid").
 */
 
 const n = (v) => Number(v || 0);
@@ -81,7 +82,6 @@ function SheetPage() {
     const skipped = [];
     for (const { d } of missing) {
       const plan = allowancePlan(entries, d.id, month);
-      if (plan.unpaidEarlier.length) { skipped.push(`${d.name} (earlier driver allowance not marked Paid)`); continue; }
       const prev = salaries.filter((x) => x.driver_id === d.id && monthKey(x.month) < month).sort((a, b) => (a.month < b.month ? 1 : -1))[0];
       const row = { driver_id: d.id, month: monthStart(month), advance_deduction: 0, special_allowance: 0 };
       ['basic', 'room_rent', 'utilities', 'mobile', 'travel_food'].forEach((k) => { row[k] = num(prev?.[k] || 0); });
@@ -96,7 +96,7 @@ function SheetPage() {
     setBusy(false);
     setMsg({
       kind: skipped.length ? 'warn' : 'ok',
-      text: [made.length ? `Created for ${made.join(', ')}.` : '', skipped.length ? `Not created: ${skipped.join('; ')}. Use Drivers page > Salary receipts to mark Paid.` : ''].filter(Boolean).join(' ')
+      text: [made.length ? `Created for ${made.join(', ')}.` : '', skipped.length ? `Not created: ${skipped.join('; ')}.` : ''].filter(Boolean).join(' ')
     });
     load();
   }
@@ -168,7 +168,10 @@ function SheetPage() {
                 {withSal.map(({ d, s }, i) => (
                   <tr key={d.id}>
                     <td className="c">{i + 1}</td>
-                    <td className="l"><Link href={`/transport/salary-sheet/${d.id}`} className="ss-name"><b>{d.name}</b></Link></td>
+                    <td className="l">
+                      <Link href={`/transport/salary-sheet/${d.id}`} className="ss-name"><b>{d.name}</b></Link>
+                      <AllowanceNotes story={allowanceStory(entries, salaries, d.id, month)} month={month} compact />
+                    </td>
                     <td className="l">{d.resident_card || '–'}</td>
                     <td className="l">{d.vehicle_no || '–'}</td>
                     {fields.map(([k]) => (

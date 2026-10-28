@@ -6,7 +6,8 @@ import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import AuthGate from '@/components/AuthGate';
 import { sb } from '@/lib/supabase';
 import { monthKey, monthLabel } from '@/lib/sheet';
-import { SALARY_FIELDS, salaryTotal, salaryPayable } from '@/lib/transport';
+import { SALARY_FIELDS, salaryTotal, salaryPayable, allowanceStory } from '@/lib/transport';
+import AllowanceNotes from '@/components/AllowanceNotes';
 import { useSalaryLabels } from '@/lib/labels';
 import { omrInWords } from '@/lib/words';
 import { useShare } from '@/components/ShareModal';
@@ -42,7 +43,7 @@ function SlipPage() {
       const [d, sal, e] = await Promise.all([
         s.from('transport_drivers').select('*').eq('id', id).single(),
         s.from('transport_salaries').select('*').eq('driver_id', id).order('month'),
-        s.from('transport_entries').select('entry_date, rent, driver_allowance, allowance_status').eq('driver_id', id)
+        s.from('transport_entries').select('id, driver_id, entry_date, rent, driver_allowance, allowance_status, allowance_salary_id').eq('driver_id', id)
       ]);
       if (d.error) { setError('Driver not found.'); return; }
       setDriver(d.data);
@@ -148,6 +149,17 @@ function SlipPage() {
               <tfoot><tr><td>Total deductions</td><td className="num">{m3(totalDed)}</td></tr></tfoot>
             </table>
           </div>
+
+          {(() => {
+            const story = allowanceStory(entries, salaries, id, month);
+            const has = story.carriedHere.length || story.paidLater.length || story.unpaidNow.n || story.prevUnpaid.length || story.waiting.n;
+            return has ? (
+              <div className="slip-allow">
+                <b>Driver allowance</b>
+                <AllowanceNotes story={story} month={month} />
+              </div>
+            ) : null;
+          })()}
 
           <div className="slip-net">
             <div>

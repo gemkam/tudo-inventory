@@ -6,7 +6,8 @@ import Modal from '@/components/Modal';
 import Omr from '@/components/Omr';
 import { sb } from '@/lib/supabase';
 import { monthKey, monthStart, monthLabel, fmtAmt, todayISO } from '@/lib/sheet';
-import { SALARY_FIELDS, salaryTotal, salaryPayable, allowancePlan, monthShort } from '@/lib/transport';
+import { SALARY_FIELDS, salaryTotal, salaryPayable, allowancePlan, allowanceStory, monthShort } from '@/lib/transport';
+import AllowanceNotes from '@/components/AllowanceNotes';
 import { fmtD } from '@/lib/reminders';
 import { useSalaryLabels } from '@/lib/labels';
 
@@ -74,6 +75,19 @@ export default function DriverDesk({ drivers, canEdit, flash, fixedDriverId = ''
     if (error) { flash(error.message, 'err'); return; }
     setTrips((l) => l.map((t) => (ids.includes(t.id) ? { ...t, allowance_status: 'Paid' } : t)));
     flash(ids.length === 1 ? 'Marked Paid' : `${ids.length} trips marked Paid`);
+    load(); // the database puts paid allowance on this month's salary (if it exists) and fixes its amounts
+  }
+
+  /* Pay every open driver allowance up to this receipt's month WITH this receipt (e.g. September paid in October).
+     The trips become Paid and the receipt amounts are worked out again by the database. */
+  async function payWith(sal, ids) {
+    if (!ids.length) return;
+    setBusy(true);
+    const { error } = await sb().from('transport_entries').update({ allowance_status: 'Paid', allowance_salary_id: sal.id }).in('id', ids);
+    setBusy(false);
+    if (error) { flash(error.message, 'err'); return; }
+    flash(`Driver allowance paid with ${monthLabel(monthKey(sal.month))} salary`);
+    load();
   }
 
   /* ---------- Salary form ---------- */
@@ -97,11 +111,10 @@ export default function DriverDesk({ drivers, canEdit, flash, fixedDriverId = ''
   }
   const setVal = (k, v) => setForm((f) => ({ ...f, values: { ...f.values, [k]: v } }));
   const clash = form && !form.id && (salaries || []).find((s) => monthKey(s.month) === form.month);
-  const blocked = Boolean(plan?.unpaidEarlier.length);
+  const blocked = false; // earlier unpaid allowance no longer blocks: it shows as "previous not paid" until paid
 
   async function saveForm() {
     if (!form?.month || !plan) return;
-    if (blocked) { flash('Mark the earlier driver allowance Paid first', 'err'); return; }
     const row = {};
     for (const [k] of [...SALARY_FIELDS, ...EXTRA]) {
       if (AUTO.includes(k)) continue;
@@ -181,7 +194,7 @@ export default function DriverDesk({ drivers, canEdit, flash, fixedDriverId = ''
                       {full && SALARY_FIELDS.filter(([k]) => !AUTO.includes(k)).map(([k]) => <td key={k} className="a-right">{n(s[k]) ? fmtAmt(s[k]) : '–'}</td>)}
                       <td className="a-right">
                         {fmtAmt(n(s.trip_allowance) + n(s.allowance_carried))}
-                        {n(s.allowance_carried) > 0 && <small className="dd-carried">incl. {s.allowance_carried_note || `earlier ${fmtAmt(s.allowance_carried)}`}</small>}
+                        <AllowanceNotes story={allowanceStory(trips, salaries, driverId, monthKey(s.month))} month={monthKey(s.month)} compact />
                       </td>
                       <td className="a-right">{fmtAmt(salaryTotal(s))}</td>
                       <td className="a-right">{n(s.advance_deduction) ? fmtAmt(s.advance_deduction) : '–'}</td>
@@ -191,6 +204,23 @@ export default function DriverDesk({ drivers, canEdit, flash, fixedDriverId = ''
                         <span className="row-links">
                           <Link href={`/transport/salary/${driverId}?m=${monthKey(s.month)}`}>🧾 Open slip</Link>
                           {canEdit && <button type="button" className="al-link" onClick={() => openEdit(s)}>✏️ Edit</button>}
+                          {canEdit && (() => {
+                            const st = allowanceStory(trips, salaries, driverId, monthKey(s.month));
+                            const sumOf = (ids) => trips.filter((t) => ids.includes(t.id)).reduce((a, t) => a + n(t.driver_allowance), 0);
+                            const m = monthShort(monthKey(s.month));
+                            return (
+                              <>
+                                {st.prevOpenIds.length > 0 && (
+                                  <button type="button" className="al-link dd-pay" disabled={busy} title="Earlier months' driver allowance becomes Paid, paid with this salary"
+                                    onClick={() => payWith(s, st.prevOpenIds)}>💳 Pay previous {fmtAmt(sumOf(st.prevOpenIds))} in {m}</button>
+                                )}
+                                {st.nowOpenIds.length > 0 && (
+                                  <button type="button" className="al-link dd-pay" disabled={busy} title="This month's driver allowance becomes Paid, paid with this salary"
+                                    onClick={() => payWith(s, st.nowOpenIds)}>💳 Pay {m} allowance {fmtAmt(sumOf(st.nowOpenIds))}</button>
+                                )}
+                              </>
+                            );
+                          })()}
                         </span>
                       </td>
                     </tr>
@@ -264,18 +294,18 @@ export default function DriverDesk({ drivers, canEdit, flash, fixedDriverId = ''
             {clash && <p className="error" style={{ margin: 0 }}>{monthLabel(form.month)} already has a salary. <button type="button" className="al-link" onClick={() => openEdit(clash)}>Edit that one</button></p>}
 
             {plan.unpaidEarlier.length > 0 && (
-              <div className="dd-check bad">
-                <b>⛔ Driver allowance of earlier months not paid. Mark Paid first.</b>
+              <div className="dd-check warn dd-col">
+                <b>⚠ Previous driver allowance not paid. Pay it with this salary, or leave it (it stays as &quot;previous not paid&quot;).</b>
                 <ul>
                   {plan.unpaidEarlier.map((t) => (
                     <li key={t.id}>
                       <span>{fmtD(t.entry_date)} · {route(t)}</span>
                       <b>{fmtAmt(t.driver_allowance)}</b>
-                      <button type="button" className="btn small" disabled={busy} onClick={() => markPaid([t.id])}>Mark paid</button>
+                      <button type="button" className="btn small" disabled={busy} onClick={() => markPaid([t.id])}>Pay with this salary</button>
                     </li>
                   ))}
                 </ul>
-                {plan.unpaidEarlier.length > 1 && <button type="button" className="btn small in" disabled={busy} onClick={() => markPaid(plan.unpaidEarlier.map((t) => t.id))}>Mark all {plan.unpaidEarlier.length} paid</button>}
+                {plan.unpaidEarlier.length > 1 && <button type="button" className="btn small in" disabled={busy} onClick={() => markPaid(plan.unpaidEarlier.map((t) => t.id))}>Pay all {plan.unpaidEarlier.length} with this salary</button>}
               </div>
             )}
             {!blocked && plan.carried > 0 && <div className="dd-check ok">✓ {plan.note}</div>}
