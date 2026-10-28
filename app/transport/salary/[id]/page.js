@@ -152,13 +152,44 @@ function SlipPage() {
 
           {(() => {
             const story = allowanceStory(entries, salaries, id, month);
-            const has = story.carriedHere.length || story.paidLater.length || story.unpaidNow.n || story.prevUnpaid.length || story.waiting.n;
-            return has ? (
+            // driver allowance paid with this salary, month by month, with the calculation (e.g. 10.000 + 15.000 = 25.000)
+            const linked = entries.filter((e) => sal && e.allowance_salary_id === sal.id && n(e.driver_allowance))
+              .sort((a, b) => String(a.entry_date).localeCompare(String(b.entry_date)));
+            const byMonth = {};
+            linked.forEach((e) => { const k = monthKey(e.entry_date); (byMonth[k] = byMonth[k] || []).push(n(e.driver_allowance)); });
+            const groups = Object.keys(byMonth).sort().map((k) => ({ k, parts: byMonth[k], amt: byMonth[k].reduce((t, v) => t + v, 0) }));
+            const totalPaid = groups.reduce((t, g) => t + g.amt, 0);
+            const rest = { ...story, carriedHere: [] };
+            const hasRest = rest.paidLater.length || rest.unpaidNow.n || rest.prevUnpaid.length || rest.waiting.n;
+            if (!groups.length && !hasRest) return null;
+            return (
               <div className="slip-allow">
-                <b>Driver allowance</b>
-                <AllowanceNotes story={story} month={month} />
+                <b>Driver allowance paid with this salary</b>
+                {groups.length > 0 && (
+                  <table className="slip-calc">
+                    <tbody>
+                      {groups.map((g) => (
+                        <tr key={g.k}>
+                          <td>{monthLabel(g.k)} trips{g.k < month ? ' (previous balance)' : ''}</td>
+                          <td className="calc">{g.parts.length > 1 ? g.parts.map((v) => m3(v)).join(' + ') : ''}</td>
+                          <td className="num">{m3(g.amt)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    {groups.length > 1 && (
+                      <tfoot>
+                        <tr>
+                          <td>Total driver allowance paid</td>
+                          <td className="calc">{groups.map((g) => m3(g.amt)).join(' + ')}</td>
+                          <td className="num">{m3(totalPaid)}</td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+                )}
+                {hasRest ? <AllowanceNotes story={rest} month={month} /> : null}
               </div>
-            ) : null;
+            );
           })()}
 
           <div className="slip-net">

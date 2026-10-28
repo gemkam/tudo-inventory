@@ -2138,3 +2138,9 @@ tr.dc-row-bad td:first-child { box-shadow: inset 4px 0 0 #b3261e; }
 .fa-prev small { display: block; color: #b3261e; font-weight: 600; font-size: 11px; }
 [data-theme="dark"] .prev-allow { background: rgba(240, 160, 40, .14); border-color: rgba(255, 207, 138, .4); color: #ffcf8a; }
 [data-theme="dark"] .prev-allow li.ok { color: #8fdcc4; }
+.pa-total { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e0b866; color: #13836b; font-weight: 600; } [data-theme="dark"] .pa-total { color: #8fdcc4; }
+.slip-calc { width: 100%; border-collapse: collapse; margin: 6px 0 4px; font-size: 13px; }
+.slip-calc td { padding: 4px 6px; border-bottom: 1px dotted #c9d6d2; vertical-align: top; }
+.slip-calc td.calc { color: #5d6e67; font-size: 12px; }
+.slip-calc td.num { text-align: right; white-space: nowrap; font-weight: 600; }
+.slip-calc tfoot td { font-weight: 700; border-top: 1.5px solid #13836b; border-bottom: 0; color: #0f3d33; }

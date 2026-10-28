@@ -101,7 +101,7 @@ function DriverSheet() {
      When it is paid (Mark paid), it shows as Paid here and on the earlier month's sheet. */
   const groupByMonth = (list) => {
     const g = {};
-    list.forEach((e) => { const k = monthKey(e.entry_date); g[k] = g[k] || { month: k, amt: 0, ids: [], paidIn: '' }; g[k].amt = num(g[k].amt + Number(e.driver_allowance || 0)); g[k].ids.push(e.id); if (e.allowance_salary_id && salMonths[e.allowance_salary_id]) g[k].paidIn = salMonths[e.allowance_salary_id]; });
+    list.forEach((e) => { const k = monthKey(e.entry_date); g[k] = g[k] || { month: k, amt: 0, ids: [], parts: [], paidIn: '' }; g[k].amt = num(g[k].amt + Number(e.driver_allowance || 0)); g[k].ids.push(e.id); g[k].parts.push(Number(e.driver_allowance || 0)); if (e.allowance_salary_id && salMonths[e.allowance_salary_id]) g[k].paidIn = salMonths[e.allowance_salary_id]; });
     return Object.values(g).sort((a, b) => a.month.localeCompare(b.month));
   };
   const hasAllow = (e) => Number(e.driver_allowance || 0) !== 0;
@@ -109,10 +109,23 @@ function DriverSheet() {
   const prevPaidHere = month && month !== 'all' ? groupByMonth(entries.filter((e) => hasAllow(e) && monthKey(e.entry_date) < month && e.allowance_status === 'Paid' && e.allowance_salary_id && salMonths[e.allowance_salary_id] === month)) : [];
   const prevOpenTotal = num(prevOpen.reduce((t, g) => t + g.amt, 0));
 
+  const calc = (parts) => (parts.length > 1 ? `${parts.map((v) => fmtAmt(v)).join(' + ')} = ` : '');
+  // this month's own allowance already paid
+  const thisPaid = month && month !== 'all' ? num(rows.filter((e) => hasAllow(e) && e.allowance_status === 'Paid').reduce((t, e) => t + Number(e.driver_allowance || 0), 0)) : 0;
+  const prevPaidTotal = num(prevPaidHere.reduce((t, g) => t + g.amt, 0));
+
   async function payPrevious(ids) {
     const { error: err } = await sb().from('transport_entries').update({ allowance_status: 'Paid' }).in('id', ids);
     if (err) { flash(err.message, 'err'); return; }
     flash('Previous driver allowance marked Paid');
+    load();
+  }
+
+  // Undo: back to Not paid (the database takes it off the salary again and fixes the amounts)
+  async function undoPrevious(ids) {
+    const { error: err } = await sb().from('transport_entries').update({ allowance_status: 'Not paid' }).in('id', ids);
+    if (err) { flash(err.message, 'err'); return; }
+    flash('Undone: back to Not paid');
     load();
   }
 
@@ -359,7 +372,7 @@ function DriverSheet() {
               {prevOpen.map((g) => (
                 <li key={`o-${g.month}`} className="bad">
                   <span>{monthLabel(g.month)} balance</span>
-                  <strong>{fmtAmt(g.amt)}</strong>
+                  <strong>{calc(g.parts)}{fmtAmt(g.amt)}</strong>
                   <span className="tag warn">Not paid</span>
                   {isAdmin && <button type="button" className="btn small" onClick={() => payPrevious(g.ids)}>Mark paid</button>}
                 </li>
@@ -367,11 +380,20 @@ function DriverSheet() {
               {prevPaidHere.map((g) => (
                 <li key={`p-${g.month}`} className="ok">
                   <span>{monthLabel(g.month)} balance</span>
-                  <strong>{fmtAmt(g.amt)}</strong>
+                  <strong>{calc(g.parts)}{fmtAmt(g.amt)}</strong>
                   <span className="tag ok">Paid in {monthLabel(month)}</span>
+                  {isAdmin && <button type="button" className="btn small ghost" onClick={() => undoPrevious(g.ids)} title="Set back to Not paid">↶ Undo</button>}
                 </li>
               ))}
             </ul>
+            {prevPaidHere.length > 0 && (
+              <div className="pa-total">
+                Driver allowance paid in {monthLabel(month)}:{' '}
+                {prevPaidHere.map((g) => `${monthLabel(g.month).split(' ')[0]} ${fmtAmt(g.amt)}`).join(' + ')}
+                {' + '}{monthLabel(month).split(' ')[0]} {fmtAmt(thisPaid)}
+                {' = '}<b>{fmtAmt(prevPaidTotal + thisPaid)}</b>
+              </div>
+            )}
             {prevOpenTotal > 0 && <small>This month {fmtAmt(totals.driver_allowance)} + previous {fmtAmt(prevOpenTotal)} = <b>{fmtAmt(totals.driver_allowance + prevOpenTotal)}</b> driver allowance due</small>}
           </div>
         )}
