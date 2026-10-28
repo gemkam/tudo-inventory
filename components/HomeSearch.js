@@ -20,7 +20,7 @@ const PAGES = [
   ['🪪 Employee Docs', '/docs?tab=employee', 'employee passport visa resident card labour'],
   ['🚚 Transport Expense', '/transport', 'transport trips diesel toll salary summary'],
   ['👤 Drivers', '/transport/drivers', 'drivers driver resident card visa mobile salary receipt'],
-  ['📑 Driver salary sheet', '/transport/salary-sheet', 'salary sheet payroll driver salaries'],
+  ['📑 Driver salary sheets', '/transport/salary-sheet', 'salary sheet payroll driver salaries other expenses trailer rent'],
   ['🚛 Vehicles and Maintenance', '/transport/vehicles', 'vehicles voc mulkiya maintenance tyre pdc service'],
   ['📊 Transport Reports', '/transport/reports', 'transport reports profit'],
   ['🧾 Transport Invoice', '/transport/invoice', 'invoice transport tax interim'],

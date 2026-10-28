@@ -2089,3 +2089,21 @@ tr.dc-row-bad td:first-child { box-shadow: inset 4px 0 0 #b3261e; }
 }
 @media (max-width: 700px) { .ss-paper { padding: 16px; } .ss-head { flex-wrap: wrap; } .ss-sign { grid-template-columns: 1fr; gap: 18px; } }
 .dd-actions { display: flex; flex-wrap: wrap; gap: 8px; } .dd-actions .btn { text-decoration: none; }
+
+/* ===== One driver's salary sheet (/transport/salary-sheet/<id>) ===== */
+.ds-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 14px; }
+.ds-pick .rp-chip { text-decoration: none; }
+.ss-name { color: inherit; text-decoration: none; }
+.ss-name:hover { text-decoration: underline; }
+.ds-paper { margin-bottom: 18px; }
+.ds-paper .ss-title { margin-bottom: 12px; }
+.ds-info { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 28px; margin: 0 0 16px; }
+.ds-info div { display: flex; flex-direction: column; align-items: center; }
+.ds-info dt { font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: #5d6e67; }
+.ds-info dd { margin: 2px 0 0; font-weight: 700; color: #1d2523; }
+.ds-paper .kpi { background: #f6faf9; color: #1d2523; }
+.ds-extras { margin-top: 18px; }
+@media print {
+  .dd .dd-tabs, .dd .dd-bar .btn, .dd .dd-pick, .dd .row-links button, .dd-actions, .ds-extras .note { display: none !important; }
+  .dd, .ds-extras { page: ss-land; break-inside: avoid; }
+}

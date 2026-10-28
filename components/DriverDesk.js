@@ -27,9 +27,10 @@ const EXTRA = [['advance_deduction', 'Advance deduction'], ['special_allowance',
 const AUTO = ['trip_allowance', 'allowance_carried']; // worked out from the trips, not typed
 const route = (t) => [t.from_place, t.to_place].filter(Boolean).join(' → ') || t.description || 'Trip';
 
-export default function DriverDesk({ drivers, canEdit, flash }) {
+export default function DriverDesk({ drivers, canEdit, flash, fixedDriverId = '', full = false, onChange }) {
   const list = useMemo(() => [...(drivers || [])].sort((a, b) => String(a.name).localeCompare(String(b.name))), [drivers]);
-  const [driverId, setDriverId] = useState('');
+  const [driverId, setDriverId] = useState(fixedDriverId);
+  useEffect(() => { if (fixedDriverId) setDriverId(fixedDriverId); }, [fixedDriverId]);
   const [view, setView] = useState('salary');
   const [salaries, setSalaries] = useState(null);
   const [trips, setTrips] = useState([]);
@@ -51,7 +52,8 @@ export default function DriverDesk({ drivers, canEdit, flash }) {
     ]);
     setSalaries(sal.data || []);
     setTrips(e.data || []);
-  }, [driverId]);
+    onChange?.(sal.data || []);
+  }, [driverId]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { setSalaries(null); setTripMonth(''); load(); }, [load]);
 
   const driver = list.find((d) => d.id === driverId);
@@ -141,13 +143,13 @@ export default function DriverDesk({ drivers, canEdit, flash }) {
   return (
     <section className="panel dd">
       <div className="section-head dd-head">
-        <h2>🧾 Salary receipts and trip sheet</h2>
-        <label className="dd-pick">
+        <h2>{fixedDriverId ? '💰 Salary detail' : '🧾 Salary receipts and trip sheet'}</h2>
+        {!fixedDriverId && <label className="dd-pick">
           <span>Driver</span>
           <select value={driverId} onChange={(e) => setDriverId(e.target.value)} aria-label="Choose driver">
             {list.map((d) => <option key={d.id} value={d.id}>{d.name}{d.status === 'Inactive' ? ' (inactive)' : ''}</option>)}
           </select>
-        </label>
+        </label>}
       </div>
 
       <div className="co-switch dd-tabs" role="tablist">
@@ -162,7 +164,7 @@ export default function DriverDesk({ drivers, canEdit, flash }) {
           <div className="dd-bar">
             <p className="muted">{driver?.name}: {salaries.length ? `${salaries.length} salary receipts` : 'no salary yet'}{driver?.resident_card ? ` · Resident Card ${driver.resident_card}` : ''}</p>
             <span className="dd-actions">
-              <Link href="/transport/salary-sheet" className="btn ghost">📑 Salary sheet (all drivers)</Link>
+              {!fixedDriverId && <Link href={`/transport/salary-sheet/${driverId}`} className="btn ghost">📑 {driver?.name || 'Driver'} salary sheet</Link>}
               {canEdit && <button type="button" className="btn in" onClick={openNew}>＋ Create salary receipt</button>}
             </span>
           </div>
@@ -170,12 +172,13 @@ export default function DriverDesk({ drivers, canEdit, flash }) {
             <div className="table-wrap">
               <table className="dc-table dd-table">
                 <thead>
-                  <tr><th>Month</th><th className="a-right">{salLabels.label('trip_allowance')}</th><th className="a-right">Total salary</th><th className="a-right">Deduction</th><th className="a-right">Special</th><th className="a-right">Payable</th><th>Receipt</th></tr>
+                  <tr><th>Month</th>{full && SALARY_FIELDS.filter(([k]) => !AUTO.includes(k)).map(([k]) => <th key={k} className="a-right">{salLabels.label(k)}</th>)}<th className="a-right">{salLabels.label('trip_allowance')}</th><th className="a-right">Total salary</th><th className="a-right">Deduction</th><th className="a-right">Special</th><th className="a-right">Payable</th><th>Receipt</th></tr>
                 </thead>
                 <tbody>
                   {salaries.map((s) => (
                     <tr key={s.id}>
                       <td><b>{monthLabel(monthKey(s.month))}</b></td>
+                      {full && SALARY_FIELDS.filter(([k]) => !AUTO.includes(k)).map(([k]) => <td key={k} className="a-right">{n(s[k]) ? fmtAmt(s[k]) : '–'}</td>)}
                       <td className="a-right">
                         {fmtAmt(n(s.trip_allowance) + n(s.allowance_carried))}
                         {n(s.allowance_carried) > 0 && <small className="dd-carried">incl. {s.allowance_carried_note || `earlier ${fmtAmt(s.allowance_carried)}`}</small>}
@@ -194,7 +197,7 @@ export default function DriverDesk({ drivers, canEdit, flash }) {
                   ))}
                 </tbody>
                 <tfoot>
-                  <tr><td>Total ({salaries.length} months)</td><td className="a-right">{fmtAmt(salaries.reduce((t, s) => t + n(s.trip_allowance) + n(s.allowance_carried), 0))}</td><td className="a-right">{fmtAmt(salaries.reduce((t, s) => t + salaryTotal(s), 0))}</td><td className="a-right">{fmtAmt(salaries.reduce((t, s) => t + n(s.advance_deduction), 0))}</td><td className="a-right">{fmtAmt(salaries.reduce((t, s) => t + n(s.special_allowance), 0))}</td><td className="a-right"><b>{fmtAmt(salaries.reduce((t, s) => t + salaryPayable(s), 0))}</b></td><td /></tr>
+                  <tr><td>Total ({salaries.length} months)</td>{full && SALARY_FIELDS.filter(([k]) => !AUTO.includes(k)).map(([k]) => <td key={k} className="a-right">{fmtAmt(salaries.reduce((t, s) => t + n(s[k]), 0))}</td>)}<td className="a-right">{fmtAmt(salaries.reduce((t, s) => t + n(s.trip_allowance) + n(s.allowance_carried), 0))}</td><td className="a-right">{fmtAmt(salaries.reduce((t, s) => t + salaryTotal(s), 0))}</td><td className="a-right">{fmtAmt(salaries.reduce((t, s) => t + n(s.advance_deduction), 0))}</td><td className="a-right">{fmtAmt(salaries.reduce((t, s) => t + n(s.special_allowance), 0))}</td><td className="a-right"><b>{fmtAmt(salaries.reduce((t, s) => t + salaryPayable(s), 0))}</b></td><td /></tr>
                 </tfoot>
               </table>
             </div>

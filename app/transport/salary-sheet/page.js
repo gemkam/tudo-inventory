@@ -117,7 +117,7 @@ function SheetPage() {
   return (
     <>
       <div className="page-tools no-print">
-        <Link href="/transport/drivers" className="crumb">← Drivers</Link>
+        <Link href="/transport" className="crumb">← Transport</Link>
         <div className="tools">
           <select className="ss-month" value={month} onChange={(e) => pickMonth(e.target.value)} aria-label="Month">
             {months.map((k) => <option key={k} value={k}>{monthLabel(k)}</option>)}
@@ -128,6 +128,13 @@ function SheetPage() {
           <button type="button" className="btn ghost" onClick={() => window.print()} disabled={!withSal.length}>🖨 Print</button>
           <button type="button" className="btn ghost" onClick={doExcel} disabled={!withSal.length}>Export Excel</button>
         </div>
+      </div>
+
+      <div className="ds-pick no-print">
+        <b>Each driver&apos;s own salary sheet:</b>
+        {[...drivers].sort((a, b) => String(a.name).localeCompare(String(b.name))).map((d) => (
+          <Link key={d.id} href={`/transport/salary-sheet/${d.id}`} className="rp-chip">📑 {d.name}{d.status === 'Inactive' ? ' (inactive)' : ''}</Link>
+        ))}
       </div>
 
       {msg && <div className={`ss-msg ${msg.kind} no-print`} role="status">{msg.text}</div>}
@@ -142,7 +149,7 @@ function SheetPage() {
             <span>{COMPANY.line2}</span>
           </div>
         </header>
-        <h1 className="ss-title">Driver Salary Sheet <span>{monthLabel(month)}</span></h1>
+        <h1 className="ss-title">All Drivers Salary Sheet <span>{monthLabel(month)}</span></h1>
         <p className="ss-sub">Transport Division · {withSal.length} driver{withSal.length === 1 ? '' : 's'}{missing.length ? ` · not yet made: ${missing.map((r) => r.d.name).join(', ')}` : ''}</p>
 
         {withSal.length === 0 ? (
@@ -161,7 +168,7 @@ function SheetPage() {
                 {withSal.map(({ d, s }, i) => (
                   <tr key={d.id}>
                     <td className="c">{i + 1}</td>
-                    <td className="l"><b>{d.name}</b></td>
+                    <td className="l"><Link href={`/transport/salary-sheet/${d.id}`} className="ss-name"><b>{d.name}</b></Link></td>
                     <td className="l">{d.resident_card || '–'}</td>
                     <td className="l">{d.vehicle_no || '–'}</td>
                     {fields.map(([k]) => (
