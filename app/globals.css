@@ -2127,3 +2127,14 @@ tr.dc-row-bad td:first-child { box-shadow: inset 4px 0 0 #b3261e; }
 .slip-paper .an li.ok, .ss-paper .an li.ok { color: #13836b; }
 .slip-paper .an li.bad, .ss-paper .an li.bad { color: #b3261e; }
 @media print { .an li { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .dd-pay { display: none !important; } }
+
+/* Trip sheet: driver allowance from previous months */
+.prev-allow { margin: 0 0 12px; padding: 10px 14px; border-radius: 10px; background: #fff4e0; border: 1px solid #f3d29b; color: #5c3a00; font-size: 14px; }
+.prev-allow ul { list-style: none; margin: 6px 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.prev-allow li { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.prev-allow li span:first-child { min-width: 170px; }
+.prev-allow li.ok { color: #13836b; }
+.prev-allow small { display: block; }
+.fa-prev small { display: block; color: #b3261e; font-weight: 600; font-size: 11px; }
+[data-theme="dark"] .prev-allow { background: rgba(240, 160, 40, .14); border-color: rgba(255, 207, 138, .4); color: #ffcf8a; }
+[data-theme="dark"] .prev-allow li.ok { color: #8fdcc4; }

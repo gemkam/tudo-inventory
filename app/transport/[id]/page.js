@@ -30,6 +30,7 @@ function DriverSheet() {
   const { isAdmin } = useUser();
   const [driver, setDriver] = useState(null);
   const [entries, setEntries] = useState([]);
+  const [salMonths, setSalMonths] = useState({}); // salary receipt id -> YYYY-MM
   const [month, setMonth] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [toast, setToast] = useState(null);
@@ -48,10 +49,12 @@ function DriverSheet() {
 
   const load = useCallback(async () => {
     const s = sb();
-    const [d, e] = await Promise.all([
+    const [d, e, sa] = await Promise.all([
       s.from('transport_drivers').select('*').eq('id', id).single(),
-      s.from('transport_entries').select('*').eq('driver_id', id).order('entry_date').order('sort').order('created_at')
+      s.from('transport_entries').select('*').eq('driver_id', id).order('entry_date').order('sort').order('created_at'),
+      s.from('transport_salaries').select('id, month').eq('driver_id', id)
     ]);
+    setSalMonths(Object.fromEntries((sa.data || []).map((x) => [x.id, monthKey(x.month)])));
     if (d.error) { setError('This driver was not found.'); return; }
     setDriver(d.data);
     setEntries(e.data || []);
@@ -93,6 +96,25 @@ function DriverSheet() {
   totals.balance = num(totals.rent - totals.received);
   totals.costs = num(totals.diesel + totals.toll + totals.maintenance);
   totals.net = num(totals.rent - totals.costs);
+
+  /* Driver allowance brought forward: earlier months' allowance still not paid shows on this month's sheet.
+     When it is paid (Mark paid), it shows as Paid here and on the earlier month's sheet. */
+  const groupByMonth = (list) => {
+    const g = {};
+    list.forEach((e) => { const k = monthKey(e.entry_date); g[k] = g[k] || { month: k, amt: 0, ids: [], paidIn: '' }; g[k].amt = num(g[k].amt + Number(e.driver_allowance || 0)); g[k].ids.push(e.id); if (e.allowance_salary_id && salMonths[e.allowance_salary_id]) g[k].paidIn = salMonths[e.allowance_salary_id]; });
+    return Object.values(g).sort((a, b) => a.month.localeCompare(b.month));
+  };
+  const hasAllow = (e) => Number(e.driver_allowance || 0) !== 0;
+  const prevOpen = month && month !== 'all' ? groupByMonth(entries.filter((e) => hasAllow(e) && monthKey(e.entry_date) < month && e.allowance_status !== 'Paid')) : [];
+  const prevPaidHere = month && month !== 'all' ? groupByMonth(entries.filter((e) => hasAllow(e) && monthKey(e.entry_date) < month && e.allowance_status === 'Paid' && e.allowance_salary_id && salMonths[e.allowance_salary_id] === month)) : [];
+  const prevOpenTotal = num(prevOpen.reduce((t, g) => t + g.amt, 0));
+
+  async function payPrevious(ids) {
+    const { error: err } = await sb().from('transport_entries').update({ allowance_status: 'Paid' }).in('id', ids);
+    if (err) { flash(err.message, 'err'); return; }
+    flash('Previous driver allowance marked Paid');
+    load();
+  }
 
   /* ---------- Saving ---------- */
 
@@ -141,7 +163,7 @@ function DriverSheet() {
     },
     { key: 'payment_status', label: 'Payment', type: 'select', options: ['Received', 'Not Received', 'Partly received'], width: 132, render: (r) => r.payment_status ? <span className={`tag ${/not/i.test(r.payment_status) ? 'due' : /receiv/i.test(r.payment_status) ? 'ok' : 'info'}`}>{r.payment_status}</span> : '' },
     { key: 'driver_allowance', label: 'Driver allowance', type: 'number', min: 0, width: 118, render: amt('driver_allowance') },
-    { key: 'allowance_status', label: 'Allowance', type: 'select', options: ['Paid', 'Not paid'], width: 104, render: (r) => r.allowance_status ? <span className={`tag ${/not/i.test(r.allowance_status) ? 'warn' : r.allowance_status === 'Paid' ? 'ok' : 'info'}`}>{r.allowance_status}</span> : '' },
+    { key: 'allowance_status', label: 'Allowance', type: 'select', options: ['Paid', 'Not paid'], width: 104, render: (r) => r.allowance_status ? <span className={`tag ${/not/i.test(r.allowance_status) ? 'warn' : r.allowance_status === 'Paid' ? 'ok' : 'info'}`}>{r.allowance_status}{r.allowance_status === 'Paid' && r.allowance_salary_id && salMonths[r.allowance_salary_id] > monthKey(r.entry_date) ? ` (${monthLabel(salMonths[r.allowance_salary_id])})` : ''}</span> : '' },
     { key: 'diesel', label: 'Diesel', type: 'number', min: 0, width: 92, render: amt('diesel') },
     { key: 'toll', label: 'Toll / other', type: 'number', min: 0, width: 100, render: amt('toll') },
     { key: 'maintenance', label: 'Maintenance', type: 'number', min: 0, width: 112, render: amt('maintenance') },
@@ -330,6 +352,29 @@ function DriverSheet() {
             Edit mode is on. Click any cell to change it, then press Enter. Amounts accept maths like 25+4. Click <strong>✓ Done</strong> when finished.
           </div>
         )}
+        {(prevOpen.length > 0 || prevPaidHere.length > 0) && (
+          <div className="prev-allow">
+            <b>Driver allowance from previous months</b>
+            <ul>
+              {prevOpen.map((g) => (
+                <li key={`o-${g.month}`} className="bad">
+                  <span>{monthLabel(g.month)} balance</span>
+                  <strong>{fmtAmt(g.amt)}</strong>
+                  <span className="tag warn">Not paid</span>
+                  {isAdmin && <button type="button" className="btn small" onClick={() => payPrevious(g.ids)}>Mark paid</button>}
+                </li>
+              ))}
+              {prevPaidHere.map((g) => (
+                <li key={`p-${g.month}`} className="ok">
+                  <span>{monthLabel(g.month)} balance</span>
+                  <strong>{fmtAmt(g.amt)}</strong>
+                  <span className="tag ok">Paid in {monthLabel(month)}</span>
+                </li>
+              ))}
+            </ul>
+            {prevOpenTotal > 0 && <small>This month {fmtAmt(totals.driver_allowance)} + previous {fmtAmt(prevOpenTotal)} = <b>{fmtAmt(totals.driver_allowance + prevOpenTotal)}</b> driver allowance due</small>}
+          </div>
+        )}
         <DataGrid
           columns={columns}
           rows={rows}
@@ -344,7 +389,7 @@ function DriverSheet() {
             entry_date: `${totals.trips} trips`,
             rent: fmtAmt(totals.rent), received: fmtAmt(totals.received),
             balance: <span className={totals.balance > 0 ? 'neg' : ''}>{fmtAmt(totals.balance)}</span>,
-            driver_allowance: fmtAmt(totals.driver_allowance), diesel: fmtAmt(totals.diesel),
+            driver_allowance: prevOpenTotal > 0 ? <span className="fa-prev">{fmtAmt(totals.driver_allowance)}<small>+ prev. {fmtAmt(prevOpenTotal)} not paid</small></span> : fmtAmt(totals.driver_allowance), diesel: fmtAmt(totals.diesel),
             toll: fmtAmt(totals.toll), maintenance: fmtAmt(totals.maintenance)
           }}
           flash={flash}
