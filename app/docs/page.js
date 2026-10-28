@@ -16,12 +16,26 @@ import { SECTIONS, SECTION, STATES, docStatus } from '@/lib/docChecklist';
   Documents Checklist (/docs): issue date and expiry of
   Employee Docs, Cars Docs, Heavy Vehicles, Govt License, Company Docs.
   Table doc_checklist. Status is worked out from the expiry date; alerts on Home 30 days before.
-  Employee tab also shows Resident Card / Visa already kept on the Drivers page and Office staff sheet (read only here).
+  - AI Search: typing filters at once; Enter or "✨ Ask AI" asks the AI across ALL sections (app/api/doc-search).
+  - Company / vehicle / employee dropdown (names from the list), Sort.
+  - ☑ Columns: choose columns for the screen, Print and Excel (remembered on this device).
+  - 🗑 on the far right of every row deletes at once, with Undo for 10 seconds.
+  Employee tab also shows Resident Card / Visa kept on the Drivers page and Office staff sheet (read only here).
 */
 
 const CO = { 'modern-city': 'Modern City', 'abu-wasif': 'Abu Wasif', sumptuosity: 'Sumptuosity' };
 const FILTERS = [['all', 'All'], ['bad', 'Expired'], ['soon', 'Renew in 30 days'], ['ok', 'Active'], ['none', 'No expiry date'], ['off', 'Cancelled / Transferred']];
 const TAG = { ok: 'ok', soon: 'warn', bad: 'due', none: 'info', off: 'info' };
+const COLS_KEY = 'tudo-doc-cols';
+const ALL_COLS = ['owner', 'doc_name', 'doc_no', 'issue_date', 'expiry_date', 'status', 'state', 'notes'];
+const COL_LABEL = { owner: 'Name', doc_name: 'Document', doc_no: 'Document No.', issue_date: 'Issue date', expiry_date: 'Expiry date', status: 'Status', state: 'Stop alerts', notes: 'Notes' };
+const PRESETS = [
+  ['All columns', ALL_COLS],
+  ['Standard', ['owner', 'doc_name', 'issue_date', 'expiry_date', 'status']],
+  ['Dates only', ['owner', 'doc_name', 'expiry_date', 'status']],
+  ['With numbers', ['owner', 'doc_name', 'doc_no', 'issue_date', 'expiry_date', 'status']]
+];
+const firstWord = (s) => String(s || '').split(' ')[0];
 
 function StatusTag({ r }) {
   const st = docStatus(r);
@@ -35,10 +49,14 @@ function DocsPage() {
   const [tab, setTab] = useState('company');
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [owner, setOwner] = useState('');
   const [sortBy, setSortBy] = useState('owner');
+  const [cols, setCols] = useState(ALL_COLS);
+  const [colsOpen, setColsOpen] = useState(false);
+  const [ai, setAi] = useState(null); // { query, ids, answer } or { busy } or { error }
   const [editMode, setEditMode] = useState(false);
-  const [del, setDel] = useState(null);
   const [toast, setToast] = useState(null);
+  const [undo, setUndo] = useState(null); // { row, timer }
   const timer = useRef(null);
   const canChange = isAdmin && editMode;
 
@@ -51,6 +69,10 @@ function DocsPage() {
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get('tab');
     if (t && SECTION[t]) setTab(t);
+    try {
+      const saved = JSON.parse(localStorage.getItem(COLS_KEY) || 'null');
+      if (Array.isArray(saved) && saved.length) setCols(['owner', ...saved.filter((c) => ALL_COLS.includes(c) && c !== 'owner')]);
+    } catch { /* ignore */ }
   }, []);
 
   const load = useCallback(async () => {
@@ -80,8 +102,38 @@ function DocsPage() {
   function pickTab(k) {
     setTab(k);
     setFilter('all');
+    setOwner('');
+    setAi(null);
     try { window.history.replaceState(null, '', `/docs?tab=${k}`); } catch { /* ignore */ }
   }
+
+  function saveCols(list) {
+    const next = ALL_COLS.filter((c) => c === 'owner' || list.includes(c));
+    setCols(next);
+    try { localStorage.setItem(COLS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+  }
+
+  /* ---------- AI Search ---------- */
+  async function askAi(e) {
+    e?.preventDefault();
+    const query = search.trim();
+    if (!query) return;
+    setAi({ busy: true, query });
+    try {
+      const { data } = await sb().auth.getSession();
+      const res = await fetch('/api/doc-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session?.access_token || ''}` },
+        body: JSON.stringify({ query })
+      });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok) { setAi({ error: out.error || 'AI Search could not answer.', query }); return; }
+      setAi({ query, ids: out.ids || [], answer: out.answer || `${(out.ids || []).length} found` });
+    } catch {
+      setAi({ error: 'No connection. Showing normal search instead.', query });
+    }
+  }
+  function clearAi() { setAi(null); setSearch(''); }
 
   const counts = useMemo(() => {
     const c = {};
@@ -93,19 +145,32 @@ function DocsPage() {
   }, [rows]);
 
   const sec = SECTION[tab];
-  const shown = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    let list = (rows || []).filter((r) => r.section === tab);
-    if (filter !== 'all') list = list.filter((r) => docStatus(r).key === filter);
-    if (q) list = list.filter((r) => [r.owner, r.doc_name, r.doc_no, r.notes].some((v) => String(v || '').toLowerCase().includes(q)));
-    const exp = (r) => (r.state ? '9999' : r.expiry_date || '9998');
-    if (sortBy === 'expiry') list = [...list].sort((a, b) => exp(a).localeCompare(exp(b)));
-    else list = [...list].sort((a, b) => String(a.owner || '').localeCompare(String(b.owner || '')) || (a.sort || 0) - (b.sort || 0));
-    return list;
-  }, [rows, tab, filter, search, sortBy]);
-
+  const aiMode = Boolean(ai && ai.ids);
   const owners = useMemo(() => [...new Set((rows || []).filter((r) => r.section === tab).map((r) => r.owner).filter(Boolean))].sort(), [rows, tab]);
   const docNames = useMemo(() => [...new Set([...(sec?.docs || []), ...(rows || []).filter((r) => r.section === tab).map((r) => r.doc_name).filter(Boolean)])], [rows, tab, sec]);
+
+  const shown = useMemo(() => {
+    let list;
+    if (aiMode) {
+      const want = new Set(ai.ids);
+      list = (rows || []).filter((r) => want.has(r.id));
+    } else {
+      const q = search.trim().toLowerCase();
+      list = (rows || []).filter((r) => r.section === tab);
+      if (owner) list = list.filter((r) => r.owner === owner);
+      if (filter !== 'all') list = list.filter((r) => docStatus(r).key === filter);
+      if (q) {
+        const words = q.split(/\s+/);
+        list = list.filter((r) => {
+          const hay = [r.owner, r.doc_name, r.doc_no, r.notes, docStatus(r).label, fmtD(r.expiry_date)].join(' ').toLowerCase();
+          return words.every((w) => hay.includes(w));
+        });
+      }
+    }
+    const exp = (r) => (r.state ? '9999' : r.expiry_date || '9998');
+    if (sortBy === 'expiry') return [...list].sort((a, b) => exp(a).localeCompare(exp(b)));
+    return [...list].sort((a, b) => String(a.owner || '').localeCompare(String(b.owner || '')) || (a.sort || 0) - (b.sort || 0));
+  }, [rows, tab, filter, search, owner, sortBy, ai, aiMode]);
 
   async function save(row, key, value) {
     const patch = { [key]: value === '' ? null : value };
@@ -119,7 +184,7 @@ function DocsPage() {
     const sort = (rows || []).reduce((m, x) => Math.max(m, x.sort || 0), 0) + 1;
     const last = shown[shown.length - 1];
     const { data, error } = await sb().from('doc_checklist')
-      .insert({ section: tab, owner: last?.owner || null, doc_name: null, sort, entered_by: name || null })
+      .insert({ section: tab, owner: owner || last?.owner || null, doc_name: null, sort, entered_by: name || null })
       .select().single();
     if (error) { flash(error.message, 'err'); return; }
     setRows((list) => [...list, data]);
@@ -127,27 +192,44 @@ function DocsPage() {
     flash('New line added. Type the document and dates.');
   }
 
-  async function confirmDelete() {
-    const { error } = await sb().from('doc_checklist').delete().eq('id', del.id);
-    if (error) { flash(error.message, 'err'); setDel(null); return; }
-    setRows((list) => list.filter((x) => x.id !== del.id));
-    setDel(null);
-    flash('Deleted');
+  /* ---------- Delete with Undo ---------- */
+  async function removeRow(row) {
+    setRows((list) => list.filter((x) => x.id !== row.id));
+    const { error } = await sb().from('doc_checklist').delete().eq('id', row.id);
+    if (error) { flash(error.message, 'err'); load(); return; }
+    if (undo?.timer) clearTimeout(undo.timer);
+    const t = setTimeout(() => setUndo(null), 10000);
+    setUndo({ row, timer: t });
+  }
+  async function undoDelete() {
+    if (!undo) return;
+    clearTimeout(undo.timer);
+    const { row } = undo;
+    setUndo(null);
+    const { data, error } = await sb().from('doc_checklist').insert(row).select().single();
+    if (error) { flash(`Could not bring it back: ${error.message}`, 'err'); return; }
+    setRows((list) => [...list, data]);
+    flash('Brought back');
+  }
+
+  /* ---------- Table for Print and Excel (chosen columns) ---------- */
+  function cellText(r, c) {
+    if (c === 'status') { const st = docStatus(r); return st.left !== null && st.key !== 'ok' ? `${st.label} (${st.left < 0 ? `${-st.left}d ago` : `${st.left}d left`})` : st.label; }
+    if (c === 'issue_date' || c === 'expiry_date') return fmtD(r[c]);
+    return r[c] || '';
   }
 
   async function doExcel() {
+    const pick = cols;
     const sheets = SECTIONS.map((s) => ({
       name: s.label,
       title: `Documents Checklist: ${s.label}`,
       subtitle: `Tudo Num Group · status on ${fmtD(new Date().toISOString())}`,
-      head: ['S.No', s.owner, 'Document', 'Document No.', 'Issue date', 'Expiry date', 'Status', 'Days left', 'Notes'],
+      head: ['S.No', ...pick.map((c) => (c === 'owner' ? s.owner : COL_LABEL[c]))],
       rows: (rows || []).filter((r) => r.section === s.key)
         .sort((a, b) => String(a.owner || '').localeCompare(String(b.owner || '')) || (a.sort || 0) - (b.sort || 0))
-        .map((r, i) => {
-          const st = docStatus(r);
-          return [i + 1, r.owner || '', r.doc_name || '', r.doc_no || '', fmtD(r.issue_date), fmtD(r.expiry_date), st.label, st.left ?? '', r.notes || ''];
-        }),
-      numCols: [], widths: [6, 40, 34, 16, 13, 13, 15, 10, 28]
+        .map((r, i) => [i + 1, ...pick.map((c) => cellText(r, c))]),
+      numCols: [], widths: [6, ...pick.map((c) => ({ owner: 40, doc_name: 34, notes: 28, status: 22 }[c] || 14))]
     }));
     await exportExcel(`Documents Checklist ${exportStamp()}.xlsx`, sheets);
     flash('Excel file downloaded');
@@ -155,18 +237,29 @@ function DocsPage() {
 
   if (!rows) return <div className="loading">Loading documents...</div>;
 
-  const columns = [
-    { key: 'owner', label: sec.owner, type: 'combo', options: owners, width: 300, render: (r) => <b>{r.owner || <span className="muted">–</span>}</b> },
-    { key: 'doc_name', label: 'Document', type: 'combo', options: docNames, width: 270 },
-    { key: 'doc_no', label: 'Document No.', type: 'text', width: 140 },
-    { key: 'issue_date', label: 'Issue date', type: 'date', width: 120 },
-    { key: 'expiry_date', label: 'Expiry date', type: 'date', width: 150, render: (r) => (r.state ? <span className="muted">{fmtD(r.expiry_date) || '–'}</span> : <Expiry date={r.expiry_date} />) },
-    { key: 'status', label: 'Status', type: 'calc', width: 130, render: (r) => <StatusTag r={r} /> },
-    { key: 'state', label: 'Stop alerts', type: 'select', options: STATES, width: 120, render: (r) => r.state || <span className="muted">–</span> },
-    { key: 'notes', label: 'Notes', type: 'text', width: 220 }
-  ];
+  const ownerWord = firstWord(sec.owner);
+  const allColumns = {
+    section: { key: 'section', label: 'Section', type: 'calc', align: 'left', width: 140, render: (r) => <span className="tag info">{SECTION[r.section]?.label}</span> },
+    owner: { key: 'owner', label: aiMode ? 'Name' : sec.owner, type: 'combo', options: owners, width: 300, render: (r) => <b>{r.owner || <span className="muted">–</span>}</b> },
+    doc_name: { key: 'doc_name', label: 'Document', type: 'combo', options: docNames, width: 270 },
+    doc_no: { key: 'doc_no', label: 'Document No.', type: 'text', width: 140 },
+    issue_date: { key: 'issue_date', label: 'Issue date', type: 'date', width: 120 },
+    expiry_date: { key: 'expiry_date', label: 'Expiry date', type: 'date', width: 150, render: (r) => (r.state ? <span className="muted">{fmtD(r.expiry_date) || '–'}</span> : <Expiry date={r.expiry_date} />) },
+    status: { key: 'status', label: 'Status', type: 'calc', width: 130, render: (r) => <StatusTag r={r} /> },
+    state: { key: 'state', label: 'Stop alerts', type: 'select', options: STATES, width: 120, render: (r) => r.state || <span className="muted">–</span> },
+    notes: { key: 'notes', label: 'Notes', type: 'text', width: 220 }
+  };
+  const columns = [...(aiMode ? [allColumns.section] : []), ...cols.map((c) => allColumns[c])];
+  if (isAdmin) {
+    columns.push({
+      key: 'del', label: '', type: 'calc', width: 56,
+      render: (r) => (
+        <button type="button" className="dc-del" title="Delete this line" aria-label={`Delete ${r.doc_name || 'line'}`}
+          onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); removeRow(r); }}>🗑</button>
+      )
+    });
+  }
 
-  const all = rows.length;
   const tot = { bad: 0, soon: 0, ok: 0, none: 0 };
   rows.forEach((r) => { const k = docStatus(r).key; if (k in tot) tot[k] += 1; });
   const empSoon = people.filter((p) => p.expiry_date && docStatus(p).key !== 'ok');
@@ -177,70 +270,92 @@ function DocsPage() {
       <div className="page-tools">
         <Link href="/" className="crumb">← Home</Link>
         <div className="tools">
+          <button type="button" className="btn ghost" onClick={() => setColsOpen(true)} title="Choose which columns to show, print and export">☑ Columns</button>
           <button type="button" className="btn ghost" onClick={() => window.print()}>🖨 Print</button>
           <button type="button" className="btn ghost" onClick={doExcel}>Export Excel</button>
         </div>
       </div>
       <div>
         <h1>📋 Documents Checklist</h1>
-        <p className="sub">Issue date and expiry of every document. Status is worked out from the expiry date. Alerts show on Home {30} days before.</p>
+        <p className="sub">Issue date and expiry of every document. Status is worked out from the expiry date. Alerts show on Home 30 days before.</p>
       </div>
 
       <div className="kpi-row">
-        <div className="kpi"><span>Documents</span><strong>{all}</strong><small>{SECTIONS.length} sections</small></div>
+        <div className="kpi"><span>Documents</span><strong>{rows.length}</strong><small>{SECTIONS.length} sections</small></div>
         <div className={`kpi ${tot.bad ? 'kpi-bad' : ''}`}><span>Expired</span><strong>{tot.bad}</strong><small>renew now</small></div>
         <div className="kpi"><span>Renew in 30 days</span><strong>{tot.soon}</strong><small>coming up</small></div>
         <div className="kpi"><span>Active</span><strong>{tot.ok}</strong><small>{tot.none ? `${tot.none} with no expiry date` : 'all dated'}</small></div>
       </div>
 
-      <div className="dc-tabs co-switch" role="tablist" aria-label="Document sections">
-        {SECTIONS.map((s) => (
-          <button key={s.key} type="button" role="tab" aria-selected={tab === s.key} className={tab === s.key ? 'on' : ''} onClick={() => pickTab(s.key)}>
-            <span aria-hidden="true">{s.icon}</span> {s.label}
-            <small className="dc-n">{counts[s.key].all}</small>
-            {counts[s.key].bad > 0 && <small className="dc-bad" title="Expired">{counts[s.key].bad}</small>}
-            {counts[s.key].soon > 0 && <small className="dc-soon" title="Renew in 30 days">{counts[s.key].soon}</small>}
-          </button>
-        ))}
-      </div>
+      <form className="dc-ai" onSubmit={askAi} role="search">
+        <span className="dc-ai-ico" aria-hidden="true">✨</span>
+        <input type="search" value={search} onChange={(e) => { setSearch(e.target.value); if (ai) setAi(null); }}
+          placeholder="AI Search: e.g. expired licenses of Modern City, what expires in December, Rauf car mulkiya"
+          aria-label="AI Search" />
+        <button type="submit" className="btn in" disabled={!search.trim() || ai?.busy}>{ai?.busy ? 'Searching...' : 'Ask AI'}</button>
+      </form>
+      {ai && !ai.busy && (
+        <div className={`dc-ai-answer ${ai.error ? 'err' : ''}`} role="status">
+          <span>{ai.error ? `⚠️ ${ai.error}` : <>✨ {ai.answer}</>}</span>
+          <button type="button" className="al-link" onClick={clearAi}>✕ Clear</button>
+        </div>
+      )}
+
+      {!aiMode && (
+        <div className="dc-tabs co-switch" role="tablist" aria-label="Document sections">
+          {SECTIONS.map((s) => (
+            <button key={s.key} type="button" role="tab" aria-selected={tab === s.key} className={tab === s.key ? 'on' : ''} onClick={() => pickTab(s.key)}>
+              <span aria-hidden="true">{s.icon}</span> {s.label}
+              <small className="dc-n">{counts[s.key].all}</small>
+              {counts[s.key].bad > 0 && <small className="dc-bad" title="Expired">{counts[s.key].bad}</small>}
+              {counts[s.key].soon > 0 && <small className="dc-soon" title="Renew in 30 days">{counts[s.key].soon}</small>}
+            </button>
+          ))}
+        </div>
+      )}
 
       <section className="panel">
         <div className="section-head">
-          <h2>{sec.icon} {sec.label}</h2>
+          <h2>{aiMode ? `✨ AI Search: ${shown.length} found` : <>{sec.icon} {sec.label}{owner ? ` · ${owner}` : ''}</>}</h2>
           <EditToggle show={isAdmin} on={editMode} onClick={() => setEditMode((v) => !v)} />
         </div>
 
-        <div className="dc-bar">
-          <div className="head-chips">
-            {FILTERS.map(([k, label]) => {
-              const n = k === 'all' ? counts[tab].all : (rows || []).filter((r) => r.section === tab && docStatus(r).key === k).length;
-              if (k !== 'all' && !n) return null;
-              return <button key={k} type="button" className={`rp-chip ${filter === k ? 'active' : ''}`} onClick={() => setFilter(k)}>{label} · {n}</button>;
-            })}
+        {!aiMode && (
+          <div className="dc-bar">
+            <div className="head-chips">
+              {FILTERS.map(([k, label]) => {
+                const base = (rows || []).filter((r) => r.section === tab && (!owner || r.owner === owner));
+                const n = k === 'all' ? base.length : base.filter((r) => docStatus(r).key === k).length;
+                if (k !== 'all' && !n) return null;
+                return <button key={k} type="button" className={`rp-chip ${filter === k ? 'active' : ''}`} onClick={() => setFilter(k)}>{label} · {n}</button>;
+              })}
+            </div>
+            <div className="dc-right">
+              <select value={owner} onChange={(e) => setOwner(e.target.value)} aria-label={`Choose ${ownerWord}`}>
+                <option value="">All {ownerWord === 'Company' ? 'companies' : ownerWord === 'Employee' ? 'employees' : ownerWord === 'Car' ? 'cars' : 'vehicles'} ({owners.length})</option>
+                {owners.map((o) => <option key={o} value={o}>{o}</option>)}
+              </select>
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label="Sort">
+                <option value="owner">Sort: A to Z</option>
+                <option value="expiry">Sort: Expiry first</option>
+              </select>
+            </div>
           </div>
-          <div className="dc-right">
-            <div className="search"><input type="search" placeholder="Search name, plate, document..." value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search documents" /></div>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label="Sort">
-              <option value="owner">Sort: {sec.owner.split(' ')[0]}</option>
-              <option value="expiry">Sort: Expiry first</option>
-            </select>
-          </div>
-        </div>
+        )}
 
         <DataGrid
           columns={columns}
           rows={shown}
           canEdit={canChange}
           onSave={save}
-          onAdd={addRow}
+          onAdd={aiMode ? undefined : addRow}
           addLabel={`+ Add ${sec.label.replace(/s$/, '').toLowerCase()} line`}
-          onDelete={(r) => setDel(r)}
           rowClass={(r) => { const k = docStatus(r).key; return k === 'bad' ? 'dc-row-bad' : k === 'off' ? 'muted-row' : ''; }}
-          emptyText={filter === 'all' && !search ? 'Nothing here yet. Press Edit, then + Add.' : 'No documents match.'}
+          emptyText={aiMode ? 'AI Search found nothing. Try other words.' : filter === 'all' && !search && !owner ? 'Nothing here yet. Press Edit, then + Add.' : 'No documents match.'}
           flash={flash}
         />
 
-        {tab === 'employee' && people.length > 0 && (
+        {!aiMode && tab === 'employee' && people.length > 0 && (
           <div className="dc-linked">
             <h3>🔗 Resident Card and Visa from Drivers and Office staff</h3>
             <p className="muted">These are kept on their own pages (alerts already come from there). {empMissing ? `${empMissing} expiry dates not entered yet.` : ''}</p>
@@ -248,7 +363,7 @@ function DocsPage() {
               <table className="dc-table">
                 <thead><tr><th>Employee</th><th>Document</th><th>No.</th><th>Expiry date</th><th>Status</th><th>Change on</th></tr></thead>
                 <tbody>
-                  {(empSoon.length ? [...empSoon, ...people.filter((p) => !empSoon.includes(p))] : people).map((p) => (
+                  {[...empSoon, ...people.filter((p) => !empSoon.includes(p))].map((p) => (
                     <tr key={p.id}>
                       <td><b>{p.owner}</b></td>
                       <td>{p.doc_name}</td>
@@ -265,16 +380,38 @@ function DocsPage() {
         )}
       </section>
 
-      {del && (
-        <Modal title="Delete document line?" onClose={() => setDel(null)}>
-          <p style={{ margin: 0 }}>Delete <b>{del.doc_name || 'this line'}</b>{del.owner ? <> of <b>{del.owner}</b></> : ''}? If it was cancelled or the vehicle was sold, you can set Stop alerts instead and keep the record.</p>
+      {colsOpen && (
+        <Modal title="Choose columns" onClose={() => setColsOpen(false)}>
+          <div className="tp-presets">
+            {PRESETS.map(([label, list]) => (
+              <button key={label} type="button" className="rp-chip" onClick={() => saveCols(list)}>{label}</button>
+            ))}
+          </div>
+          <div className="tp-cols">
+            {ALL_COLS.map((c) => (
+              <label key={c} className={cols.includes(c) ? 'on' : ''}>
+                <input type="checkbox" checked={cols.includes(c)} disabled={c === 'owner'}
+                  onChange={() => saveCols(cols.includes(c) ? cols.filter((x) => x !== c) : [...cols, c])} />
+                {c === 'owner' ? 'Name (Company / Vehicle / Employee)' : COL_LABEL[c]}
+              </label>
+            ))}
+          </div>
+          <p className="note" style={{ margin: '10px 0 0' }}>{cols.length} of {ALL_COLS.length} columns. Used on screen, Print and Excel. Remembered on this device.</p>
           <div className="modal-actions">
-            <button className="btn ghost" onClick={() => setDel(null)}>Cancel</button>
-            <button className="btn danger" onClick={confirmDelete}>Delete</button>
+            <button type="button" className="btn ghost" onClick={doExcel}>⬇ Excel</button>
+            <button type="button" className="btn ghost" onClick={() => { setColsOpen(false); setTimeout(() => window.print(), 150); }}>🖨 Print</button>
+            <button type="button" className="btn" onClick={() => setColsOpen(false)}>Done</button>
           </div>
         </Modal>
       )}
-      {toast && <div className={`toast ${toast.kind}`} role="status">{toast.text}</div>}
+
+      {undo && (
+        <div className="toast dc-undo" role="status">
+          <span>Deleted <b>{undo.row.doc_name || 'line'}</b>{undo.row.owner ? ` · ${undo.row.owner}` : ''}</span>
+          <button type="button" onClick={undoDelete}>↶ Undo</button>
+        </div>
+      )}
+      {!undo && toast && <div className={`toast ${toast.kind}`} role="status">{toast.text}</div>}
     </>
   );
 }
