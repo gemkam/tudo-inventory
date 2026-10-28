@@ -75,6 +75,19 @@ function DriversPage() {
     if (error) { flash(error.message, 'err'); return; }
     setDrivers((list) => [...list, data]);
     flash('New driver added. Type the name and details.');
+    return data;
+  }
+
+  /* Top "Add driver" button: turns on Edit, adds the driver and scrolls to the new card */
+  async function addFromTop() {
+    setEditMode(true);
+    const data = await addRow();
+    if (!data) return;
+    setTimeout(() => {
+      const el = document.getElementById(`drv-${data.id}`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el?.querySelector('.drv-name-input')?.focus();
+    }, 150);
   }
 
   async function confirmDelete() {
@@ -103,6 +116,7 @@ function DriversPage() {
       <div className="page-tools">
         <Link href="/transport" className="crumb">← Transport</Link>
         <div className="tools">
+          {isAdmin && <button type="button" className="btn" onClick={addFromTop}>➕ Add driver</button>}
           <Link href="/transport/salary-sheet" className="btn in">📑 Salary sheet</Link>
           <Link href="/transport/vehicles" className="btn">🚚 Vehicles</Link>
         </div>
@@ -131,7 +145,7 @@ function DriversPage() {
             const unit = plates(r.id, 'Unit');
             const trailer = plates(r.id, 'Trailer');
             return (
-              <article key={r.id} className={`drv-card${inactive ? ' inactive' : ''}`}>
+              <article key={r.id} id={`drv-${r.id}`} className={`drv-card${inactive ? ' inactive' : ''}`}>
                 <div className="drv-top">
                   {canChange
                     ? <input className="drv-input drv-name-input" defaultValue={r.name || ''} aria-label="Driver name"
