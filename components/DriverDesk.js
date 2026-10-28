@@ -8,6 +8,7 @@ import { sb } from '@/lib/supabase';
 import { monthKey, monthStart, monthLabel, fmtAmt, todayISO } from '@/lib/sheet';
 import { SALARY_FIELDS, salaryTotal, salaryPayable, allowancePlan, monthShort } from '@/lib/transport';
 import { fmtD } from '@/lib/reminders';
+import { useSalaryLabels } from '@/lib/labels';
 
 /*
   Driver desk on the Drivers page: choose a driver by name and see
@@ -35,6 +36,7 @@ export default function DriverDesk({ drivers, canEdit, flash }) {
   const [tripMonth, setTripMonth] = useState('');
   const [form, setForm] = useState(null); // { id?, month, values }
   const [busy, setBusy] = useState(false);
+  const salLabels = useSalaryLabels();
 
   useEffect(() => {
     if (!driverId && list.length) setDriverId((list.find((d) => d.status !== 'Inactive') || list[0]).id);
@@ -97,7 +99,7 @@ export default function DriverDesk({ drivers, canEdit, flash }) {
 
   async function saveForm() {
     if (!form?.month || !plan) return;
-    if (blocked) { flash('Mark the earlier trip allowance Paid first', 'err'); return; }
+    if (blocked) { flash('Mark the earlier driver allowance Paid first', 'err'); return; }
     const row = {};
     for (const [k] of [...SALARY_FIELDS, ...EXTRA]) {
       if (AUTO.includes(k)) continue;
@@ -165,7 +167,7 @@ export default function DriverDesk({ drivers, canEdit, flash }) {
             <div className="table-wrap">
               <table className="dc-table dd-table">
                 <thead>
-                  <tr><th>Month</th><th className="a-right">Trip allowance</th><th className="a-right">Total salary</th><th className="a-right">Deduction</th><th className="a-right">Special</th><th className="a-right">Payable</th><th>Receipt</th></tr>
+                  <tr><th>Month</th><th className="a-right">{salLabels.label('trip_allowance')}</th><th className="a-right">Total salary</th><th className="a-right">Deduction</th><th className="a-right">Special</th><th className="a-right">Payable</th><th>Receipt</th></tr>
                 </thead>
                 <tbody>
                   {salaries.map((s) => (
@@ -257,7 +259,7 @@ export default function DriverDesk({ drivers, canEdit, flash }) {
 
             {plan.unpaidEarlier.length > 0 && (
               <div className="dd-check bad">
-                <b>⛔ Trip allowance of earlier months not paid. Mark Paid first.</b>
+                <b>⛔ Driver allowance of earlier months not paid. Mark Paid first.</b>
                 <ul>
                   {plan.unpaidEarlier.map((t) => (
                     <li key={t.id}>
@@ -279,9 +281,9 @@ export default function DriverDesk({ drivers, canEdit, flash }) {
             )}
 
             <div className="dd-grid">
-              {[...SALARY_FIELDS, ...EXTRA].map(([k, label]) => (
+              {[...SALARY_FIELDS, ...EXTRA].map(([k]) => [k, salLabels.label(k)]).map(([k, label]) => (
                 <label key={k} className={AUTO.includes(k) ? 'auto' : ''}>
-                  <span>{k === 'trip_allowance' ? `Trip allowance ${monthShort(form.month)} (paid)` : label}</span>
+                  <span>{k === 'trip_allowance' ? `${label} ${monthShort(form.month)} (paid)` : label}</span>
                   {AUTO.includes(k)
                     ? <output>{fmtAmt(fv[k])}</output>
                     : <input type="number" inputMode="decimal" step="0.001" min="0" value={fv[k]} onChange={(e) => setVal(k, e.target.value)} />}

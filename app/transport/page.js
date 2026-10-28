@@ -8,6 +8,7 @@ import Modal from '@/components/Modal';
 import { sb } from '@/lib/supabase';
 import { num, fmtAmt, monthKey, monthLabel, monthStart, exportStamp, exportExcel, exportPdf, evaluate } from '@/lib/sheet';
 import { SALARY_FIELDS, salaryTotal, salaryPayable, allowancePlan } from '@/lib/transport';
+import { useSalaryLabels, SALARY_EXTRA_LABELS } from '@/lib/labels';
 import CompanyHeader, { COMPANY_NAME } from '@/components/CompanyHeader';
 import Omr from '@/components/Omr';
 import EditToggle from '@/components/EditToggle';
@@ -27,6 +28,7 @@ function TransportPage() {
   const [delExtra, setDelExtra] = useState(null);
   const toastTimer = useRef(null);
   const canChange = isAdmin && editMode;
+  const salLabels = useSalaryLabels();
 
   const flash = useCallback((text, kind = 'ok') => {
     setToast({ text, kind });
@@ -132,7 +134,7 @@ function TransportPage() {
       // Trip allowance: only what is marked Paid, each trip on one receipt; earlier months must be Paid first
       const plan = allowancePlan(entries, driver.id, month);
       if (plan.unpaidEarlier.length) {
-        flash(`${driver.name}: mark earlier trip allowance Paid first (${plan.unpaidEarlier.length} trips). Use Drivers page > Salary receipts.`, 'err');
+        flash(`${driver.name}: mark earlier driver allowance Paid first (${plan.unpaidEarlier.length} trips). Use Drivers page > Salary receipts.`, 'err');
         return;
       }
       const base = { basic: 0, room_rent: 0, utilities: 0, mobile: 0, travel_food: 0, trip_allowance: 0, allowance_carried: 0, advance_deduction: 0, special_allowance: 0 };
@@ -202,7 +204,7 @@ function TransportPage() {
   function salaryTable() {
     const head = ['Description', ...drivers.map((d) => d.name)];
     const rows = [
-      ...SALARY_FIELDS.map(([k, l]) => [l, ...drivers.map((d) => num(salaryOf(d.id)?.[k] || 0))]),
+      ...SALARY_FIELDS.map(([k]) => [salLabels.label(k), ...drivers.map((d) => num(salaryOf(d.id)?.[k] || 0))]),
       ['Total', ...drivers.map((d) => salaryTotal(salaryOf(d.id)))],
       ['Advance deduction', ...drivers.map((d) => num(salaryOf(d.id)?.advance_deduction || 0))],
       ['Special allowance', ...drivers.map((d) => num(salaryOf(d.id)?.special_allowance || 0))],
@@ -382,12 +384,26 @@ function TransportPage() {
                 </tr>
               </thead>
               <tbody>
-                {[...SALARY_FIELDS, ['_total', 'Total'], ['advance_deduction', 'Advance deduction'], ['special_allowance', 'Special allowance'], ['_payable', 'Balance payable']].map(([k, label]) => (
+                {[...SALARY_FIELDS, ...SALARY_EXTRA_LABELS].map(([k]) => [k, salLabels.label(k)]).map(([k, label]) => (
                   <tr key={k} className={k === '_total' ? 'sum' : k === '_payable' ? 'profit' : ''}>
                     <td>
-                      {label}
-                      {k === 'trip_allowance' && <small className="muted"> (paid, this month's trips)</small>}
-                      {k === 'allowance_carried' && <small className="muted"> (paid now)</small>}
+                      {canChange ? (
+                        <input
+                          key={`lbl-${k}-${label}`}
+                          className="label-input"
+                          aria-label={`Row name for ${label}`}
+                          title="Rename this row (leave empty for the standard name)"
+                          defaultValue={label}
+                          onBlur={async (e) => {
+                            if (e.target.value.trim() === label) return;
+                            const r = await salLabels.rename(k, e.target.value);
+                            flash(r.error ? r.error : 'Row name saved', r.error ? 'err' : 'ok');
+                          }}
+                          onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                        />
+                      ) : label}
+                      {k === 'trip_allowance' && !canChange && <small className="muted"> (paid, this month's trips)</small>}
+                      {k === 'allowance_carried' && !canChange && <small className="muted"> (paid now)</small>}
                     </td>
                     {drivers.map((d) => {
                       const s = salaryOf(d.id);
@@ -414,7 +430,7 @@ function TransportPage() {
                               {val === null ? '–' : (k === 'advance_deduction' && val > 0 ? `−${fmtAmt(val)}` : fmtAmt(val))}
                             </>
                           )}
-                          {k === 'trip_allowance' && <div className="hint-num">trips: {fmtAmt(tripSum)}</div>}
+                          {k === 'trip_allowance' && <div className="hint-num">all trips: {fmtAmt(tripSum)}</div>}
                         </td>
                       );
                     })}
@@ -423,7 +439,7 @@ function TransportPage() {
               </tbody>
             </table>
           </div>
-          <p className="note">Balance payable = Total − Advance deduction + Special allowance. In Edit mode, type in any box and press Enter.</p>
+          <p className="note">Balance payable = Total − Advance deduction + Special allowance. In Edit mode, type in any box and press Enter. You can also rename any row (empty = standard name).</p>
         </section>
       )}
 

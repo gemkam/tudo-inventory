@@ -7,6 +7,7 @@ import AuthGate from '@/components/AuthGate';
 import { sb } from '@/lib/supabase';
 import { monthKey, monthLabel } from '@/lib/sheet';
 import { SALARY_FIELDS, salaryTotal, salaryPayable } from '@/lib/transport';
+import { useSalaryLabels } from '@/lib/labels';
 import { omrInWords } from '@/lib/words';
 import { useShare } from '@/components/ShareModal';
 import Omr from '@/components/Omr';
@@ -33,6 +34,7 @@ function SlipPage() {
   const [entries, setEntries] = useState([]);
   const [error, setError] = useState('');
   const { open: openShare, modal } = useShare();
+  const salLabels = useSalaryLabels();
 
   useEffect(() => {
     (async () => {
@@ -60,11 +62,12 @@ function SlipPage() {
   const trips = entries.filter((e) => monthKey(e.entry_date) === month && n(e.rent) > 0).length;
   const earnings = SALARY_FIELDS
     .filter(([k]) => k !== 'allowance_carried' || n(sal?.[k]))
-    .map(([k, label]) => [k === 'allowance_carried' && sal?.allowance_carried_note ? `Trip allowance of earlier months (${sal.allowance_carried_note})` : label, n(sal?.[k])]);
+    .map(([k]) => [k, salLabels.label(k)])
+    .map(([k, label]) => [k === 'allowance_carried' && sal?.allowance_carried_note ? `${label} (${sal.allowance_carried_note})` : label, n(sal?.[k])]);
   const special = n(sal?.special_allowance);
-  if (special) earnings.push(['Special allowance', special]);
+  if (special) earnings.push([salLabels.label('special_allowance'), special]);
   const gross = salaryTotal(sal) + special;
-  const deductions = [['Advance deduction', n(sal?.advance_deduction)]];
+  const deductions = [[salLabels.label('advance_deduction'), n(sal?.advance_deduction)]];
   const totalDed = deductions.reduce((t, [, v]) => t + v, 0);
   const net = salaryPayable(sal);
   const slipNo = month ? `SAL-${month.replace('-', '')}-${String(driver.sort || 1).padStart(2, '0')}` : '';

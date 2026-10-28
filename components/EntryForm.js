@@ -188,7 +188,7 @@ export default function EntryForm({ drivers, lockedDriverId = null, defaultDrive
             </div>
             {numberOf('rent') > 0 && <p className="note">Balance to collect: <b>{balance.toFixed(3)} OMR</b></p>}
             <div className="form-row">
-              <div className="field"><label htmlFor="e-allow">Driver trip allowance (OMR)</label><input id="e-allow" inputMode="decimal" value={f.driver_allowance} onChange={set('driver_allowance')} placeholder="0" /></div>
+              <div className="field"><label htmlFor="e-allow">Driver allowance (OMR)</label><input id="e-allow" inputMode="decimal" value={f.driver_allowance} onChange={set('driver_allowance')} placeholder="0" /></div>
               <div className="field">
                 <label htmlFor="e-allows">Allowance paid?</label>
                 <select id="e-allows" value={f.allowance_status} onChange={set('allowance_status')}><option>Not paid</option><option>Paid</option></select>
