@@ -155,14 +155,17 @@ function DriverSheet() {
 
   /* ---------- Export ---------- */
 
-  function tableData() {
+  function tableData(list = rows) {
     const head = ['Date', 'From', 'To', 'Description', 'Cargo', 'Consignee', 'Rent', 'Received', 'Received on', 'Balance', 'Payment', 'Driver allow.', 'Allowance', 'Diesel', 'Toll/other', 'Maint.', 'Status', 'Credit in', 'Entered by'];
-    const data = rows.map((r) => [
+    const data = list.map((r) => [
       fmtFullDate(r.entry_date), r.from_place || '', r.to_place || '', r.description || '', r.cargo || '', r.consignee || '',
       num(r.rent), num(r.received), r.received_date ? fmtFullDate(r.received_date) : '', num(Number(r.rent || 0) - Number(r.received || 0)), r.payment_status || '',
       num(r.driver_allowance), r.allowance_status || '', num(r.diesel), num(r.toll), num(r.maintenance), r.remarks || '', r.credit_in || '', r.entered_by || ''
     ]);
-    const totalsRow = ['Total', `${totals.trips} trips`, '', '', '', '', totals.rent, totals.received, '', totals.balance, '', totals.driver_allowance, '', totals.diesel, totals.toll, totals.maintenance, '', '', ''];
+    const tot = (k) => num(list.reduce((t, e) => t + Number(e[k] || 0), 0));
+    const trips = list.filter((e) => Number(e.rent) > 0).length;
+    const T = { rent: tot('rent'), received: tot('received'), driver_allowance: tot('driver_allowance'), diesel: tot('diesel'), toll: tot('toll'), maintenance: tot('maintenance') };
+    const totalsRow = ['Total', `${trips} trips`, '', '', '', '', T.rent, T.received, '', num(T.rent - T.received), '', T.driver_allowance, '', T.diesel, T.toll, T.maintenance, '', '', ''];
     return { head, data, totalsRow, numCols: [6, 7, 9, 11, 13, 14, 15] };
   }
 
@@ -207,8 +210,9 @@ function DriverSheet() {
     }
   }
 
+  /* Print / PDF / Excel with chosen columns: rows with no From and no To are left out, totals follow the rows shown */
   function chosenTable() {
-    const t = tableData();
+    const t = tableData(rows.filter((r) => String(r.from_place || '').trim() || String(r.to_place || '').trim()));
     const keep = (cols.length ? cols : DEFAULT_COLS).filter((i) => i < t.head.length);
     const pick = (r, fmt) => keep.map((i) => (fmt && t.numCols.includes(i) && typeof r[i] === 'number' ? fmtAmt(r[i]) : r[i]));
     return {
