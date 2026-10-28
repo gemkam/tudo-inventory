@@ -1645,22 +1645,28 @@ tr.pickable:hover td { background: var(--row-hover); }
 }
 @media print { .noor-orb, .noor-panel { display: none !important; } }
 
-/* Office Expense tile: Tudo Num Group logo animation (float, shine sweep, glow) */
-.hub-brand { animation: brand-float 4.5s ease-in-out infinite; }
-.hub-brand img { animation: brand-glow 3s ease-in-out infinite; }
-.hub-brand::after {
-  content: ""; position: absolute; inset: 0; pointer-events: none;
-  background: linear-gradient(110deg, transparent 38%, rgba(255, 255, 255, .75) 50%, transparent 62%);
-  background-size: 260% 100%; background-repeat: no-repeat;
-  -webkit-mask: url(/tudonum-group.png) center / contain no-repeat; mask: url(/tudonum-group.png) center / contain no-repeat;
-  animation: brand-shine 3.6s ease-in-out infinite;
+/* Office Expense tile: Tudo Num Group logo animation.
+   The logo is in 3 layers: base (globe, person, text), the green arrow, and the text with blue and green swapped.
+   3.5 s show (arrow spins, text colours swap back and forth), then 5 s resting as the real logo, then again. */
+.brand-anim { display: block; }
+.brand-anim img { display: block; width: 210px; max-width: 62vw; height: auto; }
+.brand-anim .ba-base { position: relative; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .35)); }
+.brand-anim .ba-swap, .brand-anim .ba-arrow { position: absolute; left: 0; top: 0; }
+.brand-anim .ba-swap { filter: none; opacity: 0; animation: ba-swap 8.5s ease-in-out infinite; }
+.brand-anim .ba-arrow { transform-origin: 28.3% 37.1%; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .3)); animation: ba-spin 8.5s cubic-bezier(.45, .05, .35, 1) infinite; }
+@keyframes ba-spin {
+  0%, 3% { transform: rotate(0) scale(1); filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .3)); }
+  8% { transform: rotate(40deg) scale(1.08); filter: drop-shadow(0 0 10px rgba(140, 255, 90, .9)); }
+  28% { transform: rotate(372deg) scale(1.08); filter: drop-shadow(0 0 12px rgba(140, 255, 90, .9)); }
+  34% { transform: rotate(357deg) scale(.98); }
+  40%, 100% { transform: rotate(360deg) scale(1); filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .3)); }
 }
-.hub-tile:hover .hub-brand img { animation: brand-glow 3s ease-in-out infinite, brand-bounce .7s ease; }
-@keyframes brand-float { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-7px); } }
-@keyframes brand-glow {
-  0%, 100% { filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .35)); }
-  50% { filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .35)) drop-shadow(0 0 14px rgba(120, 210, 255, .55)); }
+@keyframes ba-swap {
+  0%, 6% { opacity: 0; }
+  11%, 17% { opacity: 1; }
+  21% { opacity: 0; }
+  25%, 32% { opacity: 1; }
+  40%, 100% { opacity: 0; }
 }
-@keyframes brand-shine { 0% { background-position: 130% 0; } 55%, 100% { background-position: -30% 0; } }
-@keyframes brand-bounce { 0% { transform: scale(1); } 40% { transform: scale(1.08) rotate(-2deg); } 100% { transform: scale(1); } }
-@media (prefers-reduced-motion: reduce) { .hub-brand, .hub-brand img, .hub-brand::after { animation: none; } .hub-brand { transform: translateX(-50%); } }
+@media screen and (max-width: 680px) { .brand-anim img { width: 170px; } }
+@media (prefers-reduced-motion: reduce) { .brand-anim .ba-swap, .brand-anim .ba-arrow { animation: none; } }

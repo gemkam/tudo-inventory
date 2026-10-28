@@ -73,7 +73,11 @@ function Home() {
           </span>
         </Link>
         <Link href="/expenses" className="hub-tile">
-          <span className="hub-brand"><img src="/tudonum-group.png" alt="Tudo Num Group" /></span>
+          <span className="hub-brand brand-anim" role="img" aria-label="Tudo Num Group">
+            <img className="ba-base" src="/brand-base.png" alt="" />
+            <img className="ba-swap" src="/brand-text-swap.png" alt="" />
+            <img className="ba-arrow" src="/brand-arrow.png" alt="" />
+          </span>
           <span className="hub-kicker">Modern City · Abu Wasif · Sumptuosity</span>
           <span className="hub-title">Office Expense</span>
           <span className="hub-sub">Bills · Salary · Petrol · Utility · Marketing · VAT</span>
