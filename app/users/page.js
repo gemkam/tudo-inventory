@@ -5,6 +5,7 @@ import Link from 'next/link';
 import AuthGate, { ROLES, useUser } from '@/components/AuthGate';
 import Modal from '@/components/Modal';
 import { sb } from '@/lib/supabase';
+import { logAction } from '@/lib/activity';
 
 const ROLE_HELP = {
   admin: 'Everything, plus managing users',
@@ -45,6 +46,7 @@ function UsersPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
+  const [seen, setSeen] = useState({});
 
   const load = useCallback(async () => {
     const [{ data, error: err }, d] = await Promise.all([
@@ -57,6 +59,24 @@ function UsersPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Online now / last seen per user (from the activity log)
+  const loadSeen = useCallback(async () => {
+    const { data } = await sb().from('user_sessions').select('user_id, last_seen, ended_at').order('last_seen', { ascending: false }).limit(500);
+    const m = {};
+    (data || []).forEach((s) => {
+      const online = !s.ended_at && Date.now() - new Date(s.last_seen).getTime() < 150000;
+      if (!m[s.user_id]) m[s.user_id] = { last: s.last_seen, online };
+      else if (online) m[s.user_id].online = true;
+    });
+    setSeen(m);
+  }, []);
+
+  useEffect(() => {
+    loadSeen();
+    const t = setInterval(loadSeen, 30000);
+    return () => clearInterval(t);
+  }, [loadSeen]);
 
   function flash(t) { setMsg(t); setTimeout(() => setMsg(''), 3500); }
 
@@ -74,6 +94,7 @@ function UsersPage() {
       extra = dErr ? ` (Could not add to the driver list: ${dErr.message})` : ' Added to the driver list.';
     }
     setBusy(false);
+    logAction(`Created user "${form.username.trim().toLowerCase()}" with ${ROLES[form.role].label}`);
     flash(`User "${form.username.trim().toLowerCase()}" created with ${ROLES[form.role].label}. They can log in now.${extra}`);
     setForm(EMPTY);
     load();
@@ -97,6 +118,12 @@ function UsersPage() {
       }
     }
     setBusy(false);
+    const before = (users || []).find((x) => x.id === edit.id);
+    const bits = [];
+    if (before && before.role !== edit.role) bits.push(`access ${ROLES[before.role]?.label || before.role} → ${ROLES[edit.role]?.label || edit.role}`);
+    if (before && (before.display_name || '') !== (edit.display_name || '')) bits.push(`name "${before.display_name || ''}" → "${edit.display_name || ''}"`);
+    if (edit.password) bits.push('password changed');
+    logAction(`Edited user "${edit.username}"${bits.length ? ': ' + bits.join(', ') : ''}`);
     flash(`${edit.display_name || edit.username} saved.${edit.id !== me.id ? ' They were signed out, and the new access applies at their next login.' : ''}`);
     setEdit(null);
     load();
@@ -107,6 +134,7 @@ function UsersPage() {
     const { error: err } = await sb().rpc('admin_delete_user', { p_id: del.id });
     setBusy(false);
     if (err) { setError(err.message); return; }
+    logAction(`Deleted user "${del.username}"`);
     flash(`${del.display_name || del.username} deleted.`);
     setDel(null);
     load();
@@ -176,11 +204,11 @@ function UsersPage() {
       </section>
 
       <section className="panel">
-        <h2>All users {users && <span className="note">({users.length})</span>}</h2>
+        <h2>All users {users && <span className="note">({users.length})</span>} <Link href="/activity" className="btn small ghost" style={{ marginLeft: 10 }}>👁 All users activity</Link></h2>
         {!users ? <p className="empty">Loading users...</p> : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Name</th><th>Username</th><th>Access level</th><th>Driver</th><th>Last login</th><th className="num">Actions</th></tr></thead>
+              <thead><tr><th>Name</th><th>Username</th><th>Access level</th><th>Driver</th><th>Status</th><th>Last login</th><th className="num">Actions</th></tr></thead>
               <tbody>
                 {users.map((u) => (
                   <tr key={u.id}>
@@ -188,9 +216,11 @@ function UsersPage() {
                     <td>{u.username}</td>
                     <td><span className={`role-badge r-${u.role}`}>{ROLES[u.role]?.label || u.role || 'No access'}</span></td>
                     <td>{drivers.find((d) => d.user_id === u.id)?.name || <span className="muted">–</span>}</td>
+                    <td>{seen[u.id]?.online ? <span className="pill in">🟢 Online now</span> : seen[u.id] ? <span className="muted">Last seen {fmtWhen(seen[u.id].last)}</span> : <span className="muted">–</span>}</td>
                     <td>{fmtWhen(u.last_sign_in_at)}</td>
                     <td>
                       <div className="actions">
+                        <Link href={`/activity?u=${u.id}`} className="mini">📜 Activity</Link>
                         <button type="button" className="mini" onClick={() => setEdit({ ...u, password: '', driverId: drivers.find((d) => d.user_id === u.id)?.id || '' })}>Edit</button>
                         {u.id !== me.id && <button type="button" className="mini danger" onClick={() => setDel(u)}>Delete</button>}
                       </div>

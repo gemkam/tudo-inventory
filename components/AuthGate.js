@@ -8,6 +8,7 @@ import { sb } from '@/lib/supabase';
 import RaufAssistant from '@/components/NoorAssistant';
 import { RaufCtx, defaultGreeting } from '@/components/RaufContext';
 import ThemeMenu from '@/components/ThemeMenu';
+import { startActivity, logPage, endActivity } from '@/lib/activity';
 
 /*
   Access levels (stored in the user's app_metadata.role):
@@ -73,7 +74,17 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
     return () => sub.subscription.unsubscribe();
   }, [router, entryPage]);
 
+  // Activity log for the Administrator (/activity)
+  useEffect(() => {
+    if (user) startActivity(user);
+  }, [user]);
+
+  useEffect(() => {
+    if (user && path) logPage(path);
+  }, [user, path]);
+
   async function switchUser() {
+    await endActivity('logout');
     await sb().auth.signOut();
     router.replace('/login');
   }

@@ -116,6 +116,7 @@ function Home() {
           <Link href="/entry" className="btn ghost">✍️ Data entry</Link>
           <Link href="/settings" className="btn ghost">⚙️ Settings</Link>
           {isOwner && <Link href="/users" className="btn ghost">👥 Users</Link>}
+          {isOwner && <Link href="/activity" className="btn ghost">👁 User activity</Link>}
         </div>
       )}
       </div>
