@@ -277,8 +277,11 @@ export default function NoorAssistant({ context, greeting, alertCount = 0 }) {
     setOpen(nv);
     if (nv) {
       setTimeout(() => inputRef.current?.focus(), 80);
-      // say hello once, the first time Noor is opened on this visit
-      if (!greeted.current && voiceOn && !msgs.length) { greeted.current = true; speak(greeting?.[lang] || '', -2); }
+      // Noor speaks first, then starts listening by herself (Talk mode: you speak, 3 s silence, she replies, listens again)
+      greeted.current = true;
+      setTalk(true);
+      live.current.talk = true;
+      speak(greeting?.[lang] || '', -2, () => { if (live.current.talk) setTimeout(() => startListening(true), 400); });
     } else { stopAll(); setTalk(false); }
   }
 
