@@ -62,9 +62,11 @@ function Home() {
         </Link>
         <Link href="/transport" className="hub-tile">
           <Letterhead />
-          <TruckAnim />
           <span className="hub-kicker">Transport Division</span>
-          <span className="hub-title">Transport Expense</span>
+          <span className="hub-title-row">
+            <span className="hub-title">Transport Expense</span>
+            <TruckAnim />
+          </span>
           <span className="hub-sub">Trips · Diesel · Tolls · Maintenance · Salaries</span>
           <span className="hub-meta">
             {tr ? <>{tr.drivers.length} drivers{tr.drivers.length > 0 && `: ${tr.drivers.join(', ')}`}</> : ' '}
