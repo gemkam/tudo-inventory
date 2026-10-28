@@ -92,6 +92,8 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
   if (!user) return <div className="loading">Loading...</div>;
 
   const nav = user.isEntry ? [['/entry', 'Data entry']] : [['/', 'Home']];
+  // Phone / tablet: quick buttons next to Home (on Home the alerts list pushes the tiles far down)
+  const quick = user.canRead ? [['/transport', '🚚 Transport'], ['/inventory', '📦 Inventory'], ['/expenses', '🧾 Office Expense']] : [];
 
   let blocked = '';
   if (ownerOnly && !user.isOwner) blocked = 'Only Administrator can open this page.';
@@ -106,6 +108,9 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
           <nav className="topnav">
             {nav.map(([href, label]) => (
               <Link key={href} href={href} className={(href === '/' ? path === '/' : path.startsWith(href)) ? 'active' : ''}>{label}</Link>
+            ))}
+            {quick.map(([href, label]) => (
+              <Link key={href} href={href} className={`nav-quick${path === href || (path.startsWith(`${href}/`)) ? ' active' : ''}`}>{label}</Link>
             ))}
           </nav>
           <div className="top-user">

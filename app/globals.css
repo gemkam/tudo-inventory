@@ -2232,3 +2232,9 @@ textarea.drv-input { resize: vertical; }
 .drv-actions { display: flex; justify-content: flex-end; }
 .drv-add { justify-self: start; }
 @media (max-width: 420px) { .drv-fields { grid-template-columns: 1fr; } }
+
+/* Quick buttons next to Home: only on phone / tablet (desktop has the tiles in view) */
+.topnav a.nav-quick { display: none; }
+@media screen and (max-width: 1080px) {
+  .topnav a.nav-quick { display: inline-block; }
+}
