@@ -2144,3 +2144,6 @@ tr.dc-row-bad td:first-child { box-shadow: inset 4px 0 0 #b3261e; }
 .slip-calc td.calc { color: #5d6e67; font-size: 12px; }
 .slip-calc td.num { text-align: right; white-space: nowrap; font-weight: 600; }
 .slip-calc tfoot td { font-weight: 700; border-top: 1.5px solid #13836b; border-bottom: 0; color: #0f3d33; }
+.mark-all-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; padding: 8px 14px; border-radius: 10px; background: var(--tint); font-size: 14px; }
+.dd-table th .btn.small { text-transform: none; letter-spacing: 0; }
+@media print { .mark-all-bar { display: none !important; } }

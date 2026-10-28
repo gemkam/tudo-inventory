@@ -117,7 +117,7 @@ function DriverSheet() {
   async function payPrevious(ids) {
     const { error: err } = await sb().from('transport_entries').update({ allowance_status: 'Paid' }).in('id', ids);
     if (err) { flash(err.message, 'err'); return; }
-    flash('Previous driver allowance marked Paid');
+    flash('Driver allowance marked Paid');
     load();
   }
 
@@ -365,6 +365,15 @@ function DriverSheet() {
             Edit mode is on. Click any cell to change it, then press Enter. Amounts accept maths like 25+4. Click <strong>✓ Done</strong> when finished.
           </div>
         )}
+        {isAdmin && month !== 'all' && (() => {
+          const open = rows.filter((e) => hasAllow(e) && e.allowance_status !== 'Paid');
+          return open.length > 1 ? (
+            <div className="mark-all-bar">
+              <span>{open.length} trips with driver allowance not paid in {monthLabel(month)}: <b>{fmtAmt(open.reduce((t, e) => t + Number(e.driver_allowance || 0), 0))}</b></span>
+              <button type="button" className="btn small in" onClick={() => payPrevious(open.map((e) => e.id))}>✓ Mark all paid</button>
+            </div>
+          ) : null;
+        })()}
         {(prevOpen.length > 0 || prevPaidHere.length > 0) && (
           <div className="prev-allow">
             <b>Driver allowance from previous months</b>

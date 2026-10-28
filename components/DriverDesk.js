@@ -255,7 +255,18 @@ export default function DriverDesk({ drivers, canEdit, flash, fixedDriverId = ''
             <div className="table-wrap">
               <table className="dc-table dd-table">
                 <thead>
-                  <tr><th>Date</th><th>Route</th><th className="a-right">Rent</th><th className="a-right">Received</th><th className="a-right">Balance</th><th className="a-right">Allowance</th><th>Allowance status</th></tr>
+                  <tr><th>Date</th><th>Route</th><th className="a-right">Rent</th><th className="a-right">Received</th><th className="a-right">Balance</th><th className="a-right">Allowance</th><th>
+                    <span className="dd-st">Allowance status
+                      {canEdit && (() => {
+                        const open = monthTrips.filter((t) => n(t.driver_allowance) && t.allowance_status !== 'Paid');
+                        return open.length > 1 ? (
+                          <button type="button" className="btn small in" disabled={busy} onClick={() => markPaid(open.map((t) => t.id))}>
+                            ✓ Mark all paid ({fmtAmt(open.reduce((a, t) => a + n(t.driver_allowance), 0))})
+                          </button>
+                        ) : null;
+                      })()}
+                    </span>
+                  </th></tr>
                 </thead>
                 <tbody>
                   {monthTrips.map((t) => (
