@@ -11,6 +11,8 @@ import { sb } from '@/lib/supabase';
 import { fmtAmt, monthLabel, todayISO, exportStamp } from '@/lib/sheet';
 import { COMPANIES, HEADS, r3 } from '@/lib/expenses';
 import { buildReminders, whenText } from '@/lib/reminders';
+import NoorAssistant from '@/components/NoorAssistant';
+import { groupContext, groupGreeting } from '@/lib/groupAssistantContext';
 import { GROUP_SOURCES as SOURCES, TRANSPORT_HEADS, buildLines, buildIncome, computeGroup, periodLabelOf, shiftMonth } from '@/lib/groupSummary';
 
 const PICK_KEY = 'tudo-summary-pick';
@@ -86,6 +88,17 @@ function SummaryPage() {
       text: `${r.title}: ${r.detail}, ${whenText(r.left)} (${dmy(r.date)}).`, link: '/transport/vehicles'
     }));
   }, [data, pick]);
+
+  // Everything on this page as text, for Noor (the AI assistant)
+  const aiContext = useMemo(() => {
+    if (!G || !period) return '';
+    try { return groupContext({ G, lines, income, allMonths, pick, periodLabel: periodLabelOf(period, monthLabel), extraAlerts: vehicleAlerts }); } catch { return ''; }
+  }, [G, lines, income, allMonths, pick, period, vehicleAlerts]);
+  const aiGreeting = useMemo(() => {
+    if (!G || !period) return null;
+    const pl = periodLabelOf(period, monthLabel);
+    return { en: groupGreeting({ G, periodLabel: pl, extraAlerts: vehicleAlerts, lang: 'en' }), ru: groupGreeting({ G, periodLabel: pl, extraAlerts: vehicleAlerts, lang: 'ru' }) };
+  }, [G, period, vehicleAlerts]);
 
   if (!data || !period || !G) return <div className="loading">Loading summary...</div>;
 
@@ -407,6 +420,7 @@ function SummaryPage() {
       {drill && <DrillModal drill={drill} onClose={() => setDrill(null)} />}
       {budgetOpen && <BudgetModal budgets={data.budgets} onClose={() => setBudgetOpen(false)} onSaved={load} />}
       {modal}
+      <NoorAssistant context={aiContext} greeting={aiGreeting} alertCount={G.alerts.filter((a) => a.level !== 'info').length + vehicleAlerts.length} />
     </>
   );
 }

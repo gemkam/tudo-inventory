@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { inventoryData, inventoryContext, transportData, transportContext, systemPrompt, askAI } from '@/lib/assistant';
+import { inventoryData, inventoryContext, transportData, transportContext, systemPrompt, groupPrompt, askAI } from '@/lib/assistant';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -14,7 +14,7 @@ export async function POST(req) {
   } catch {
     return Response.json({ error: 'Bad request.' }, { status: 400 });
   }
-  const scope = body.scope === 'transport' ? 'transport' : 'inventory';
+  const scope = ['transport', 'group'].includes(body.scope) ? body.scope : 'inventory';
   const messages = Array.isArray(body.messages) ? body.messages.filter((m) => m && m.content) : [];
   if (!messages.length) return Response.json({ error: 'Type or say a question.' }, { status: 400 });
 
@@ -27,8 +27,17 @@ export async function POST(req) {
   if (uErr || !u?.user) return Response.json({ error: 'Please log in again.' }, { status: 401 });
 
   try {
-    const context = scope === 'transport' ? transportContext(await transportData(supa)) : inventoryContext(await inventoryData(supa));
-    const answer = await askAI(systemPrompt(scope, context), messages);
+    let system;
+    if (scope === 'group') {
+      // The Group Summary page sends the numbers it shows (already limited by the database rules for this user)
+      const context = String(body.context || '').slice(0, 32000);
+      if (!context) return Response.json({ error: 'The summary is still loading. Try again in a moment.' }, { status: 400 });
+      system = groupPrompt(context, body.lang === 'ru' ? 'ru' : 'en');
+    } else {
+      const context = scope === 'transport' ? transportContext(await transportData(supa)) : inventoryContext(await inventoryData(supa));
+      system = systemPrompt(scope, context);
+    }
+    const answer = await askAI(system, messages);
     return Response.json({ answer: answer || 'Sorry, I could not find an answer.' });
   } catch (e) {
     if (e.code === 'NO_KEY') {
