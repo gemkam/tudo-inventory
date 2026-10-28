@@ -12,6 +12,7 @@ import { buildDocReminders } from '@/lib/docChecklist';
   1. Vehicle reminders (PDC to pay, service due, VOC / Mulkiya renewals), as before.
   2. Resident card and visa expiry of drivers and office staff, 30 days before (same as Mulkiya).
      Documents Checklist (doc_checklist): any document expired or expiring within 30 days.
+  Payments (PDC, Bank Transfer, Cash, Cheque) are always listed first.
   3. Payment words: any description with "Bank Transfer", "Cash", "PDC" or "Cheque"
      (trip sheets, office bills, vehicle maintenance). A date written in the text (03/11/2026) becomes the due date.
   Each bubble has × to close it. Closed alerts are kept per user (table alert_dismissals) and can be brought back.
@@ -121,8 +122,12 @@ export default function AlertsPanel() {
     exp.forEach((r) => addWord(`word-exp-${r.id}`, r.description, r.entry_date, Number(r.unpaid) || Number(r.paid) || 0, `${CO[r.company] || r.company} office expense, ${fmtD(r.entry_date)}`, `/expenses?co=${r.company}`));
     maint.forEach((m) => addWord(`word-vm-${m.id}`, [m.work, m.notes].filter(Boolean).join(' · '), m.work_date, Number(m.amount) || 0, `${vehName[m.vehicle_id] || 'Vehicle'} maintenance, ${fmtD(m.work_date)}`, '/transport/vehicles#maintenance'));
 
-    // most urgent first; payment words without a date go last (newest first)
+    // PAYMENTS ALWAYS ON TOP (PDC cheques, Bank Transfer, Cash, Cheque), then everything else.
+    // Inside each group: most urgent first; items without a date go last (newest first)
+    const payFirst = (a) => (a.kind === 'pay' || a.kind === 'word' ? 0 : 1);
     out.sort((a, b) => {
+      const pa = payFirst(a), pb = payFirst(b);
+      if (pa !== pb) return pa - pb;
       const la = a.left ?? 9999, lb = b.left ?? 9999;
       if (la !== lb) return la - lb;
       return String(b.date || '').localeCompare(String(a.date || ''));
