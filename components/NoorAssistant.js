@@ -1,8 +1,8 @@
 'use client';
 
-// Noor: the Group Summary AI assistant.
+// Rauf: the Group Summary AI assistant.
 // Animated face (blinks, listens, thinks, talks), can be dragged anywhere, English and Roman Urdu,
-// polite female voice, hands-free Talk mode that waits for 3 seconds of silence before answering.
+// polite male voice, hands-free Talk mode that waits for 3 seconds of silence before answering.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { sb } from '@/lib/supabase';
 
@@ -16,16 +16,16 @@ const TXT = {
   en: {
     status: { idle: 'Online', listening: 'Listening...', thinking: 'Thinking...', speaking: 'Speaking...' },
     starters: ['Give me a quick summary', 'Which company spent the most?', 'What needs my attention?', 'How much is unpaid?', 'Compare with last month'],
-    placeholder: 'Ask Noor anything', listenPh: 'Listening... speak now', silence: 'I will answer after 3 seconds of silence',
-    talkOn: 'Talk mode on: just speak, I will reply and listen again', talk: 'Talk', hint: 'Hi, I am Noor 👋 Drag me anywhere',
+    placeholder: 'Ask Rauf anything', listenPh: 'Listening... speak now', silence: 'I will answer after 3 seconds of silence',
+    talkOn: 'Talk mode on: just speak, I will reply and listen again', talk: 'Talk', hint: 'Hi, I am Rauf 👋 Drag me anywhere',
     micBlocked: 'The microphone is blocked. Please allow the microphone for this site in the browser settings, then try again.',
     noMic: 'This browser cannot listen. Please use Google Chrome or Microsoft Edge.'
   },
   ru: {
-    status: { idle: 'Online', listening: 'Sun rahi hoon...', thinking: 'Soch rahi hoon...', speaking: 'Bol rahi hoon...' },
+    status: { idle: 'Online', listening: 'Sun raha hoon...', thinking: 'Soch raha hoon...', speaking: 'Bol raha hoon...' },
     starters: ['Mukhtasar summary bataiye', 'Sab se zyada kharcha kis company ka hai?', 'Kin cheezon par tawajjo chahiye?', 'Kitna payment baqi hai?', 'Pichle mahine se muqabla kariye'],
-    placeholder: 'Noor se kuch bhi poochiye', listenPh: 'Sun rahi hoon... boliye', silence: '3 second khamoshi ke baad jawab doongi',
-    talkOn: 'Talk mode on: bas boliye, main jawab de kar phir sunoongi', talk: 'Baat', hint: 'Assalam o Alaikum, main Noor hoon 👋 Mujhe kahin bhi le jayein',
+    placeholder: 'Rauf se kuch bhi poochiye', listenPh: 'Sun raha hoon... boliye', silence: '3 second khamoshi ke baad jawab doonga',
+    talkOn: 'Talk mode on: bas boliye, main jawab de kar phir sunoonga', talk: 'Baat', hint: 'Assalam o Alaikum, main Rauf hoon 👋 Mujhe kahin bhi le jayein',
     micBlocked: 'Microphone band hai. Browser settings mein is site ke liye microphone allow kariye, phir dobara try kariye.',
     noMic: 'Yeh browser sun nahi sakta. Google Chrome ya Microsoft Edge use kariye.'
   }
@@ -39,8 +39,8 @@ function bestVoice(lang) {
   const L = (v) => (v.lang || '').toLowerCase().replace('_', '-');
   const score = (v, want) => {
     let s = 0;
-    if (FEMALE.test(v.name)) s += 6;
-    if (MALE.test(v.name)) s -= 12;
+    if (MALE.test(v.name)) s += 6;
+    if (FEMALE.test(v.name)) s -= 12;
     if (/natural|online|neural|premium|enhanced/i.test(v.name)) s += 3;
     if (/google/i.test(v.name)) s += 2;
     want.forEach((w, i) => { if (L(v).startsWith(w)) s += 8 - i * 2; });
@@ -49,7 +49,7 @@ function bestVoice(lang) {
   const want = lang === 'ru' ? ['en-in', 'hi-in', 'ur', 'en-gb', 'en-us'] : ['en-gb', 'en-us', 'en-in', 'en'];
   const pool = all.filter((v) => want.some((w) => L(v).startsWith(w)) || L(v).startsWith('en'));
   const best = pool.sort((a, b) => score(b, want) - score(a, want))[0];
-  return best ? { voice: best, female: FEMALE.test(best.name) && !MALE.test(best.name) } : { voice: null, female: false };
+  return best ? { voice: best, male: MALE.test(best.name) && !FEMALE.test(best.name) } : { voice: null, male: false };
 }
 
 // Split the "NEXT: a | b" line off the answer
@@ -73,7 +73,7 @@ function TypeText({ text, fresh, onTick }) {
   return <>{text.slice(0, n)}{n < text.length && <span className="noor-caret" />}</>;
 }
 
-// Noor's face: a friendly young woman in a hijab (hijab follows the chosen theme colour)
+// Rauf's face: a friendly man with a trimmed beard (shirt follows the theme colour)
 function Avatar({ mode, uid }) {
   const g = (n) => `${n}-${uid}`;
   return (
@@ -87,48 +87,52 @@ function Avatar({ mode, uid }) {
           <stop offset="0" style={{ stopColor: 'var(--brown-hover)' }} />
           <stop offset="1" style={{ stopColor: 'var(--brown-deep)' }} />
         </linearGradient>
-        <radialGradient id={g('sk')} cx="50%" cy="40%" r="65%">
-          <stop offset="0" stopColor="#ffe3cf" />
-          <stop offset="1" stopColor="#f2c4a4" />
+        <radialGradient id={g('sk')} cx="50%" cy="38%" r="65%">
+          <stop offset="0" stopColor="#f8d6bd" />
+          <stop offset="1" stopColor="#e2b08f" />
         </radialGradient>
+        <linearGradient id={g('hr')} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#3a2c27" />
+          <stop offset="1" stopColor="#211816" />
+        </linearGradient>
         <clipPath id={g('clip')}><circle cx="50" cy="50" r="50" /></clipPath>
       </defs>
       <g clipPath={`url(#${g('clip')})`}>
         <rect width="100" height="100" fill={`url(#${g('bg')})`} />
-        {/* shoulders and hijab */}
-        <path d="M8 104 C10 82 26 74 50 74 C74 74 90 82 92 104 Z" fill={`url(#${g('hj')})`} />
-        <path d="M50 12 C28 12 20 30 21 50 C22 68 32 80 50 82 C68 80 78 68 79 50 C80 30 72 12 50 12 Z" fill={`url(#${g('hj')})`} />
-        <path d="M31 70 C38 80 62 80 69 70 C66 84 58 90 50 90 C42 90 34 84 31 70 Z" fill={`url(#${g('hj')})`} opacity=".9" />
+        {/* shoulders, shirt and collar */}
+        <path d="M10 104 C12 84 28 77 50 77 C72 77 88 84 90 104 Z" fill={`url(#${g('hj')})`} />
+        <rect x="43" y="68" width="14" height="12" rx="3" fill="#dcaa88" />
+        <path d="M41 77 L50 88 L59 77 L55 76 L50 82 L45 76 Z" fill="#fff" opacity=".9" />
+        {/* ears */}
+        <ellipse cx="31.5" cy="51" rx="3.2" ry="5" fill="#e2b08f" />
+        <ellipse cx="68.5" cy="51" rx="3.2" ry="5" fill="#e2b08f" />
         {/* face */}
-        <ellipse cx="50" cy="50" rx="19" ry="22.5" fill={`url(#${g('sk')})`} />
+        <ellipse cx="50" cy="50" rx="18.5" ry="21.5" fill={`url(#${g('sk')})`} />
+        {/* hair */}
+        <path d="M30.6 50 C28 29 38 21.5 50 21.5 C63 21.5 72 29 69.4 50 C68.4 40 64.5 34 57 32.8 C52 34.8 44 34.3 39 31.8 C33.5 34.5 31.6 41 30.6 50 Z" fill={`url(#${g('hr')})`} />
+        {/* beard and moustache */}
+        <path d="M31.6 48 C32 65 40 75.5 50 75.5 C60 75.5 68 65 68.4 48 C66.5 56.5 63 60.5 58.5 61 C55.5 59 44.5 59 41.5 61 C37 60.5 33.5 56.5 31.6 48 Z" fill={`url(#${g('hr')})`} />
+        <path d="M42.5 60.2 C45.5 57.6 48.6 57.8 50 59.2 C51.4 57.8 54.5 57.6 57.5 60.2 C54.6 61.6 52.2 61.4 50 60.6 C47.8 61.4 45.4 61.6 42.5 60.2 Z" fill="#1b1311" />
         {/* eyebrows */}
-        <path className="nf-brow" d="M38 41.5 Q42.5 38.8 46.5 41" fill="none" stroke="#6b4636" strokeWidth="1.6" strokeLinecap="round" />
-        <path className="nf-brow" d="M53.5 41 Q57.5 38.8 62 41.5" fill="none" stroke="#6b4636" strokeWidth="1.6" strokeLinecap="round" />
+        <path className="nf-brow" d="M37.5 41.6 Q42 38.8 46.5 40.8" fill="none" stroke="#2b201c" strokeWidth="2.3" strokeLinecap="round" />
+        <path className="nf-brow" d="M53.5 40.8 Q58 38.8 62.5 41.6" fill="none" stroke="#2b201c" strokeWidth="2.3" strokeLinecap="round" />
         {/* eyes */}
         <g className="nf-eyes">
           <g className="nf-eye">
-            <ellipse cx="42.3" cy="48.5" rx="3.3" ry="4" fill="#2a1f2d" />
-            <circle className="nf-glint" cx="43.4" cy="47.2" r="1.25" fill="#fff" />
-            <path d="M38.6 46.2 Q42.3 43.4 46 46.2" fill="none" stroke="#2a1f2d" strokeWidth="1.3" strokeLinecap="round" />
-            <path d="M38.8 46.4 L37.2 45.2" stroke="#2a1f2d" strokeWidth="1.1" strokeLinecap="round" />
+            <ellipse cx="42.3" cy="47.8" rx="3" ry="3.5" fill="#2a1f1c" />
+            <circle className="nf-glint" cx="43.3" cy="46.7" r="1.1" fill="#fff" />
           </g>
           <g className="nf-eye">
-            <ellipse cx="57.7" cy="48.5" rx="3.3" ry="4" fill="#2a1f2d" />
-            <circle className="nf-glint" cx="58.8" cy="47.2" r="1.25" fill="#fff" />
-            <path d="M54 46.2 Q57.7 43.4 61.4 46.2" fill="none" stroke="#2a1f2d" strokeWidth="1.3" strokeLinecap="round" />
-            <path d="M61.2 46.4 L62.8 45.2" stroke="#2a1f2d" strokeWidth="1.1" strokeLinecap="round" />
+            <ellipse cx="57.7" cy="47.8" rx="3" ry="3.5" fill="#2a1f1c" />
+            <circle className="nf-glint" cx="58.7" cy="46.7" r="1.1" fill="#fff" />
           </g>
         </g>
-        {/* cheeks and nose */}
-        <ellipse cx="38" cy="57" rx="4" ry="2.4" fill="#ff7f96" opacity=".35" />
-        <ellipse cx="62" cy="57" rx="4" ry="2.4" fill="#ff7f96" opacity=".35" />
-        <path d="M50 51 Q48.6 55.5 50.6 56" fill="none" stroke="#d99a7c" strokeWidth="1.1" strokeLinecap="round" />
+        {/* nose */}
+        <path d="M50 49.5 Q48 55 50.8 55.8" fill="none" stroke="#c78f70" strokeWidth="1.3" strokeLinecap="round" />
         {/* mouth: smile, or talking */}
         {mode === 'speaking'
-          ? <ellipse className="nf-talk" cx="50" cy="63" rx="3.6" ry="2.6" fill="#b8435e" />
-          : <path d={mode === 'thinking' ? 'M46.5 63 Q50 64 53.5 62.4' : 'M44.5 61.5 Q50 67 55.5 61.5'} fill="none" stroke="#b8435e" strokeWidth="1.8" strokeLinecap="round" />}
-        {/* little sparkle pin on the hijab */}
-        <path className="nf-pin" d="M72 34 l1.2 2.8 2.8 1.2 -2.8 1.2 -1.2 2.8 -1.2 -2.8 -2.8 -1.2 2.8 -1.2z" fill="#fff" />
+          ? <ellipse className="nf-talk" cx="50" cy="64" rx="3.4" ry="2.4" fill="#a8465a" />
+          : <path d={mode === 'thinking' ? 'M46.8 64 Q50 64.8 53.2 63.4' : 'M45.6 63 Q50 66.6 54.4 63'} fill="none" stroke="#e7a1a8" strokeWidth="1.9" strokeLinecap="round" />}
       </g>
     </svg>
   );
@@ -148,7 +152,7 @@ function Face({ mode, size = 'big' }) {
   );
 }
 
-export default function NoorAssistant({ context, greeting, alertCount = 0 }) {
+export default function RaufAssistant({ context, greeting, alertCount = 0 }) {
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState([]);
   const [input, setInput] = useState('');
@@ -277,7 +281,7 @@ export default function NoorAssistant({ context, greeting, alertCount = 0 }) {
     setOpen(nv);
     if (nv) {
       setTimeout(() => inputRef.current?.focus(), 80);
-      // Noor speaks first, then starts listening by herself (Talk mode: you speak, 3 s silence, she replies, listens again)
+      // Rauf speaks first, then starts listening by herself (Talk mode: you speak, 3 s silence, she replies, listens again)
       greeted.current = true;
       setTalk(true);
       live.current.talk = true;
@@ -285,7 +289,7 @@ export default function NoorAssistant({ context, greeting, alertCount = 0 }) {
     } else { stopAll(); setTalk(false); }
   }
 
-  /* ---------- speaking (female voice) ---------- */
+  /* ---------- speaking (male voice) ---------- */
   function stopSpeaking() {
     run.current++;
     window.speechSynthesis?.cancel();
@@ -300,14 +304,14 @@ export default function NoorAssistant({ context, greeting, alertCount = 0 }) {
     const clean = String(text).replace(/[*_#`]/g, '').replace(/\bOMR\b/g, 'Rials').replace(/(\d),(\d{3})/g, '$1$2').replace(/%/g, ' percent');
     const parts = clean.split(/(?<=[.!?\n])\s+/).flatMap((p) => p.match(/.{1,170}(\s|$)/g) || [p]).map((p) => p.trim()).filter(Boolean);
     if (!parts.length) { then?.(); return; }
-    const { voice, female } = bestVoice(live.current.lang);
+    const { voice, male } = bestVoice(live.current.lang);
     setSpeakingIdx(idx);
     setMode('speaking');
     parts.forEach((part, i) => {
       const u = new SpeechSynthesisUtterance(part);
       if (voice) { u.voice = voice; u.lang = voice.lang; } else u.lang = live.current.lang === 'ru' ? 'en-IN' : 'en-GB';
       u.rate = 0.96;
-      u.pitch = female ? 1.05 : 1.3; // softer if no female voice was found
+      u.pitch = male ? 1 : 0.8; // deeper if no male voice was found
       if (i === parts.length - 1) {
         const done = () => { if (my !== run.current) return; setSpeakingIdx(-1); setMode('idle'); then?.(); };
         u.onend = done; u.onerror = done;
@@ -418,7 +422,7 @@ export default function NoorAssistant({ context, greeting, alertCount = 0 }) {
         body: JSON.stringify({ scope: 'group', lang: live.current.lang, context: live.current.context, messages: next.filter((m) => !m.error).slice(-8).map(({ role, content }) => ({ role, content })) })
       });
       const out = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(out.error || 'Noor could not answer right now. Please try again.');
+      if (!res.ok) throw new Error(out.error || 'Rauf could not answer right now. Please try again.');
       const { body, next: follow } = splitNext(out.answer);
       const idx = next.length;
       setMsgs((m) => [...m, { role: 'assistant', content: body, next: follow, fresh: true }]);
@@ -472,8 +476,8 @@ export default function NoorAssistant({ context, greeting, alertCount = 0 }) {
         onPointerCancel={() => { drag.current = null; }}
         onKeyDown={onKeyDown}
         aria-expanded={open}
-        aria-label={open ? 'Close Noor, the AI assistant' : 'Open Noor, the AI assistant. Drag or use arrow keys to move.'}
-        title="Noor · AI assistant (drag to move)"
+        aria-label={open ? 'Close Rauf, the AI assistant' : 'Open Rauf, the AI assistant. Drag or use arrow keys to move.'}
+        title="Rauf · AI assistant (drag to move)"
       >
         <Face mode={mode} />
         {!seen && alertCount > 0 && <span className="noor-badge">{alertCount}</span>}
@@ -481,15 +485,15 @@ export default function NoorAssistant({ context, greeting, alertCount = 0 }) {
       </button>
 
       {open && (
-        <section className={`noor-panel ${sheet ? 'sheet' : ''}`} style={panelStyle} role="dialog" aria-label="Noor, Group Summary AI assistant">
+        <section className={`noor-panel ${sheet ? 'sheet' : ''}`} style={panelStyle} role="dialog" aria-label="Rauf, Group Summary AI assistant">
           <header className="noor-head">
             <Face mode={mode} size="small" />
             <div className="noor-who">
-              <div className="noor-name">Noor <span className="noor-tag">AI</span></div>
+              <div className="noor-name">Rauf <span className="noor-tag">AI</span></div>
               <div className={`noor-status s-${mode}`}><span className="noor-dot" />{status}</div>
             </div>
             <div className="noor-actions">
-              <button type="button" className={`noor-ic ${voiceOn ? 'on' : ''}`} onClick={() => { if (voiceOn) stopSpeaking(); setVoiceOn((v) => !v); }} aria-pressed={voiceOn} title={voiceOn ? 'Voice on: Noor reads answers aloud' : 'Voice off'}>
+              <button type="button" className={`noor-ic ${voiceOn ? 'on' : ''}`} onClick={() => { if (voiceOn) stopSpeaking(); setVoiceOn((v) => !v); }} aria-pressed={voiceOn} title={voiceOn ? 'Voice on: Rauf reads answers aloud' : 'Voice off'}>
                 {voiceOn ? '🔊' : '🔇'}
               </button>
               {msgs.length > 0 && <button type="button" className="noor-ic" onClick={() => { stopAll(); setMsgs([]); }} title="Clear chat" aria-label="Clear chat">🗑</button>}
@@ -547,7 +551,7 @@ export default function NoorAssistant({ context, greeting, alertCount = 0 }) {
           {talk && mode !== 'listening' && <div className="noor-talknote">{t.talkOn}</div>}
 
           <form className="noor-form" onSubmit={(e) => { e.preventDefault(); send(); }}>
-            <button type="button" className={`noor-talk ${talk ? 'on' : ''}`} onClick={toggleTalk} aria-pressed={talk} title="Hands-free: speak, Noor answers, then listens again">
+            <button type="button" className={`noor-talk ${talk ? 'on' : ''}`} onClick={toggleTalk} aria-pressed={talk} title="Hands-free: speak, Rauf answers, then listens again">
               <span className="noor-talk-dot" />{t.talk}
             </button>
             <button type="button" className={`noor-mic ${mode === 'listening' && !talk ? 'live' : ''}`} onClick={micOnce} aria-label={mode === 'listening' ? 'Stop listening' : 'Speak one question'} title="Speak one question">
