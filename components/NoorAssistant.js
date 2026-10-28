@@ -301,7 +301,7 @@ export default function RaufAssistant({ context, greeting, alertCount = 0 }) {
     stopSpeaking();
     if (!synth || !text) { then?.(); return; }
     const my = ++run.current;
-    const clean = String(text).replace(/[*_#`]/g, '').replace(/\bOMR\b/g, 'Rials').replace(/(\d),(\d{3})/g, '$1$2').replace(/%/g, ' percent');
+    const clean = String(text).replace(/[*_#`]/g, '').replace(/\bOMR\b/g, 'Rials').replace(/(\d),(\d{3})/g, '$1$2').replace(/%/g, ' percent').replace(/\bRauf\b/gi, 'Raoof'); // say the name the right way
     const parts = clean.split(/(?<=[.!?\n])\s+/).flatMap((p) => p.match(/.{1,170}(\s|$)/g) || [p]).map((p) => p.trim()).filter(Boolean);
     if (!parts.length) { then?.(); return; }
     const { voice, male } = bestVoice(live.current.lang);
