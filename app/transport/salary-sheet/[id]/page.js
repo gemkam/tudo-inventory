@@ -12,7 +12,7 @@ import Omr from '@/components/Omr';
 import { sb } from '@/lib/supabase';
 import { num, fmtAmt, monthKey, monthStart, monthLabel, todayISO, exportExcel, exportStamp } from '@/lib/sheet';
 import { SALARY_FIELDS, salaryTotal, salaryPayable } from '@/lib/transport';
-import { useSalaryLabels } from '@/lib/labels';
+import { useSalaryLabels, SALARY_EXTRA_LABELS } from '@/lib/labels';
 import { fmtD } from '@/lib/reminders';
 
 /*
@@ -28,7 +28,8 @@ function DriverSheet() {
   const { id } = useParams();
   const router = useRouter();
   const { isAdmin } = useUser();
-  const { label } = useSalaryLabels();
+  const { label, rename } = useSalaryLabels();
+  const [names, setNames] = useState(null); // row-name editor values
   const [drivers, setDrivers] = useState(null);
   const [extras, setExtras] = useState([]);
   const [salaries, setSalaries] = useState([]);
@@ -118,6 +119,7 @@ function DriverSheet() {
           </select>
           <Link href={`/transport/${id}`} className="btn">📄 Trip sheet</Link>
           <Link href="/transport/salary-sheet" className="btn ghost">📑 All drivers (one month)</Link>
+          {isAdmin && <button type="button" className="btn ghost" onClick={() => setNames(Object.fromEntries([...SALARY_FIELDS, ...SALARY_EXTRA_LABELS].map(([k]) => [k, label(k)])))}>✏️ Row names</button>}
           <button type="button" className="btn ghost" onClick={() => window.print()}>🖨 Print</button>
           <button type="button" className="btn ghost" onClick={doExcel}>Export Excel</button>
         </div>
@@ -181,6 +183,31 @@ function DriverSheet() {
           <div className="modal-actions">
             <button className="btn ghost" onClick={() => setDel(null)}>Cancel</button>
             <button className="btn danger" onClick={confirmDelete}>Delete</button>
+          </div>
+        </Modal>
+      )}
+      {names && (
+        <Modal title="Salary row names" onClose={() => setNames(null)}>
+          <p className="note" style={{ margin: '0 0 10px' }}>Rename any salary row. It changes for every driver, the slips and the sheets. Leave empty for the standard name.</p>
+          <div className="dd-grid">
+            {Object.keys(names).map((k) => (
+              <label key={k}>
+                <span className="muted">{k === 'trip_allowance' ? 'Driver allowance' : k.replace(/^_/, '').replace(/_/g, ' ')}</span>
+                <input type="text" value={names[k]} onChange={(e) => setNames((m) => ({ ...m, [k]: e.target.value }))} style={{ textAlign: 'left' }} />
+              </label>
+            ))}
+          </div>
+          <div className="modal-actions">
+            <button type="button" className="btn ghost" onClick={() => setNames(null)}>Cancel</button>
+            <button type="button" className="btn in" onClick={async () => {
+              for (const [k, v] of Object.entries(names)) {
+                if (v.trim() === label(k)) continue;
+                const r = await rename(k, v);
+                if (r.error) { flash(r.error, 'err'); return; }
+              }
+              setNames(null);
+              flash('Row names saved');
+            }}>Save names</button>
           </div>
         </Modal>
       )}
