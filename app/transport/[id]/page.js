@@ -384,6 +384,16 @@ function DriverSheet() {
       return { ...v, trips, allowMonth: { ...v.allowMonth, [k]: raw } };
     });
   }
+  // Mark all paid (ticks every open trip with its own amount); pressed again = Undo back to how it was
+  function toggleAllPaid() {
+    setSlipEdit((v) => {
+      if (v.undoAll) return { ...v, trips: v.undoAll.trips, allowMonth: v.undoAll.allowMonth, undoAll: null };
+      const trips = Object.fromEntries(allowTrips.map((e) => [e.id, { paid: true, amt: Number(v.trips?.[e.id]?.amt ?? e.driver_allowance ?? 0) }]));
+      const allowMonth = Object.fromEntries(allowMonths.map((k) => [k, num(allowTrips.filter((e) => monthKey(e.entry_date) === k).reduce((t, e) => t + Number(trips[e.id].amt || 0), 0))]));
+      return { ...v, trips, allowMonth, undoAll: { trips: v.trips, allowMonth: v.allowMonth } };
+    });
+  }
+
   const setTrip = (tid, patch) => setSlipEdit((v) => {
     const trips = { ...v.trips, [tid]: { ...v.trips[tid], ...patch } };
     const e = allowTrips.find((x) => x.id === tid);
@@ -684,6 +694,11 @@ function DriverSheet() {
                   );
                 })()}
                 <div className="modal-actions">
+                  {allowTrips.length > 0 && (
+                    <button type="button" className={`btn ${slipEdit.undoAll ? 'ghost' : ''}`} onClick={toggleAllPaid}>
+                      {slipEdit.undoAll ? '↶ Undo' : '✓ Mark all paid'}
+                    </button>
+                  )}
                   <button type="button" className="btn ghost" onClick={() => setSlipEdit(null)}>Cancel</button>
                   <button type="button" className="btn in" disabled={slipBusy} onClick={saveSlip}>{slipBusy ? 'Saving...' : 'OK, save slip'}</button>
                 </div>
