@@ -1877,3 +1877,45 @@ tr.pickable:hover td { background: var(--row-hover); }
 }
 
 @page trip-land { size: A4 landscape; margin: 8mm; }
+
+/* ===== Documents Checklist (/docs) and its Home button ===== */
+.dc-home { display: flex; align-items: center; gap: 16px; margin-top: 18px; padding: 16px 20px; border-radius: 18px; text-decoration: none; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--frame); box-shadow: 0 4px 14px rgba(var(--shadow-rgb), .08); transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+.dc-home:hover { transform: translateY(-2px); border-color: var(--brown); box-shadow: 0 8px 22px rgba(var(--shadow-rgb), .14); }
+.dc-home-ico { flex: 0 0 auto; width: 52px; height: 52px; display: grid; place-items: center; font-size: 28px; border-radius: 14px; background: var(--tint); }
+.dc-home-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.dc-home-text b { font-size: 19px; color: var(--heading); }
+.dc-home-text small { color: var(--muted, #6b7a76); font-size: 13px; }
+.dc-home-meta { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.dc-home-meta em, .dc-tabs .dc-bad, .dc-tabs .dc-soon { font-style: normal; font-weight: 700; font-size: 12.5px; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.dc-home-meta small { font-size: 12px; opacity: .7; }
+.dc-bad { background: #fdecea; color: #b3261e; }
+.dc-soon { background: #fff4e0; color: #8a4f00; }
+.dc-ok { background: var(--green-bg, #e5f4ec); color: var(--green, #13836b); }
+@media (max-width: 600px) {
+  .dc-home { flex-wrap: wrap; padding: 14px; gap: 12px; }
+  .dc-home-meta { flex-direction: row; flex-wrap: wrap; align-items: center; width: 100%; }
+}
+
+.dc-tabs { margin: 18px 0 4px; }
+.dc-tabs button { display: inline-flex; align-items: center; gap: 6px; }
+.dc-tabs .dc-n { font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--tint); color: var(--brown); }
+.dc-tabs button.on .dc-n { background: rgba(255, 255, 255, .25); color: #fff; }
+.dc-tabs .dc-bad, .dc-tabs .dc-soon { padding: 1px 8px; font-size: 12px; }
+.dc-bar { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.dc-bar .head-chips { margin-top: 0; }
+.dc-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.dc-right select { font: inherit; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+tr.dc-row-bad td:first-child { box-shadow: inset 4px 0 0 #b3261e; }
+.dc-linked { margin-top: 22px; }
+.dc-linked h3 { margin: 0 0 4px; font-size: 16px; }
+.dc-linked p { margin: 0 0 10px; font-size: 13px; }
+.dc-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.dc-table th, .dc-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.dc-table th { background: var(--grid-head); font-weight: 600; }
+[data-theme="dark"] .dc-bad { background: rgba(179, 38, 30, .18); color: #ffb4ab; }
+[data-theme="dark"] .dc-soon { background: rgba(240, 160, 40, .16); color: #ffcf8a; }
+[data-theme="dark"] .dc-ok { background: var(--tint); color: #bfe6cf; }
+@media print {
+  .dc-tabs, .dc-bar, .dc-home { display: none !important; }
+}
