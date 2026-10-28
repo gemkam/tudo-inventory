@@ -8,6 +8,7 @@ import Modal from '@/components/Modal';
 import EditToggle from '@/components/EditToggle';
 import { sb } from '@/lib/supabase';
 import { expiryCol } from '@/components/Expiry';
+import DriverDesk from '@/components/DriverDesk';
 
 function DriversPage() {
   const { isAdmin } = useUser();
@@ -16,6 +17,7 @@ function DriversPage() {
   const [editMode, setEditMode] = useState(false);
   const [toast, setToast] = useState(null);
   const [del, setDel] = useState(null);
+  const [sortBy, setSortBy] = useState('name');
   const timer = useRef(null);
   const canChange = isAdmin && editMode;
 
@@ -86,6 +88,13 @@ function DriversPage() {
   ];
 
   const active = drivers.filter((d) => d.status !== 'Inactive').length;
+  const exp = (d) => [d.resident_card_expiry, d.visa_expiry].filter(Boolean).sort()[0] || '9999';
+  const sorted = [...drivers].sort((a, b) => {
+    if (sortBy === 'status') return String(a.status || 'Active').localeCompare(String(b.status || 'Active')) || String(a.name).localeCompare(String(b.name));
+    if (sortBy === 'expiry') return exp(a).localeCompare(exp(b));
+    if (sortBy === 'added') return (a.sort || 0) - (b.sort || 0);
+    return String(a.name).localeCompare(String(b.name));
+  });
 
   return (
     <>
@@ -102,11 +111,17 @@ function DriversPage() {
       <section className="panel">
         <div className="section-head">
           <h2>👤 All drivers</h2>
+          <select className="dd-sort" value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label="Sort drivers">
+            <option value="name">Sort: Name A to Z</option>
+            <option value="status">Sort: Active first</option>
+            <option value="expiry">Sort: Resident Card / Visa expiry first</option>
+            <option value="added">Sort: Order added</option>
+          </select>
           <EditToggle show={isAdmin} on={editMode} onClick={() => setEditMode((v) => !v)} />
         </div>
         <DataGrid
           columns={columns}
-          rows={drivers}
+          rows={sorted}
           canEdit={canChange}
           onSave={save}
           onAdd={addRow}
@@ -117,6 +132,8 @@ function DriversPage() {
           flash={flash}
         />
       </section>
+
+      <DriverDesk drivers={drivers} canEdit={isAdmin} flash={flash} />
 
       {del && (
         <Modal title="Delete driver?" onClose={() => setDel(null)}>

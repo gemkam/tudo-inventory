@@ -2009,3 +2009,25 @@ tr.dc-row-bad td:first-child { box-shadow: inset 4px 0 0 #b3261e; }
 }
 [data-theme="dark"] .hs-card.err { color: #ffb4ab; }
 @media print { .hs { display: none !important; } }
+
+/* ===== Drivers page: driver desk (salary receipts + trip sheet) ===== */
+.dd { margin-top: 22px; }
+.dd-head { flex-wrap: wrap; gap: 10px; }
+.dd-pick { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.dd-pick select, .dd-sort, .dd-bar select { font: inherit; padding: 9px 12px; border-radius: 999px; border: 1.5px solid var(--brown); background: var(--surface); color: var(--ink); font-weight: 600; min-width: 180px; }
+.dd-sort { margin-left: auto; margin-right: 8px; font-weight: 500; border-width: 1px; border-color: var(--line); }
+.dd-tabs { margin: 4px 0 14px; }
+.dd-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.dd-bar p { margin: 0; }
+.dd-bar .btn { text-decoration: none; }
+.dd-table td.a-right, .dd-table th.a-right { text-align: right; white-space: nowrap; }
+.dd-table tfoot td { font-weight: 700; border-top: 2px solid var(--line); }
+.dd-form { display: flex; flex-direction: column; gap: 12px; }
+.dd-month { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+.dd-month input { font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.dd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.dd-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; }
+.dd-grid label small { font-weight: 400; opacity: .7; }
+.dd-grid input { font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); text-align: right; }
+.dd-sum { display: flex; flex-wrap: wrap; gap: 18px; justify-content: flex-end; padding: 10px 14px; border-radius: 10px; background: var(--tint); font-size: 15px; }
+@media (max-width: 600px) { .dd-sort { margin: 0; width: 100%; } .dd-pick, .dd-pick select { width: 100%; } }
