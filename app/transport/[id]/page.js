@@ -14,6 +14,17 @@ import EditToggle from '@/components/EditToggle';
 
 const NUM_KEYS = ['rent', 'received', 'driver_allowance', 'diesel', 'toll', 'maintenance'];
 
+/* Print / export: pick the columns (indexes into tableData().head). Saved on this device. */
+const COLS_KEY = 'tudo-trip-print-cols';
+const DEFAULT_COLS = [0, 1, 2, 3, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16];
+const PRESETS = [
+  ['All columns', null],
+  ['Driver copy (no money in)', [0, 1, 2, 3, 4, 5, 11, 12, 13, 16]],
+  ['Money only', [0, 1, 2, 6, 7, 8, 9, 10]],
+  ['Costs only', [0, 1, 2, 3, 11, 13, 14, 15]],
+  ['Standard', DEFAULT_COLS]
+];
+
 function DriverSheet() {
   const { id } = useParams();
   const { isAdmin } = useUser();
@@ -24,6 +35,8 @@ function DriverSheet() {
   const [toast, setToast] = useState(null);
   const [del, setDel] = useState(null);
   const [error, setError] = useState('');
+  const [cols, setCols] = useState(DEFAULT_COLS);
+  const [colsOpen, setColsOpen] = useState(false);
   const toastTimer = useRef(null);
   const canChange = isAdmin && editMode;
 
@@ -50,6 +63,14 @@ function DriverSheet() {
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    try { const c = JSON.parse(localStorage.getItem(COLS_KEY) || 'null'); if (Array.isArray(c) && c.length) setCols(c); } catch { /* ignore */ }
+  }, []);
+  function saveCols(next) {
+    const c = [...new Set(next)].sort((a, b) => a - b);
+    setCols(c);
+    try { localStorage.setItem(COLS_KEY, JSON.stringify(c)); } catch { /* ignore */ }
+  }
 
   const months = useMemo(() => {
     const set = new Set([...entries.map((x) => monthKey(x.entry_date)), monthKey(todayISO())]);
@@ -186,6 +207,44 @@ function DriverSheet() {
     }
   }
 
+  function chosenTable() {
+    const t = tableData();
+    const keep = (cols.length ? cols : DEFAULT_COLS).filter((i) => i < t.head.length);
+    const pick = (r, fmt) => keep.map((i) => (fmt && t.numCols.includes(i) && typeof r[i] === 'number' ? fmtAmt(r[i]) : r[i]));
+    return {
+      head: keep.map((i) => t.head[i]), keep,
+      rows: (fmt) => t.data.map((r) => pick(r, fmt)),
+      totals: (fmt) => pick(t.totalsRow, fmt),
+      numCols: keep.map((i, j) => (t.numCols.includes(i) ? j : -1)).filter((j) => j >= 0)
+    };
+  }
+  function printChosen() {
+    setColsOpen(false);
+    setTimeout(() => window.print(), 120);
+  }
+  async function pdfChosen() {
+    try {
+      const c = chosenTable();
+      await exportPdf(`${driver.name} ${monthLabel(month)}.pdf`, {
+        title: `${driver.name} · Vehicle # ${driver.vehicle_no || ''}`,
+        subtitle: `${COMPANY_NAME} · Transport Division  |  ${monthLabel(month)}  |  Exported ${exportStamp()}  |  OMR`,
+        sections: [{ head: c.head, rows: c.rows(true), totalsRow: c.totals(true), numCols: c.numCols }]
+      });
+      flash('PDF downloaded');
+    } catch { flash('Could not create the PDF. Please try again.', 'err'); }
+  }
+  async function excelChosen() {
+    try {
+      const c = chosenTable();
+      await exportExcel(`${driver.name} ${monthLabel(month)}.xlsx`, [{
+        name: driver.name, title: `${driver.name} · Vehicle # ${driver.vehicle_no || ''} · ${monthLabel(month)}`,
+        subtitle: `${COMPANY_NAME} · Transport Division · Exported ${exportStamp()} · OMR`,
+        head: c.head, rows: c.rows(false), numCols: c.numCols, totalsRow: c.totals(false), widths: c.head.map((h) => Math.max(10, Math.min(28, h.length + 6)))
+      }]);
+      flash('Excel file downloaded');
+    } catch { flash('Could not create the Excel file. Please try again.', 'err'); }
+  }
+
   /* Driver copy: only his trips, allowance and diesel. No rent, received, balance or profit. */
   async function doDriverCopy() {
     try {
@@ -239,6 +298,8 @@ function DriverSheet() {
               {editMode ? '✓ Done editing' : 'Edit'}
             </button>
           )}
+          <button type="button" className="btn ghost" onClick={() => setColsOpen(true)} title="Choose which columns to print or export">☑ Columns</button>
+          <button type="button" className="btn ghost" onClick={printChosen} title="Print the chosen columns">🖨 Print</button>
           <button type="button" className="btn ghost" onClick={doExcel}>Export Excel</button>
           <button type="button" className="btn ghost" onClick={doPdf}>Export PDF</button>
           <button type="button" className="btn" onClick={doDriverCopy} title="PDF for the driver: trips, allowance and diesel only. No rent, received or profit.">🚚 Driver copy</button>
@@ -247,7 +308,7 @@ function DriverSheet() {
 
       <CompanyHeader title={`${driver.name} · Trip sheet`} detail={`Driver: ${driver.name}  |  Vehicle # ${driver.vehicle_no || '–'}  |  ${monthLabel(month)}`} />
 
-      <div className="kpi-row">
+      <div className="kpi-row tp-hide">
         <div className="kpi"><span>Trips</span><strong>{totals.trips}</strong><small>{monthLabel(month)}</small></div>
         <div className="kpi"><span>Work amount</span><strong><Omr v={totals.rent} /></strong><small>OMR</small></div>
         <div className="kpi"><span>Balance to collect</span><strong className={totals.balance > 0 ? 'neg' : ''}><Omr v={totals.balance} /></strong><small>Rent − received</small></div>
@@ -255,7 +316,7 @@ function DriverSheet() {
         <div className="kpi hero"><span>Net before salary</span><strong><Omr v={totals.net} /></strong><small>OMR</small></div>
       </div>
 
-      <section className={`sheet ${editMode ? 'is-editing' : ''}`}>
+      <section className={`sheet tp-hide ${editMode ? 'is-editing' : ''}`}>
         <div className="sheet-title sheet-edit-bar">
           <h2>Trip sheet</h2>
           <EditToggle show={isAdmin} on={editMode} onClick={() => setEditMode((v) => !v)} />
@@ -289,6 +350,51 @@ function DriverSheet() {
           {!isAdmin && ' View only.'}
         </p>
       </section>
+
+      {(() => {
+        const c = chosenTable();
+        return (
+          <section className="trip-print" aria-hidden="true">
+            <table>
+              <thead><tr>{c.head.map((h, i) => <th key={i} className={c.numCols.includes(i) ? 'num' : ''}>{h}</th>)}</tr></thead>
+              <tbody>
+                {c.rows(true).map((r, k) => <tr key={k}>{r.map((v, i) => <td key={i} className={c.numCols.includes(i) ? 'num' : ''}>{v}</td>)}</tr>)}
+              </tbody>
+              <tfoot><tr>{c.totals(true).map((v, i) => <td key={i} className={c.numCols.includes(i) ? 'num' : ''}>{v}</td>)}</tr></tfoot>
+            </table>
+            <p className="tp-foot">Printed {exportStamp()} · All amounts in OMR</p>
+          </section>
+        );
+      })()}
+
+      {colsOpen && (() => {
+        const head = tableData().head;
+        const on = new Set(cols);
+        return (
+          <Modal title="Choose columns to print" onClose={() => setColsOpen(false)}>
+            <div className="tp-presets">
+              {PRESETS.map(([label, list]) => (
+                <button key={label} type="button" className="rp-chip" onClick={() => saveCols(list || head.map((_, i) => i))}>{label}</button>
+              ))}
+              <button type="button" className="rp-chip" onClick={() => saveCols([0])}>Clear</button>
+            </div>
+            <div className="tp-cols">
+              {head.map((h, i) => (
+                <label key={i} className={on.has(i) ? 'on' : ''}>
+                  <input type="checkbox" checked={on.has(i)} disabled={i === 0} onChange={() => saveCols(on.has(i) ? cols.filter((x) => x !== i) : [...cols, i])} />
+                  {h}
+                </label>
+              ))}
+            </div>
+            <p className="note" style={{ margin: '10px 0 0' }}>{cols.length} of {head.length} columns chosen. Your choice is remembered on this device.</p>
+            <div className="modal-actions">
+              <button type="button" className="btn ghost" onClick={excelChosen}>⬇ Excel</button>
+              <button type="button" className="btn ghost" onClick={pdfChosen}>⬇ PDF</button>
+              <button type="button" className="btn" onClick={printChosen}>🖨 Print</button>
+            </div>
+          </Modal>
+        );
+      })()}
 
       {toast && <div className={`toast ${toast.kind}`} role="status">{toast.text}</div>}
 

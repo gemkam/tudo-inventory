@@ -1857,3 +1857,23 @@ tr.pickable:hover td { background: var(--row-hover); }
   .home-grid { grid-template-columns: 1fr; }
   .alerts-col { position: static; max-height: none; order: -1; }
 }
+
+/* Trip sheet: choose columns to print (28 Oct 2026) */
+.trip-print { display: none; }
+.tp-presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.tp-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.tp-cols label { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 10px; font-size: 13.5px; cursor: pointer; user-select: none; }
+.tp-cols label.on { background: var(--tint); border-color: var(--brown); color: var(--heading); font-weight: 600; }
+.tp-cols input { width: auto; margin: 0; accent-color: var(--brown); }
+@media print {
+  .tp-hide { display: none !important; }
+  .trip-print { display: block; margin-top: 8px; page: trip-land; }
+  .trip-print table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+  .trip-print th { background: #13836b; color: #fff; text-align: left; padding: 5px 6px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .trip-print td { padding: 4px 6px; border-bottom: 1px solid #d9e2de; vertical-align: top; }
+  .trip-print .num { text-align: right; white-space: nowrap; }
+  .trip-print tfoot td { font-weight: 700; border-top: 2px solid #13836b; }
+  .trip-print .tp-foot { font-size: 9.5px; color: #6b7773; margin-top: 6px; }
+}
+
+@page trip-land { size: A4 landscape; margin: 8mm; }
