@@ -2164,3 +2164,12 @@ tr.dc-row-bad td:first-child { box-shadow: inset 4px 0 0 #b3261e; }
   body.slip-printing .slip-paper { page: auto; }
 }
 @media (max-width: 600px) { .ts-slip-overlay { padding: 8px 4px; } .ts-slip-box { padding: 8px; } }
+.ts-allow-h { margin: 14px 0 8px; font-size: 16px; }
+.ts-allow-month { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; }
+.ts-allow-mh { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 6px; font-size: 14px; }
+.ts-allow-mh label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.ts-allow-t { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.ts-allow-t td { padding: 4px 6px; border-top: 1px solid var(--line); }
+.ts-allow-t tr.on td { background: var(--tint); }
+.ts-allow-t input[type="number"] { width: 100px; font: inherit; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; text-align: right; background: var(--surface); color: var(--ink); }
+.ts-allow-sum { margin: 8px 0; padding: 8px 12px; border-radius: 8px; background: var(--tint); font-size: 14px; }

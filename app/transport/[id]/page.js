@@ -346,6 +346,19 @@ function DriverSheet() {
     await load();
   }
 
+  // Trips whose driver allowance can go on this salary: already on it, or not paid with any salary yet (this month and earlier)
+  const allowTrips = slipSal ? entries
+    .filter((e) => Number(e.driver_allowance || 0) !== 0 || e.allowance_salary_id === slipSal.id)
+    .filter((e) => e.allowance_salary_id === slipSal.id || (!e.allowance_salary_id && monthKey(e.entry_date) <= slipMonth))
+    .sort((a, b) => String(a.entry_date).localeCompare(String(b.entry_date))) : [];
+
+  function openSlipEdit() {
+    const v = Object.fromEntries(EDIT_FIELDS.map(([k]) => [k, Number(slipSal[k] || 0)]));
+    v.trips = Object.fromEntries(allowTrips.map((e) => [e.id, { paid: e.allowance_salary_id === slipSal.id, amt: Number(e.driver_allowance || 0) }]));
+    setSlipEdit(v);
+  }
+  const setTrip = (tid, patch) => setSlipEdit((v) => ({ ...v, trips: { ...v.trips, [tid]: { ...v.trips[tid], ...patch } } }));
+
   async function saveSlip() {
     const patch = {};
     for (const [k] of EDIT_FIELDS) {
@@ -355,10 +368,26 @@ function DriverSheet() {
     }
     setSlipBusy(true);
     const { error: err } = await sb().from('transport_salaries').update(patch).eq('id', slipSal.id);
+    if (err) { setSlipBusy(false); flash(err.message, 'err'); return; }
+    // driver allowance: amount changes and paid with this salary or not (the trip sheets follow; the database recalculates the salary)
+    for (const e of allowTrips) {
+      const t = slipEdit.trips?.[e.id];
+      if (!t) continue;
+      const amt = Math.round(Number(t.amt || 0) * 1000) / 1000;
+      if (Number.isNaN(amt) || amt < 0) { setSlipBusy(false); flash('Driver allowance must be a number', 'err'); return; }
+      const up = {};
+      if (amt !== Number(e.driver_allowance || 0)) up.driver_allowance = amt;
+      const wasPaid = e.allowance_salary_id === slipSal.id;
+      if (t.paid && !wasPaid) { up.allowance_status = 'Paid'; up.allowance_salary_id = slipSal.id; }
+      if (!t.paid && wasPaid) { up.allowance_status = 'Not paid'; up.allowance_salary_id = null; }
+      if (Object.keys(up).length) {
+        const { error: e2 } = await sb().from('transport_entries').update(up).eq('id', e.id);
+        if (e2) { setSlipBusy(false); flash(e2.message, 'err'); return; }
+      }
+    }
     setSlipBusy(false);
-    if (err) { flash(err.message, 'err'); return; }
     setSlipEdit(null);
-    flash('Salary slip saved');
+    flash('Salary slip saved. Trip sheets updated.');
     load();
   }
 
@@ -554,7 +583,7 @@ function DriverSheet() {
                 {slipSal && !slipEdit && <button type="button" className="btn in" onClick={printSlip}>🖨 Print</button>}
                 {slipSal && !slipEdit && <button type="button" className="btn ghost" onClick={pdfSlip}>⬇ PDF</button>}
                 {slipSal && !slipEdit && isAdmin && (
-                  <button type="button" className="btn ghost" onClick={() => setSlipEdit(Object.fromEntries(EDIT_FIELDS.map(([k]) => [k, Number(slipSal[k] || 0)])))}>✏️ Edit</button>
+                  <button type="button" className="btn ghost" onClick={openSlipEdit}>✏️ Edit</button>
                 )}
                 <button type="button" className="btn ghost" onClick={() => { setSlipOpen(false); setSlipEdit(null); }}>✕ Close</button>
               </span>
@@ -570,7 +599,50 @@ function DriverSheet() {
                     </label>
                   ))}
                 </div>
-                <p className="note" style={{ margin: '8px 0' }}>Driver allowance is worked out from the trips marked Paid (Mark paid on the sheet). Total now: {fmtAmt(salaryTotal({ ...slipSal, ...slipEdit }))} · Net: {fmtAmt(salaryPayable({ ...slipSal, ...slipEdit }))}</p>
+                {(() => {
+                  const tr = slipEdit.trips || {};
+                  const groups = {};
+                  allowTrips.forEach((e) => { const k = monthKey(e.entry_date); (groups[k] = groups[k] || []).push(e); });
+                  const paidSum = (list) => list.reduce((t, e) => t + (tr[e.id]?.paid ? Number(tr[e.id].amt || 0) : 0), 0);
+                  const curAllow = num(paidSum(allowTrips.filter((e) => monthKey(e.entry_date) === slipMonth)));
+                  const prevAllow = num(paidSum(allowTrips.filter((e) => monthKey(e.entry_date) < slipMonth)));
+                  const preview = { ...slipSal, ...slipEdit, trip_allowance: curAllow, allowance_carried: prevAllow };
+                  return (
+                    <>
+                      <h3 className="ts-allow-h">Driver allowance paid with this salary</h3>
+                      {!allowTrips.length && <p className="muted">No driver allowance open for {monthLabel(slipMonth)} or earlier.</p>}
+                      {Object.keys(groups).sort().map((k) => {
+                        const list = groups[k];
+                        const allOn = list.every((e) => tr[e.id]?.paid);
+                        return (
+                          <div key={k} className="ts-allow-month">
+                            <div className="ts-allow-mh">
+                              <label><input type="checkbox" checked={allOn} onChange={() => list.forEach((e) => setTrip(e.id, { paid: !allOn }))} /> <b>{monthLabel(k)}{k < slipMonth ? ' (previous balance)' : ''}</b></label>
+                              <span>Paid here: <b>{fmtAmt(paidSum(list))}</b>{list.some((e) => tr[e.id]?.paid) ? ` (${list.filter((e) => tr[e.id]?.paid).map((e) => fmtAmt(tr[e.id].amt)).join(' + ')})` : ''}</span>
+                            </div>
+                            <table className="ts-allow-t">
+                              <tbody>
+                                {list.map((e) => (
+                                  <tr key={e.id} className={tr[e.id]?.paid ? 'on' : ''}>
+                                    <td><input type="checkbox" checked={Boolean(tr[e.id]?.paid)} onChange={(ev) => setTrip(e.id, { paid: ev.target.checked })} aria-label="Paid with this salary" /></td>
+                                    <td>{fmtDay(e.entry_date)}</td>
+                                    <td>{[e.from_place, e.to_place].filter(Boolean).join(' → ') || e.description || 'Trip'}</td>
+                                    <td><input type="number" inputMode="decimal" step="0.001" min="0" value={tr[e.id]?.amt ?? 0} onChange={(ev) => setTrip(e.id, { amt: ev.target.value })} aria-label="Driver allowance" /></td>
+                                    <td>{tr[e.id]?.paid ? <span className="tag ok">Paid</span> : <span className="tag warn">Not paid</span>}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        );
+                      })}
+                      <p className="ts-allow-sum">
+                        Driver allowance: {prevAllow ? `previous ${fmtAmt(prevAllow)} + ` : ''}{monthLabel(slipMonth).split(' ')[0]} {fmtAmt(curAllow)} = <b>{fmtAmt(prevAllow + curAllow)}</b>
+                        {' · '}Total salary {fmtAmt(salaryTotal(preview))} · Net <b>{fmtAmt(salaryPayable(preview))}</b>
+                      </p>
+                    </>
+                  );
+                })()}
                 <div className="modal-actions">
                   <button type="button" className="btn ghost" onClick={() => setSlipEdit(null)}>Cancel</button>
                   <button type="button" className="btn in" disabled={slipBusy} onClick={saveSlip}>Save slip</button>
