@@ -9,10 +9,10 @@ import Modal from '@/components/Modal';
   Reads the tables on the page, lets the user tick columns per table (and leave a table out),
   then builds a clean print copy (.pc-sheet) with only those columns and prints it.
   Choice is remembered per page on this device (localStorage "tudo-print:<path>").
-  Pages with their own paper print (invoices, receipts, salary slip, data entry) do not show it.
+  Not on the Home page. Pages with their own paper print (invoices, receipts, salary slip, data entry) do not show it.
 */
 
-const SKIP_PATHS = [/^\/login/, /^\/entry/, /^\/f\//, /^\/transport\/invoice/, /^\/expenses\/docs/, /^\/transport\/salary\//];
+const SKIP_PATHS = [/^\/$/, /^\/login/, /^\/entry/, /^\/f\//, /^\/transport\/invoice/, /^\/expenses\/docs/, /^\/transport\/salary\//];
 const KEY = (p) => `tudo-print:${p}`;
 
 function visible(el) {
