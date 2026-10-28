@@ -923,7 +923,7 @@ body .btn.in:hover { background: var(--brown-deep); border-color: var(--brown-de
 .theme-custom small { font-size: 10.5px; color: var(--muted); font-weight: 500; text-transform: uppercase; }
 .theme-reset { justify-self: start; border: 0; background: none; color: var(--muted); font-size: 12.5px; text-decoration: underline; cursor: pointer; padding: 2px 0; }
 .theme-reset:hover { color: var(--brown); }
-@media screen and (max-width: 760px) { .theme-pop { position: fixed; left: 12px; right: 12px; top: auto; width: auto; margin-top: 8px; } }
+/* theme-pop is placed by ThemeMenu.js (fixed, kept inside the screen) */
 
 /* Night mode extras (colours mostly come from the variables above) */
 [data-theme="dark"] .watermark { opacity: .35; filter: invert(1) hue-rotate(180deg); }

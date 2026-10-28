@@ -7,7 +7,27 @@ import { PALETTES, DEFAULT_THEME, readTheme, saveTheme } from '@/lib/theme';
 export default function ThemeMenu() {
   const [t, setT] = useState(DEFAULT_THEME);
   const [open, setOpen] = useState(false);
+  const [popStyle, setPopStyle] = useState(null);
   const boxRef = useRef(null);
+  const colBtnRef = useRef(null);
+
+  // Keep the colour box fully on the screen, whatever the window width
+  useEffect(() => {
+    if (!open) return undefined;
+    const place = () => {
+      const r = colBtnRef.current?.getBoundingClientRect();
+      if (!r) return;
+      const W = window.innerWidth; const H = window.innerHeight;
+      const w = Math.min(286, W - 16);
+      const left = Math.min(Math.max(8, r.right - w), W - w - 8);
+      const top = r.bottom + 10;
+      setPopStyle({ position: 'fixed', left, top, right: 'auto', width: w, maxHeight: Math.max(220, H - top - 12), overflowY: 'auto' });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => { window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); };
+  }, [open]);
 
   useEffect(() => {
     setT(readTheme());
@@ -51,6 +71,7 @@ export default function ThemeMenu() {
       </button>
       <button
         type="button"
+        ref={colBtnRef}
         className={`theme-btn ${open ? 'on' : ''}`}
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
@@ -61,7 +82,7 @@ export default function ThemeMenu() {
       </button>
 
       {open && (
-        <div className="theme-pop" role="dialog" aria-label="Colours">
+        <div className="theme-pop" role="dialog" aria-label="Colours" style={popStyle || { visibility: 'hidden' }}>
           <div className="theme-pop-head">Appearance</div>
           <div className="theme-mode" role="radiogroup" aria-label="Mode">
             <button type="button" role="radio" aria-checked={!night} className={!night ? 'on' : ''} onClick={() => update({ mode: 'light' })}>☀️ Day</button>
