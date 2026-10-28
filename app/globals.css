@@ -1347,9 +1347,9 @@ span.omr { font-size: inherit !important; font-weight: inherit !important; lette
 .hub-title-row .hub-title { min-width: 0; }
 .hub-tile .truck-anim {
   position: relative; top: auto; right: auto; flex: none;
-  width: 92px; height: 62px; overflow: hidden; border-radius: 10px; margin: 0 -4px 2px 0;
+  width: 124px; height: 84px; overflow: hidden; border-radius: 10px; margin: 0 -4px 2px 0;
 }
-.hub-tile .truck-anim svg { width: 92px; height: 63px; }
+.hub-tile .truck-anim svg { width: 124px; height: 85px; }
 .ta-truck { animation-name: ta-come-small; }
 @keyframes ta-come-small {
   0% { transform: scale(.15); opacity: 0; }
@@ -1359,8 +1359,8 @@ span.omr { font-size: inherit !important; font-weight: inherit !important; lette
 }
 .hub-tile { min-height: 360px; }
 @media screen and (max-width: 680px) {
-  .hub-tile .truck-anim { width: 78px; height: 53px; }
-  .hub-tile .truck-anim svg { width: 78px; height: 54px; }
+  .hub-tile .truck-anim { width: 104px; height: 71px; }
+  .hub-tile .truck-anim svg { width: 104px; height: 72px; }
 }
 
 /* Office Expense tile: Tudo Num Group logo (no background) */
