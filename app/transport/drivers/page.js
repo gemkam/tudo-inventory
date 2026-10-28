@@ -7,6 +7,7 @@ import DataGrid from '@/components/DataGrid';
 import Modal from '@/components/Modal';
 import EditToggle from '@/components/EditToggle';
 import { sb } from '@/lib/supabase';
+import { expiryCol } from '@/components/Expiry';
 
 function DriversPage() {
   const { isAdmin } = useUser();
@@ -65,6 +66,8 @@ function DriversPage() {
   const columns = [
     { key: 'name', label: 'Name', type: 'text', width: 170, render: (r) => <b>{r.name}</b> },
     { key: 'resident_card', label: 'Resident Card No.', type: 'text', width: 150 },
+    expiryCol('resident_card_expiry', 'Resident Card expiry'),
+    expiryCol('visa_expiry', 'Visa expiry'),
     { key: 'phone', label: 'Mobile', type: 'text', width: 130 },
     { key: 'vehicle_no', label: 'Vehicle # (shown on sheets)', type: 'text', width: 190 },
     { key: 'unit', label: 'Unit (from Vehicles)', type: 'calc', align: 'left', width: 140, render: (r) => plates(r.id, 'Unit') || <span className="muted">–</span> },

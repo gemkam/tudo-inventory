@@ -4,12 +4,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { sb } from '@/lib/supabase';
 import { todayISO } from '@/lib/sheet';
-import { buildReminders, fmtD, whenText, daysLeft } from '@/lib/reminders';
+import { buildReminders, buildPeopleReminders, fmtD, whenText, daysLeft } from '@/lib/reminders';
 
 /*
   Home page right column: numbered alert bubbles (1, 2, 3...).
   1. Vehicle reminders (PDC to pay, service due, VOC / Mulkiya renewals), as before.
-  2. Payment words: any description with "Bank Transfer", "Cash", "PDC" or "Cheque"
+  2. Resident card and visa expiry of drivers and office staff, 30 days before (same as Mulkiya).
+  3. Payment words: any description with "Bank Transfer", "Cash", "PDC" or "Cheque"
      (trip sheets, office bills, vehicle maintenance). A date written in the text (03/11/2026) becomes the due date.
   Each bubble has × to close it. Closed alerts are kept per user (table alert_dismissals) and can be brought back.
 */
@@ -17,7 +18,7 @@ import { buildReminders, fmtD, whenText, daysLeft } from '@/lib/reminders';
 const POP_KEY = 'tudo-alarm-seen';
 const LOCAL_KEY = 'tudo-closed-alerts';
 const WORDS = /\b(bank\s*transfer|cash|pdc|cheque)\b/i;
-const ICON = { pay: '💳', maintain: '🔧', renew: '📄', word: '📝' };
+const ICON = { pay: '💳', maintain: '🔧', renew: '📄', word: '📝', person: '🪪' };
 const CO = { 'modern-city': 'Modern City', 'abu-wasif': 'Abu Wasif', sumptuosity: 'Sumptuosity' };
 const f3 = (v) => (Number(v) || 0).toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 
@@ -74,12 +75,13 @@ export default function AlertsPanel() {
   const load = useCallback(async () => {
     const s = sb();
     const q = (p) => p.then((r) => r.data || []).catch(() => []);
-    const [veh, maint, te, drv, exp, dis] = await Promise.all([
+    const [veh, maint, te, drv, exp, staff, dis] = await Promise.all([
       q(s.from('transport_vehicles').select('id, name, part, plate_no, voc_expiry, mulkiya_expiry')),
       q(s.from('vehicle_maintenance').select('*')),
       q(s.from('transport_entries').select('id, driver_id, entry_date, description, from_place, to_place, rent, maintenance, diesel, toll')),
-      q(s.from('transport_drivers').select('id, name')),
+      q(s.from('transport_drivers').select('id, name, status, resident_card, resident_card_expiry, visa_expiry')),
       q(s.from('exp_entries').select('id, company, entry_date, description, paid, unpaid, source').is('source', null)),
+      q(s.from('exp_staff').select('id, name, company, active, resident_card, resident_card_expiry, visa_expiry')),
       s.from('alert_dismissals').select('key')
     ]);
 
@@ -92,6 +94,7 @@ export default function AlertsPanel() {
     setClosed(new Set(shut));
 
     const out = buildReminders(veh, maint).map((r) => ({ ...r, icon: ICON[r.kind], href: '/transport/vehicles#maintenance' }));
+    buildPeopleReminders(drv, staff, CO).forEach((r) => out.push({ ...r, icon: ICON.person }));
 
     const drvName = Object.fromEntries(drv.map((d) => [d.id, d.name]));
     const vehName = Object.fromEntries(veh.map((v) => [v.id, `${v.name || ''} ${v.plate_no || ''}`.trim()]));

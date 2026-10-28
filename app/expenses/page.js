@@ -10,6 +10,7 @@ import EditToggle from '@/components/EditToggle';
 import { HBars } from '@/components/Charts';
 import { useShare } from '@/components/ShareModal';
 import { sb } from '@/lib/supabase';
+import { expiryCol } from '@/components/Expiry';
 import { num, fmtAmt, monthKey, monthLabel, todayISO, exportExcel, exportPdf, exportStamp, fmtFullDate } from '@/lib/sheet';
 import { HEADS, CATEGORIES, COMPANIES, DEPARTMENTS, SOURCE_LABEL, companyOf, n, r3, staffGross, staffNet } from '@/lib/expenses';
 
@@ -192,6 +193,9 @@ function ExpensesPage() {
   const staffCols = [
     { key: 'name', label: 'Name', type: 'text', width: 220, render: (r) => <b>{r.name}</b> },
     { key: 'department', label: 'Department', type: 'text', width: 170 },
+    { key: 'resident_card', label: 'Resident Card No.', type: 'text', width: 140 },
+    expiryCol('resident_card_expiry', 'Resident Card expiry'),
+    expiryCol('visa_expiry', 'Visa expiry'),
     { key: 'basic', label: 'Basic pay', type: 'number', min: 0, width: 110, render: amt('basic') },
     { key: 'allowances', label: 'Allowances', type: 'number', min: 0, width: 110, render: amt('allowances') },
     { key: 'working_days', label: 'Working days', type: 'number', min: 0, width: 110 },
