@@ -352,12 +352,45 @@ function DriverSheet() {
     .filter((e) => e.allowance_salary_id === slipSal.id || (!e.allowance_salary_id && monthKey(e.entry_date) <= slipMonth))
     .sort((a, b) => String(a.entry_date).localeCompare(String(b.entry_date))) : [];
 
+  const allowMonths = [...new Set(allowTrips.map((e) => monthKey(e.entry_date)))].sort();
+
   function openSlipEdit() {
     const v = Object.fromEntries(EDIT_FIELDS.map(([k]) => [k, Number(slipSal[k] || 0)]));
     v.trips = Object.fromEntries(allowTrips.map((e) => [e.id, { paid: e.allowance_salary_id === slipSal.id, amt: Number(e.driver_allowance || 0) }]));
+    v.allowMonth = Object.fromEntries(allowMonths.map((k) => [k, num(allowTrips.filter((e) => monthKey(e.entry_date) === k && e.allowance_salary_id === slipSal.id).reduce((t, e) => t + Number(e.driver_allowance || 0), 0))]));
     setSlipEdit(v);
   }
-  const setTrip = (tid, patch) => setSlipEdit((v) => ({ ...v, trips: { ...v.trips, [tid]: { ...v.trips[tid], ...patch } } }));
+
+  /* Typed driver allowance for one month -> which trips it pays (oldest first).
+     Whole trips are ticked while they fit; anything left over is added to the last ticked trip
+     (or, if no trip fits, the first trip is paid with the typed amount). The trip sheets get exactly this. */
+  function typeAllowance(k, raw) {
+    setSlipEdit((v) => {
+      const A = Math.round(Number(raw || 0) * 1000) / 1000;
+      const list = allowTrips.filter((e) => monthKey(e.entry_date) === k);
+      const trips = { ...v.trips };
+      let sum = 0;
+      let last = null;
+      list.forEach((e) => {
+        const a = Number(e.driver_allowance || 0);
+        if (A > 0 && sum + a <= A + 0.0005) { trips[e.id] = { paid: true, amt: a }; sum = num(sum + a); last = e.id; }
+        else trips[e.id] = { paid: false, amt: a };
+      });
+      const r = num(A - sum);
+      if (r > 0.0005 && list.length) {
+        if (last) trips[last] = { ...trips[last], amt: num(Number(trips[last].amt) + r) };
+        else trips[list[0].id] = { paid: true, amt: r };
+      }
+      return { ...v, trips, allowMonth: { ...v.allowMonth, [k]: raw } };
+    });
+  }
+  const setTrip = (tid, patch) => setSlipEdit((v) => {
+    const trips = { ...v.trips, [tid]: { ...v.trips[tid], ...patch } };
+    const e = allowTrips.find((x) => x.id === tid);
+    const k = e ? monthKey(e.entry_date) : null;
+    const total = k ? num(allowTrips.filter((x) => monthKey(x.entry_date) === k).reduce((t, x) => t + (trips[x.id]?.paid ? Number(trips[x.id].amt || 0) : 0), 0)) : 0;
+    return { ...v, trips, allowMonth: k ? { ...v.allowMonth, [k]: total } : v.allowMonth };
+  });
 
   async function saveSlip() {
     const patch = {};
@@ -592,6 +625,13 @@ function DriverSheet() {
             {slipEdit && slipSal && (
               <div className="ts-slip-edit">
                 <div className="dd-grid">
+                  {allowMonths.map((k) => (
+                    <label key={`am-${k}`} className="ts-allow-field">
+                      <span>Driver allowance {monthLabel(k)}{k < slipMonth ? ' (previous balance)' : ''}</span>
+                      <input type="number" inputMode="decimal" step="0.001" min="0" value={slipEdit.allowMonth?.[k] ?? 0} onChange={(e) => typeAllowance(k, e.target.value)} />
+                      <small>of {fmtAmt(allowTrips.filter((e) => monthKey(e.entry_date) === k).reduce((t, e) => t + Number(e.driver_allowance || 0), 0))} open</small>
+                    </label>
+                  ))}
                   {EDIT_FIELDS.map(([k, label]) => (
                     <label key={k}>
                       <span>{label}</span>
@@ -645,7 +685,7 @@ function DriverSheet() {
                 })()}
                 <div className="modal-actions">
                   <button type="button" className="btn ghost" onClick={() => setSlipEdit(null)}>Cancel</button>
-                  <button type="button" className="btn in" disabled={slipBusy} onClick={saveSlip}>Save slip</button>
+                  <button type="button" className="btn in" disabled={slipBusy} onClick={saveSlip}>{slipBusy ? 'Saving...' : 'OK, save slip'}</button>
                 </div>
               </div>
             )}
