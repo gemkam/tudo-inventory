@@ -61,7 +61,7 @@ export async function POST(req) {
     const msg = String(e.message || '');
     let reason = 'Please try again.';
     if (/401|invalid api key|invalid_api_key/i.test(msg) && !/429/.test(msg)) reason = 'The GROQ_API_KEY in Vercel is not valid. Create a new key and update it.';
-    else if (/429|rate limit|quota|tokens per/i.test(msg)) reason = 'The free AI daily limit is used up. Administrator: add MISTRAL_API_KEY in Vercel as a free backup (see handover), or wait for the limit to reset.';
+    else if (/429|rate limit|quota|tokens per/i.test(msg)) reason = 'The free AI daily limit is used up. Administrator: add OPENROUTER_API_KEY in Vercel as a free backup (see handover), or wait for the limit to reset.';
     else if (/model/i.test(msg)) reason = 'The AI model is not available.';
     return Response.json({ error: `The assistant could not answer right now. ${reason}`, detail: msg.slice(0, 500) }, { status: 502 });
   }
