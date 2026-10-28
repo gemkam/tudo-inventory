@@ -370,6 +370,7 @@ function TransportPage() {
         <section className="panel">
           <div className="section-head">
             <h2>Salary detail · {monthLabel(month)}</h2>
+            <Link href={`/transport/salary-sheet?m=${month}`} className="btn ghost">📑 Salary sheet</Link>
             <EditToggle show={isAdmin} on={editMode} onClick={() => setEditMode((v) => !v)} />
             {canChange && drivers.some((d) => !salaryOf(d.id)) && (
               <button type="button" className="btn ghost" onClick={createSalaries}>Create salary for this month</button>

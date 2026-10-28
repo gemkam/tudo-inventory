@@ -2047,3 +2047,45 @@ tr.dc-row-bad td:first-child { box-shadow: inset 4px 0 0 #b3261e; }
 [data-theme="dark"] .dd-check.warn { background: rgba(240, 160, 40, .16); color: #ffcf8a; border-color: rgba(255, 207, 138, .4); }
 .label-input { font: inherit; width: 100%; min-width: 150px; padding: 6px 8px; border-radius: 6px; border: 1px dashed var(--pill-line, var(--line)); background: var(--surface); color: var(--ink); }
 .label-input:focus { outline: none; border-style: solid; border-color: var(--brown); }
+
+/* ===== Driver salary sheet (/transport/salary-sheet) ===== */
+.ss-month { font: inherit; font-weight: 600; padding: 9px 14px; border-radius: 999px; border: 1.5px solid var(--brown); background: var(--surface); color: var(--ink); }
+.ss-msg { margin: 0 0 12px; padding: 10px 14px; border-radius: 10px; font-size: 14px; }
+.ss-msg.ok { background: var(--tint); color: var(--brown); }
+.ss-msg.warn { background: #fff4e0; color: #7a4600; }
+.ss-paper { background: #fff; color: #1d2523; border-radius: 14px; padding: 28px 30px; box-shadow: 0 6px 24px rgba(var(--shadow-rgb), .12); border: 1px solid var(--frame); }
+.ss-head { display: flex; align-items: center; gap: 18px; padding-bottom: 12px; border-bottom: 3px solid #13836b; }
+.ss-head img { width: 96px; height: auto; background: #fff; }
+.ss-head div { display: grid; gap: 3px; }
+.ss-head b { font-size: 18px; letter-spacing: .04em; color: #0f3d33; }
+.ss-head span { font-size: 12.5px; color: #44514d; }
+.ss-title { text-align: center; margin: 18px 0 2px; font-size: 24px; color: #0f3d33; }
+.ss-title span { color: #13836b; font-weight: 600; margin-left: 6px; }
+.ss-sub { text-align: center; margin: 0 0 16px; color: #5d6e67; font-size: 13.5px; }
+.ss-empty { text-align: center; padding: 30px; color: #5d6e67; }
+.ss-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ss-table th, .ss-table td { border: 1px solid #c9d6d2; padding: 7px 8px; text-align: right; vertical-align: top; white-space: nowrap; }
+.ss-table th { background: #13836b; color: #fff; font-weight: 600; font-size: 12px; text-align: center; white-space: normal; }
+.ss-table .l { text-align: left; }
+.ss-table .c { text-align: center; }
+.ss-table td.hi { background: #eef7f4; }
+.ss-table th.hi { background: #0f6b57; }
+.ss-table tbody tr:nth-child(even) td:not(.hi) { background: #f8fbfa; }
+.ss-table tfoot td { font-weight: 700; background: #e3f0ec; border-top: 2px solid #13836b; }
+.ss-table .sig { min-width: 110px; }
+.ss-note { display: block; font-size: 10.5px; color: #13836b; white-space: normal; max-width: 160px; margin-left: auto; }
+.ss-words { margin: 14px 0 0; font-size: 13.5px; }
+.ss-sign { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-top: 46px; }
+.ss-sign div { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #44514d; }
+.ss-sign i { display: block; border-bottom: 1px solid #1d2523; height: 28px; }
+.ss-stamp { margin: 22px 0 0; font-size: 11px; color: #8a9893; text-align: right; }
+.ss-paper { page: ss-land; }
+@page ss-land { size: A4 landscape; margin: 8mm; }
+@media print {
+  .ss-paper { box-shadow: none; border: 0; padding: 0; border-radius: 0; }
+  .ss-table th, .ss-table td.hi, .ss-table tfoot td, .ss-table tbody tr:nth-child(even) td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .ss-table { font-size: 10.5px; }
+  .ss-table th, .ss-table td { padding: 5px 6px; }
+}
+@media (max-width: 700px) { .ss-paper { padding: 16px; } .ss-head { flex-wrap: wrap; } .ss-sign { grid-template-columns: 1fr; gap: 18px; } }
+.dd-actions { display: flex; flex-wrap: wrap; gap: 8px; } .dd-actions .btn { text-decoration: none; }

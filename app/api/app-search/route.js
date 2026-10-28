@@ -51,7 +51,7 @@ export async function POST(req) {
     ['Documents Checklist: Company Docs', '/docs?tab=company'], ['Documents Checklist: Govt License', '/docs?tab=govt'],
     ['Documents Checklist: Cars Docs', '/docs?tab=car'], ['Documents Checklist: Heavy Vehicles', '/docs?tab=heavy'], ['Documents Checklist: Employee Docs', '/docs?tab=employee'],
     ['Transport Expense (monthly summary, salaries)', '/transport'], ['Transport Reports', '/transport/reports'],
-    ['Drivers (resident card, visa)', '/transport/drivers'], ['Vehicles (VOC, Mulkiya) and Maintenance', '/transport/vehicles'], ['Transport Invoice', '/transport/invoice'],
+    ['Drivers (resident card, visa, salary receipts)', '/transport/drivers'], ['Driver salary sheet (all drivers, one month)', '/transport/salary-sheet'], ['Vehicles (VOC, Mulkiya) and Maintenance', '/transport/vehicles'], ['Transport Invoice', '/transport/invoice'],
     ...drivers.map((d) => [`Trip sheet of ${d.name}`, `/transport/${d.id}`]),
     ...drivers.map((d) => [`Salary slip of ${d.name}`, `/transport/salary/${d.id}`]),
     ['Office Expense: Modern City', '/expenses?co=modern-city'], ['Office Expense: Abu Wasif', '/expenses?co=abu-wasif'], ['Office Expense: Sumptuosity', '/expenses?co=sumptuosity'],

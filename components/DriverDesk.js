@@ -161,7 +161,10 @@ export default function DriverDesk({ drivers, canEdit, flash }) {
         <>
           <div className="dd-bar">
             <p className="muted">{driver?.name}: {salaries.length ? `${salaries.length} salary receipts` : 'no salary yet'}{driver?.resident_card ? ` · Resident Card ${driver.resident_card}` : ''}</p>
-            {canEdit && <button type="button" className="btn in" onClick={openNew}>＋ Create salary receipt</button>}
+            <span className="dd-actions">
+              <Link href="/transport/salary-sheet" className="btn ghost">📑 Salary sheet (all drivers)</Link>
+              {canEdit && <button type="button" className="btn in" onClick={openNew}>＋ Create salary receipt</button>}
+            </span>
           </div>
           {salaries.length > 0 && (
             <div className="table-wrap">

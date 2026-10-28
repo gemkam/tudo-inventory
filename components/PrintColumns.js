@@ -12,7 +12,7 @@ import Modal from '@/components/Modal';
   Not on the Home page. Pages with their own paper print (invoices, receipts, salary slip, data entry) do not show it.
 */
 
-const SKIP_PATHS = [/^\/$/, /^\/login/, /^\/entry/, /^\/f\//, /^\/transport\/invoice/, /^\/expenses\/docs/, /^\/transport\/salary\//];
+const SKIP_PATHS = [/^\/$/, /^\/login/, /^\/entry/, /^\/f\//, /^\/transport\/invoice/, /^\/expenses\/docs/, /^\/transport\/salary\//, /^\/transport\/salary-sheet/];
 const KEY = (p) => `tudo-print:${p}`;
 
 function visible(el) {

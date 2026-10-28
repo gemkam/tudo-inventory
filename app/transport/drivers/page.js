@@ -101,6 +101,7 @@ function DriversPage() {
       <div className="page-tools">
         <Link href="/transport" className="crumb">← Transport</Link>
         <div className="tools">
+          <Link href="/transport/salary-sheet" className="btn in">📑 Salary sheet</Link>
           <Link href="/transport/vehicles" className="btn">🚚 Vehicles</Link>
         </div>
       </div>
