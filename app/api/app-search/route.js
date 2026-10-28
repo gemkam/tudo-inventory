@@ -72,15 +72,15 @@ PAGES:
 ${pages.map(([l, h]) => `${h} = ${l}`).join('\n')}
 
 === DOCUMENTS CHECKLIST (${docLines.length}) ===
-${docLines.join('\n').slice(0, 9000)}
+${docLines.join('\n').slice(0, 5000)}
 
-${String(watch).slice(0, 12000)}
+${String(watch).slice(0, 7000)}
 
 === TRANSPORT DETAIL ===
-${String(tr).slice(0, 9000)}
+${String(tr).slice(0, 4000)}
 
 === INVENTORY DETAIL ===
-${String(inv).slice(0, 5000)}`;
+${String(inv).slice(0, 2500)}`;
 
   const valid = new Set(pages.map(([, h]) => h));
   try {

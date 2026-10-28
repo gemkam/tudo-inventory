@@ -31,11 +31,11 @@ export async function POST(req) {
     let system;
     if (scope === 'group') {
       // The Group Summary page sends the numbers it shows (already limited by the database rules for this user)
-      const page = String(body.context || '').slice(0, 22000);
+      const page = String(body.context || '').slice(0, 9000);
       const where = String(body.page || '').slice(0, 80);
       // The whole app (alerts, money to pay and to receive, renewals, low stock), read on the server as this user
       let watch = '';
-      try { watch = appWatchContext(await appWatchData(supa)); } catch (e) { console.error('app watch', e); }
+      try { watch = String(appWatchContext(await appWatchData(supa))).slice(0, 9000); } catch (e) { console.error('app watch', e); }
       let rest = '';
       if (page) rest = `=== GROUP SUMMARY PAGE ===\n${page}`;
       else {
@@ -44,7 +44,7 @@ export async function POST(req) {
           transportData(supa).then((d) => transportContext(d)).catch(() => ''),
           inventoryData(supa).then((d) => inventoryContext(d)).catch(() => '')
         ]);
-        rest = `=== TRANSPORT DETAIL ===\n${t.slice(0, 14000)}\n\n=== INVENTORY DETAIL ===\n${i.slice(0, 8000)}`;
+        rest = `=== TRANSPORT DETAIL ===\n${t.slice(0, 6000)}\n\n=== INVENTORY DETAIL ===\n${i.slice(0, 3000)}`;
       }
       system = groupPrompt(`USER IS NOW ON PAGE: ${where || '/'}\n\n${watch}\n\n${rest}`, body.lang === 'ru' ? 'ru' : 'en');
     } else {
@@ -60,8 +60,8 @@ export async function POST(req) {
     console.error('assistant error', e);
     const msg = String(e.message || '');
     let reason = 'Please try again.';
-    if (/401|invalid api key|invalid_api_key/i.test(msg)) reason = 'The GROQ_API_KEY in Vercel is not valid. Create a new key and update it.';
-    else if (/429|rate limit|quota|tokens per/i.test(msg)) reason = 'The free AI limit is used up for now. Wait a minute and try again.';
+    if (/401|invalid api key|invalid_api_key/i.test(msg) && !/429/.test(msg)) reason = 'The GROQ_API_KEY in Vercel is not valid. Create a new key and update it.';
+    else if (/429|rate limit|quota|tokens per/i.test(msg)) reason = 'The free AI daily limit is used up. Administrator: add GEMINI_API_KEY in Vercel as a free backup (see handover), or wait for the limit to reset.';
     else if (/model/i.test(msg)) reason = 'The AI model is not available.';
     return Response.json({ error: `The assistant could not answer right now. ${reason}`, detail: msg.slice(0, 500) }, { status: 502 });
   }
