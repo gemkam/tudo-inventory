@@ -2210,3 +2210,25 @@ tr.dc-row-bad td:first-child { box-shadow: inset 4px 0 0 #b3261e; }
 .act-diff .old { color: var(--red, #c0392b); text-decoration: line-through; }
 .act-diff .new { color: var(--green, #1d7a46); font-weight: 600; }
 @media (max-width: 640px) { .act-change-who { margin-left: 0; width: 100%; } }
+
+/* Drivers page: one card per driver (vertical, no side scrolling) */
+.drv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+.drv-card { background: var(--row); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.drv-card.inactive { opacity: .6; }
+.drv-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.drv-name { margin: 0; font-size: 18px; color: var(--ink); }
+.drv-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.drv-links .btn { text-decoration: none; }
+.drv-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; border-top: 1px solid var(--grid-line); padding-top: 12px; }
+.drv-field { display: grid; gap: 3px; min-width: 0; }
+.drv-field.wide { grid-column: 1 / -1; }
+.drv-label { font-size: 11.5px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--muted); }
+.drv-value { font-size: 14.5px; color: var(--ink); overflow-wrap: anywhere; }
+.drv-input { width: 100%; font: inherit; font-size: 14px; padding: 6px 9px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface); color: var(--ink); box-sizing: border-box; }
+.drv-input:focus { outline: 2px solid var(--brown); outline-offset: 0; }
+textarea.drv-input { resize: vertical; }
+.drv-name-input { font-size: 16px; font-weight: 700; }
+.drv-status { width: auto; flex: none; }
+.drv-actions { display: flex; justify-content: flex-end; }
+.drv-add { justify-self: start; }
+@media (max-width: 420px) { .drv-fields { grid-template-columns: 1fr; } }

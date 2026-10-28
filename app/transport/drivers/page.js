@@ -3,12 +3,35 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import AuthGate, { useUser } from '@/components/AuthGate';
-import DataGrid from '@/components/DataGrid';
 import Modal from '@/components/Modal';
 import EditToggle from '@/components/EditToggle';
+import DateInput from '@/components/DateInput';
+import Expiry from '@/components/Expiry';
 import { sb } from '@/lib/supabase';
-import { expiryCol } from '@/components/Expiry';
 import DriverDesk from '@/components/DriverDesk';
+
+/* One editable line on a driver card: shows the value, or an input box in Edit mode (saves when you leave the box) */
+function Field({ label, value, type = 'text', canEdit, onSave, view, wide }) {
+  const [text, setText] = useState(value || '');
+  useEffect(() => { setText(value || ''); }, [value]);
+
+  let body;
+  if (!canEdit) {
+    body = view ?? (value ? <span>{value}</span> : <span className="muted">–</span>);
+  } else if (type === 'date') {
+    body = <DateInput value={value || ''} onChange={(iso) => { if (iso !== (value || '')) onSave(iso); }} className="drv-input" />;
+  } else if (type === 'textarea') {
+    body = <textarea className="drv-input" rows={2} value={text} onChange={(e) => setText(e.target.value)} onBlur={() => { if (text !== (value || '')) onSave(text); }} />;
+  } else {
+    body = <input className="drv-input" value={text} onChange={(e) => setText(e.target.value)} onBlur={() => { if (text !== (value || '')) onSave(text); }} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} />;
+  }
+  return (
+    <div className={`drv-field${wide ? ' wide' : ''}`}>
+      <span className="drv-label">{label}</span>
+      <div className="drv-value">{body}</div>
+    </div>
+  );
+}
 
 function DriversPage() {
   const { isAdmin } = useUser();
@@ -65,27 +88,6 @@ function DriversPage() {
   if (!drivers) return <div className="loading">Loading drivers...</div>;
 
   const plates = (id, part) => vehicles.filter((v) => v.driver_id === id && v.part === part).map((v) => v.plate_no).filter(Boolean).join(', ');
-  const columns = [
-    { key: 'name', label: 'Name', type: 'text', width: 170, render: (r) => <b>{r.name}</b> },
-    { key: 'resident_card', label: 'Resident Card No.', type: 'text', width: 150 },
-    expiryCol('resident_card_expiry', 'Resident Card expiry'),
-    expiryCol('visa_expiry', 'Visa expiry'),
-    { key: 'phone', label: 'Mobile', type: 'text', width: 130 },
-    { key: 'vehicle_no', label: 'Vehicle # (shown on sheets)', type: 'text', width: 190 },
-    { key: 'unit', label: 'Unit (from Vehicles)', type: 'calc', align: 'left', width: 140, render: (r) => plates(r.id, 'Unit') || <span className="muted">–</span> },
-    { key: 'trailer', label: 'Trailer (from Vehicles)', type: 'calc', align: 'left', width: 150, render: (r) => plates(r.id, 'Trailer') || <span className="muted">–</span> },
-    { key: 'status', label: 'Status', type: 'select', options: ['Active', 'Inactive'], width: 100, render: (r) => <span className={`tag ${r.status === 'Inactive' ? 'warn' : 'ok'}`}>{r.status || 'Active'}</span> },
-    { key: 'notes', label: 'Notes', type: 'text', width: 200 },
-    {
-      key: 'links', label: 'Open', type: 'calc', width: 190,
-      render: (r) => (
-        <span className="row-links">
-          <Link href={`/transport/${r.id}`}>Trip sheet</Link>
-          <Link href={`/transport/salary/${r.id}`}>Salary slip</Link>
-        </span>
-      )
-    }
-  ];
 
   const active = drivers.filter((d) => d.status !== 'Inactive').length;
   const exp = (d) => [d.resident_card_expiry, d.visa_expiry].filter(Boolean).sort()[0] || '9999';
@@ -120,18 +122,64 @@ function DriversPage() {
           </select>
           <EditToggle show={isAdmin} on={editMode} onClick={() => setEditMode((v) => !v)} />
         </div>
-        <DataGrid
-          columns={columns}
-          rows={sorted}
-          canEdit={canChange}
-          onSave={save}
-          onAdd={addRow}
-          addLabel="+ Add driver"
-          onDelete={(r) => setDel(r)}
-          rowClass={(r) => (r.status === 'Inactive' ? 'muted-row' : '')}
-          emptyText="No drivers yet."
-          flash={flash}
-        />
+
+        {sorted.length === 0 && <p className="muted" style={{ margin: 0 }}>No drivers yet.</p>}
+
+        <div className="drv-grid">
+          {sorted.map((r) => {
+            const inactive = r.status === 'Inactive';
+            const unit = plates(r.id, 'Unit');
+            const trailer = plates(r.id, 'Trailer');
+            return (
+              <article key={r.id} className={`drv-card${inactive ? ' inactive' : ''}`}>
+                <div className="drv-top">
+                  {canChange
+                    ? <input className="drv-input drv-name-input" defaultValue={r.name || ''} aria-label="Driver name"
+                        onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== r.name) save(r, 'name', v); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} />
+                    : <h3 className="drv-name">{r.name}</h3>}
+                  {canChange
+                    ? <select className="drv-input drv-status" value={r.status || 'Active'} onChange={(e) => save(r, 'status', e.target.value)} aria-label="Status">
+                        <option>Active</option><option>Inactive</option>
+                      </select>
+                    : <span className={`tag ${inactive ? 'warn' : 'ok'}`}>{r.status || 'Active'}</span>}
+                </div>
+
+                <div className="drv-links">
+                  <Link href={`/transport/${r.id}`} className="btn small">🧾 Trip sheet</Link>
+                  <Link href={`/transport/salary/${r.id}`} className="btn small in">💵 Salary slip</Link>
+                </div>
+
+                <div className="drv-fields">
+                  <Field label="Mobile" value={r.phone} canEdit={canChange} onSave={(v) => save(r, 'phone', v)} />
+                  <Field label="Resident Card No." value={r.resident_card} canEdit={canChange} onSave={(v) => save(r, 'resident_card', v)} />
+                  <Field label="Resident Card expiry" type="date" value={r.resident_card_expiry} canEdit={canChange}
+                    onSave={(v) => save(r, 'resident_card_expiry', v)} view={<Expiry date={r.resident_card_expiry} />} />
+                  <Field label="Visa expiry" type="date" value={r.visa_expiry} canEdit={canChange}
+                    onSave={(v) => save(r, 'visa_expiry', v)} view={<Expiry date={r.visa_expiry} />} />
+                  <Field label="Vehicle # (shown on sheets)" value={r.vehicle_no} canEdit={canChange} onSave={(v) => save(r, 'vehicle_no', v)} />
+                  <div className="drv-field">
+                    <span className="drv-label">Unit (from Vehicles)</span>
+                    <div className="drv-value">{unit || <span className="muted">–</span>}</div>
+                  </div>
+                  <div className="drv-field">
+                    <span className="drv-label">Trailer (from Vehicles)</span>
+                    <div className="drv-value">{trailer || <span className="muted">–</span>}</div>
+                  </div>
+                  <Field label="Notes" type="textarea" wide value={r.notes} canEdit={canChange} onSave={(v) => save(r, 'notes', v)} />
+                </div>
+
+                {canChange && (
+                  <div className="drv-actions">
+                    <button type="button" className="mini danger" onClick={() => setDel(r)}>Delete driver</button>
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </div>
+
+        {canChange && <button type="button" className="add-row drv-add" onClick={addRow}>+ Add driver</button>}
       </section>
 
       <DriverDesk drivers={drivers} canEdit={isAdmin} flash={flash} />
