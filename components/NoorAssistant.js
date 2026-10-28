@@ -1,6 +1,6 @@
 'use client';
 
-// Rauf: the Group Summary AI assistant.
+// Rauf: the AI assistant of the whole app (shown on every page by AuthGate).
 // Animated face (blinks, listens, thinks, talks), can be dragged anywhere, English and Roman Urdu,
 // polite male voice, hands-free Talk mode that waits for 3 seconds of silence before answering.
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -152,7 +152,7 @@ function Face({ mode, size = 'big' }) {
   );
 }
 
-export default function RaufAssistant({ context, greeting, alertCount = 0 }) {
+export default function RaufAssistant({ context, greeting, alertCount = 0, page = '' }) {
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState([]);
   const [input, setInput] = useState('');
@@ -182,7 +182,7 @@ export default function RaufAssistant({ context, greeting, alertCount = 0 }) {
   const drag = useRef(null);
   const live = useRef({});
   const greeted = useRef(false);
-  live.current = { msgs, lang, voiceOn, talk, context, mode };
+  live.current = { msgs, lang, voiceOn, talk, context, mode, page };
   const t = TXT[lang];
 
   /* ---------- load and save ---------- */
@@ -419,7 +419,7 @@ export default function RaufAssistant({ context, greeting, alertCount = 0 }) {
       const res = await fetch('/api/assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session?.access_token || ''}` },
-        body: JSON.stringify({ scope: 'group', lang: live.current.lang, context: live.current.context, messages: next.filter((m) => !m.error).slice(-8).map(({ role, content }) => ({ role, content })) })
+        body: JSON.stringify({ scope: 'group', lang: live.current.lang, context: live.current.context, page: live.current.page, messages: next.filter((m) => !m.error).slice(-8).map(({ role, content }) => ({ role, content })) })
       });
       const out = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(out.error || 'Rauf could not answer right now. Please try again.');
@@ -485,7 +485,7 @@ export default function RaufAssistant({ context, greeting, alertCount = 0 }) {
       </button>
 
       {open && (
-        <section className={`noor-panel ${sheet ? 'sheet' : ''}`} style={panelStyle} role="dialog" aria-label="Rauf, Group Summary AI assistant">
+        <section className={`noor-panel ${sheet ? 'sheet' : ''}`} style={panelStyle} role="dialog" aria-label="Rauf, AI assistant">
           <header className="noor-head">
             <Face mode={mode} size="small" />
             <div className="noor-who">

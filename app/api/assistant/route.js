@@ -31,12 +31,22 @@ export async function POST(req) {
     let system;
     if (scope === 'group') {
       // The Group Summary page sends the numbers it shows (already limited by the database rules for this user)
-      const page = String(body.context || '').slice(0, 24000);
-      if (!page) return Response.json({ error: 'The summary is still loading. Try again in a moment.' }, { status: 400 });
-      // Plus the whole app (alerts, money to pay and to receive, renewals, low stock), read on the server as this user
+      const page = String(body.context || '').slice(0, 22000);
+      const where = String(body.page || '').slice(0, 80);
+      // The whole app (alerts, money to pay and to receive, renewals, low stock), read on the server as this user
       let watch = '';
       try { watch = appWatchContext(await appWatchData(supa)); } catch (e) { console.error('app watch', e); }
-      system = groupPrompt(`${watch}\n\n=== GROUP SUMMARY PAGE ===\n${page}`, body.lang === 'ru' ? 'ru' : 'en');
+      let rest = '';
+      if (page) rest = `=== GROUP SUMMARY PAGE ===\n${page}`;
+      else {
+        // other pages: give Rauf the transport and inventory detail too
+        const [t, i] = await Promise.all([
+          transportData(supa).then((d) => transportContext(d)).catch(() => ''),
+          inventoryData(supa).then((d) => inventoryContext(d)).catch(() => '')
+        ]);
+        rest = `=== TRANSPORT DETAIL ===\n${t.slice(0, 14000)}\n\n=== INVENTORY DETAIL ===\n${i.slice(0, 8000)}`;
+      }
+      system = groupPrompt(`USER IS NOW ON PAGE: ${where || '/'}\n\n${watch}\n\n${rest}`, body.lang === 'ru' ? 'ru' : 'en');
     } else {
       const context = scope === 'transport' ? transportContext(await transportData(supa)) : inventoryContext(await inventoryData(supa));
       system = systemPrompt(scope, context);

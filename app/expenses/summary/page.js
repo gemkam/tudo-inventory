@@ -11,7 +11,7 @@ import { sb } from '@/lib/supabase';
 import { fmtAmt, monthLabel, todayISO, exportStamp } from '@/lib/sheet';
 import { COMPANIES, HEADS, r3 } from '@/lib/expenses';
 import { buildReminders, whenText } from '@/lib/reminders';
-import NoorAssistant from '@/components/NoorAssistant';
+import { useRaufPage } from '@/components/RaufContext';
 import { groupContext, groupGreeting } from '@/lib/groupAssistantContext';
 import { GROUP_SOURCES as SOURCES, TRANSPORT_HEADS, buildLines, buildIncome, computeGroup, periodLabelOf, shiftMonth } from '@/lib/groupSummary';
 
@@ -99,6 +99,10 @@ function SummaryPage() {
     const pl = periodLabelOf(period, monthLabel);
     return { en: groupGreeting({ G, periodLabel: pl, extraAlerts: vehicleAlerts, lang: 'en' }), ru: groupGreeting({ G, periodLabel: pl, extraAlerts: vehicleAlerts, lang: 'ru' }) };
   }, [G, period, vehicleAlerts]);
+
+  // Rauf (in AuthGate, on every page) gets this page's numbers too
+  const aiAlerts = G ? G.alerts.filter((a) => a.level !== 'info').length + vehicleAlerts.length : 0;
+  useRaufPage({ context: aiContext, greeting: aiGreeting, alertCount: aiAlerts });
 
   if (!data || !period || !G) return <div className="loading">Loading summary...</div>;
 
@@ -420,7 +424,6 @@ function SummaryPage() {
       {drill && <DrillModal drill={drill} onClose={() => setDrill(null)} />}
       {budgetOpen && <BudgetModal budgets={data.budgets} onClose={() => setBudgetOpen(false)} onSaved={load} />}
       {modal}
-      <NoorAssistant context={aiContext} greeting={aiGreeting} alertCount={G.alerts.filter((a) => a.level !== 'info').length + vehicleAlerts.length} />
     </>
   );
 }

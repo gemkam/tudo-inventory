@@ -1,10 +1,11 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { sb } from '@/lib/supabase';
-import Assistant from '@/components/Assistant';
+import RaufAssistant from '@/components/NoorAssistant';
+import { RaufCtx, defaultGreeting } from '@/components/RaufContext';
 import ThemeMenu from '@/components/ThemeMenu';
 
 /*
@@ -47,6 +48,9 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
   const router = useRouter();
   const path = usePathname();
   const [user, setUser] = useState(null);
+  const [pageAi, setPageAi] = useState(null);
+  const raufValue = useMemo(() => ({ setPageAi }), []);
+  const greet = useMemo(() => defaultGreeting(user?.name ? user.name.charAt(0).toUpperCase() + user.name.slice(1) : ''), [user?.name]);
 
   useEffect(() => {
     if (!theme) return undefined;
@@ -75,12 +79,6 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
 
   if (!user) return <div className="loading">Loading...</div>;
 
-  const aiScope = !user.canRead ? null
-    : path.startsWith('/transport') ? 'transport'
-      : (path.startsWith('/inventory') || path.startsWith('/c/') || path.startsWith('/bills') || path.startsWith('/log')) ? 'inventory'
-        : null;
-
-  // Top bar: only Home. Inventory, Transport, Expenses, Data entry, Settings and Users open from the Home page.
   const nav = user.isEntry ? [['/entry', 'Data entry']] : [['/', 'Home']];
 
   let blocked = '';
@@ -89,6 +87,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
 
   return (
     <UserCtx.Provider value={user}>
+      <RaufCtx.Provider value={raufValue}>
       <header className="topbar">
         <div className="topbar-inner">
           <Link href={user.isEntry ? '/entry' : '/'} className="brand">Tudo Num Office Systems</Link>
@@ -109,7 +108,15 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
       <main className={`page${wide ? ' wide' : ''}`}>
         {blocked ? <div className="error">{blocked}</div> : children}
       </main>
-      {aiScope && <Assistant key={aiScope} scope={aiScope} />}
+      {user.canRead && (
+        <RaufAssistant
+          context={pageAi?.context || ''}
+          greeting={pageAi?.greeting || greet}
+          alertCount={pageAi?.alertCount || 0}
+          page={path}
+        />
+      )}
+      </RaufCtx.Provider>
     </UserCtx.Provider>
   );
 }
