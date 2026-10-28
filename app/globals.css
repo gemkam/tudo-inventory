@@ -1786,3 +1786,8 @@ tr.pickable:hover td { background: var(--row-hover); }
   28%, 100% { transform: translateX(420%) skewX(-18deg); }
 }
 @media (prefers-reduced-motion: reduce) { .hub-tile::before { animation: none; display: none; } }
+
+/* Office Expense tile: the whole Tudo Num Group logo floats slowly up and down (as before) */
+.hub-brand { animation: brand-float 4.5s ease-in-out infinite; }
+@keyframes brand-float { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-7px); } }
+@media (prefers-reduced-motion: reduce) { .hub-brand { animation: none; transform: translateX(-50%); } }
