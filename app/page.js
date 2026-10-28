@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import AuthGate, { useUser } from '@/components/AuthGate';
 import TruckAnim from '@/components/TruckAnim';
-import Reminders from '@/components/Reminders';
+import AlertsPanel from '@/components/AlertsPanel';
 import { sb, isLow } from '@/lib/supabase';
 
 function Letterhead() {
@@ -48,7 +48,8 @@ function Home() {
   return (
     <>
       <h1 className="center">Tudo Num Office Systems</h1>
-      <Reminders />
+      <div className="home-grid">
+      <div className="home-main">
       <div className="hub">
         <Link href="/inventory" className="hub-tile">
           <Letterhead />
@@ -95,11 +96,14 @@ function Home() {
           {isOwner && <Link href="/users" className="btn ghost">👥 Users</Link>}
         </div>
       )}
+      </div>
+      <AlertsPanel />
+      </div>
       <div className="powered-by" aria-label="Powered by KS TECH LLC">Powered by <b>KS TECH LLC</b></div>
     </>
   );
 }
 
 export default function Page() {
-  return <AuthGate><Home /></AuthGate>;
+  return <AuthGate wide><Home /></AuthGate>;
 }
