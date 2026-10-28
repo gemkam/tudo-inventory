@@ -5,6 +5,7 @@ import Link from 'next/link';
 import AuthGate, { useUser } from '@/components/AuthGate';
 import TruckAnim from '@/components/TruckAnim';
 import AlertsPanel from '@/components/AlertsPanel';
+import HomeSearch from '@/components/HomeSearch';
 import { sb, isLow } from '@/lib/supabase';
 import { SECTIONS, docStatus } from '@/lib/docChecklist';
 
@@ -53,6 +54,7 @@ function Home() {
   return (
     <>
       <h1 className="center">Tudo Num Office Systems</h1>
+      <HomeSearch />
       <div className="home-grid">
       <div className="home-main">
       <div className="hub">

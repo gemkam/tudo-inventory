@@ -1,5 +1,6 @@
 'use client';
 
+import PrintColumns from '@/components/PrintColumns';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -108,6 +109,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
       <main className={`page${wide ? ' wide' : ''}`}>
         {blocked ? <div className="error">{blocked}</div> : children}
       </main>
+      {user.canRead && !blocked && <PrintColumns />}
       {user.canRead && (
         <RaufAssistant
           context={pageAi?.context || ''}
