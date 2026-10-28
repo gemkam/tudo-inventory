@@ -2147,3 +2147,20 @@ tr.dc-row-bad td:first-child { box-shadow: inset 4px 0 0 #b3261e; }
 .mark-all-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; padding: 8px 14px; border-radius: 10px; background: var(--tint); font-size: 14px; }
 .dd-table th .btn.small { text-transform: none; letter-spacing: 0; }
 @media print { .mark-all-bar { display: none !important; } }
+
+/* Trip sheet: salary slip panel (Print, Edit, PDF) */
+.ts-slip-overlay { position: fixed; inset: 0; z-index: 80; background: rgba(15, 30, 26, .55); display: flex; justify-content: center; align-items: flex-start; overflow: auto; padding: 24px 12px; }
+.ts-slip-box { width: min(860px, 100%); background: var(--bg); border-radius: 16px; padding: 14px; box-shadow: 0 20px 60px rgba(0, 0, 0, .3); }
+.ts-slip-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.ts-slip-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.ts-slip-edit { background: var(--surface); border: 1px solid var(--frame); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+.ts-slip-empty { background: var(--surface); border-radius: 12px; padding: 24px; text-align: center; }
+.ts-slip-box .slip-paper { margin: 0 auto; }
+@media print {
+  body.slip-printing > *:not(main), body.slip-printing main > *:not(.ts-slip-overlay) { display: none !important; }
+  body.slip-printing .ts-slip-overlay { position: static; background: none; padding: 0; overflow: visible; display: block; }
+  body.slip-printing .ts-slip-box { box-shadow: none; padding: 0; width: auto; background: #fff; }
+  body.slip-printing .ts-slip-bar, body.slip-printing .ts-slip-edit { display: none !important; }
+  body.slip-printing .slip-paper { page: auto; }
+}
+@media (max-width: 600px) { .ts-slip-overlay { padding: 8px 4px; } .ts-slip-box { padding: 8px; } }

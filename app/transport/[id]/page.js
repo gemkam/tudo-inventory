@@ -11,6 +11,8 @@ import { sb } from '@/lib/supabase';
 import { num, fmtAmt, fmtDay, fmtFullDate, monthKey, monthLabel, monthStart, todayISO, exportStamp, exportExcel, exportPdf } from '@/lib/sheet';
 import Omr from '@/components/Omr';
 import EditToggle from '@/components/EditToggle';
+import SalarySlipPaper from '@/components/SalarySlip';
+import { SALARY_FIELDS, salaryTotal, salaryPayable, allowancePlan } from '@/lib/transport';
 
 const NUM_KEYS = ['rent', 'received', 'driver_allowance', 'diesel', 'toll', 'maintenance'];
 
@@ -31,6 +33,10 @@ function DriverSheet() {
   const [driver, setDriver] = useState(null);
   const [entries, setEntries] = useState([]);
   const [salMonths, setSalMonths] = useState({}); // salary receipt id -> YYYY-MM
+  const [salaries, setSalaries] = useState([]);
+  const [slipOpen, setSlipOpen] = useState(false);
+  const [slipEdit, setSlipEdit] = useState(null); // form values while editing the slip
+  const [slipBusy, setSlipBusy] = useState(false);
   const [month, setMonth] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [toast, setToast] = useState(null);
@@ -52,9 +58,10 @@ function DriverSheet() {
     const [d, e, sa] = await Promise.all([
       s.from('transport_drivers').select('*').eq('id', id).single(),
       s.from('transport_entries').select('*').eq('driver_id', id).order('entry_date').order('sort').order('created_at'),
-      s.from('transport_salaries').select('id, month').eq('driver_id', id)
+      s.from('transport_salaries').select('*').eq('driver_id', id)
     ]);
     setSalMonths(Object.fromEntries((sa.data || []).map((x) => [x.id, monthKey(x.month)])));
+    setSalaries(sa.data || []);
     if (d.error) { setError('This driver was not found.'); return; }
     setDriver(d.data);
     setEntries(e.data || []);
@@ -320,6 +327,67 @@ function DriverSheet() {
   if (error) return <div className="error">{error} <Link href="/transport">Back to Transport</Link></div>;
   if (!driver || !month) return <div className="loading">Loading trip sheet...</div>;
 
+  /* ---------- Salary slip inside the trip sheet: Print, Edit, PDF, Create ---------- */
+  const slipMonth = month && month !== 'all' ? month : monthKey(todayISO());
+  const slipSal = salaries.find((x) => monthKey(x.month) === slipMonth) || null;
+  const EDIT_FIELDS = [...SALARY_FIELDS.filter(([k]) => k !== 'trip_allowance' && k !== 'allowance_carried'), ['advance_deduction', 'Advance deduction'], ['special_allowance', 'Special allowance']];
+
+  async function createSlip() {
+    setSlipBusy(true);
+    const plan = allowancePlan(entries, id, slipMonth);
+    const prev = salaries.filter((x) => monthKey(x.month) < slipMonth).sort((a, b) => (a.month < b.month ? 1 : -1))[0];
+    const row = { driver_id: id, month: monthStart(slipMonth), advance_deduction: 0, special_allowance: 0, trip_allowance: plan.current, allowance_carried: plan.carried, allowance_carried_note: plan.note || null };
+    ['basic', 'room_rent', 'utilities', 'mobile', 'travel_food'].forEach((k) => { row[k] = num(prev?.[k] || 0); });
+    const { data, error: err } = await sb().from('transport_salaries').insert(row).select().single();
+    if (err) { setSlipBusy(false); flash(err.message, 'err'); return; }
+    if (plan.linkIds.length) await sb().from('transport_entries').update({ allowance_salary_id: data.id }).in('id', plan.linkIds);
+    setSlipBusy(false);
+    flash(`Salary created for ${monthLabel(slipMonth)}. Check the amounts with Edit.`);
+    await load();
+  }
+
+  async function saveSlip() {
+    const patch = {};
+    for (const [k] of EDIT_FIELDS) {
+      const v = Number(slipEdit[k] || 0);
+      if (Number.isNaN(v) || v < 0) { flash('Amounts must be numbers, e.g. 200', 'err'); return; }
+      patch[k] = Math.round(v * 1000) / 1000;
+    }
+    setSlipBusy(true);
+    const { error: err } = await sb().from('transport_salaries').update(patch).eq('id', slipSal.id);
+    setSlipBusy(false);
+    if (err) { flash(err.message, 'err'); return; }
+    setSlipEdit(null);
+    flash('Salary slip saved');
+    load();
+  }
+
+  function printSlip() {
+    document.body.classList.add('slip-printing');
+    const done = () => { document.body.classList.remove('slip-printing'); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    setTimeout(() => { window.print(); setTimeout(done, 1500); }, 80);
+  }
+
+  async function pdfSlip() {
+    const el = document.getElementById('trip-slip');
+    if (!el) return;
+    try {
+      flash('Preparing PDF...');
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+      const canvas = await html2canvas(el, { backgroundColor: '#ffffff', scale: 2, logging: false });
+      const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+      const w = 190;
+      const h = Math.min(277, (canvas.height * w) / canvas.width);
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 10, 10, w, h);
+      pdf.save(`Salary slip ${driver?.name || ''} ${monthLabel(slipMonth)}.pdf`);
+      flash('PDF downloaded');
+    } catch {
+      flash('Could not make the PDF. Use Print and choose Save as PDF.', 'err');
+    }
+  }
+
   return (
     <>
       <div className="page-tools">
@@ -341,6 +409,7 @@ function DriverSheet() {
           <button type="button" className="btn ghost" onClick={printChosen} title="Print the chosen columns">🖨 Print</button>
           <button type="button" className="btn ghost" onClick={doExcel}>Export Excel</button>
           <button type="button" className="btn ghost" onClick={doPdf}>Export PDF</button>
+          <button type="button" className="btn in" onClick={() => { setSlipEdit(null); setSlipOpen(true); }} title="Salary slip of this month: print, edit, PDF">🧾 Salary slip</button>
           <button type="button" className="btn" onClick={doDriverCopy} title="PDF for the driver: trips, allowance and diesel only. No rent, received or profit.">🚚 Driver copy</button>
         </div>
       </div>
@@ -475,6 +544,52 @@ function DriverSheet() {
           </Modal>
         );
       })()}
+
+      {slipOpen && driver && (
+        <div className="ts-slip-overlay" role="dialog" aria-modal="true" aria-label="Salary slip">
+          <div className="ts-slip-box">
+            <div className="ts-slip-bar">
+              <b>🧾 Salary slip · {driver.name} · {monthLabel(slipMonth)}</b>
+              <span className="ts-slip-actions">
+                {slipSal && !slipEdit && <button type="button" className="btn in" onClick={printSlip}>🖨 Print</button>}
+                {slipSal && !slipEdit && <button type="button" className="btn ghost" onClick={pdfSlip}>⬇ PDF</button>}
+                {slipSal && !slipEdit && isAdmin && (
+                  <button type="button" className="btn ghost" onClick={() => setSlipEdit(Object.fromEntries(EDIT_FIELDS.map(([k]) => [k, Number(slipSal[k] || 0)])))}>✏️ Edit</button>
+                )}
+                <button type="button" className="btn ghost" onClick={() => { setSlipOpen(false); setSlipEdit(null); }}>✕ Close</button>
+              </span>
+            </div>
+
+            {slipEdit && slipSal && (
+              <div className="ts-slip-edit">
+                <div className="dd-grid">
+                  {EDIT_FIELDS.map(([k, label]) => (
+                    <label key={k}>
+                      <span>{label}</span>
+                      <input type="number" inputMode="decimal" step="0.001" min="0" value={slipEdit[k]} onChange={(e) => setSlipEdit((v) => ({ ...v, [k]: e.target.value }))} />
+                    </label>
+                  ))}
+                </div>
+                <p className="note" style={{ margin: '8px 0' }}>Driver allowance is worked out from the trips marked Paid (Mark paid on the sheet). Total now: {fmtAmt(salaryTotal({ ...slipSal, ...slipEdit }))} · Net: {fmtAmt(salaryPayable({ ...slipSal, ...slipEdit }))}</p>
+                <div className="modal-actions">
+                  <button type="button" className="btn ghost" onClick={() => setSlipEdit(null)}>Cancel</button>
+                  <button type="button" className="btn in" disabled={slipBusy} onClick={saveSlip}>Save slip</button>
+                </div>
+              </div>
+            )}
+
+            {slipSal ? (
+              <SalarySlipPaper driver={driver} salaries={salaries} entries={entries} month={slipMonth} paperId="trip-slip" />
+            ) : (
+              <div className="ts-slip-empty">
+                <p>No salary saved for {driver.name} in {monthLabel(slipMonth)} yet.</p>
+                {isAdmin && <button type="button" className="btn in" disabled={slipBusy} onClick={createSlip}>{slipBusy ? 'Creating...' : `＋ Create salary for ${monthLabel(slipMonth)}`}</button>}
+                <p className="note">Fixed amounts are copied from the last month. Driver allowance comes from the trips marked Paid.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {toast && <div className={`toast ${toast.kind}`} role="status">{toast.text}</div>}
 
