@@ -58,7 +58,9 @@ function SlipPage() {
   if (!driver) return <div className="loading">Loading salary slip...</div>;
 
   const trips = entries.filter((e) => monthKey(e.entry_date) === month && n(e.rent) > 0).length;
-  const earnings = SALARY_FIELDS.map(([k, label]) => [label, n(sal?.[k])]);
+  const earnings = SALARY_FIELDS
+    .filter(([k]) => k !== 'allowance_carried' || n(sal?.[k]))
+    .map(([k, label]) => [k === 'allowance_carried' && sal?.allowance_carried_note ? `Trip allowance of earlier months (${sal.allowance_carried_note})` : label, n(sal?.[k])]);
   const special = n(sal?.special_allowance);
   if (special) earnings.push(['Special allowance', special]);
   const gross = salaryTotal(sal) + special;

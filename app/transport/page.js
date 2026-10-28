@@ -7,7 +7,7 @@ import DataGrid from '@/components/DataGrid';
 import Modal from '@/components/Modal';
 import { sb } from '@/lib/supabase';
 import { num, fmtAmt, monthKey, monthLabel, monthStart, exportStamp, exportExcel, exportPdf, evaluate } from '@/lib/sheet';
-import { SALARY_FIELDS, salaryTotal, salaryPayable } from '@/lib/transport';
+import { SALARY_FIELDS, salaryTotal, salaryPayable, allowancePlan } from '@/lib/transport';
 import CompanyHeader, { COMPANY_NAME } from '@/components/CompanyHeader';
 import Omr from '@/components/Omr';
 import EditToggle from '@/components/EditToggle';
@@ -38,7 +38,7 @@ function TransportPage() {
     const s = sb();
     const [d, e, sa, ex] = await Promise.all([
       s.from('transport_drivers').select('*').order('sort').order('name'),
-      s.from('transport_entries').select('id, driver_id, entry_date, rent, received, diesel, toll, maintenance, driver_allowance'),
+      s.from('transport_entries').select('id, driver_id, entry_date, rent, received, diesel, toll, maintenance, driver_allowance, allowance_status, allowance_salary_id'),
       s.from('transport_salaries').select('*'),
       s.from('transport_extras').select('*').order('created_at')
     ]);
@@ -129,12 +129,23 @@ function TransportPage() {
     } else {
       // New month: copy the fixed amounts from the latest earlier month
       const prev = salaries.filter((s) => s.driver_id === driver.id && monthKey(s.month) < month).sort((a, b) => (a.month < b.month ? 1 : -1))[0];
-      const base = { basic: 0, room_rent: 0, utilities: 0, mobile: 0, travel_food: 0, trip_allowance: 0, advance_deduction: 0, special_allowance: 0 };
+      // Trip allowance: only what is marked Paid, each trip on one receipt; earlier months must be Paid first
+      const plan = allowancePlan(entries, driver.id, month);
+      if (plan.unpaidEarlier.length) {
+        flash(`${driver.name}: mark earlier trip allowance Paid first (${plan.unpaidEarlier.length} trips). Use Drivers page > Salary receipts.`, 'err');
+        return;
+      }
+      const base = { basic: 0, room_rent: 0, utilities: 0, mobile: 0, travel_food: 0, trip_allowance: 0, allowance_carried: 0, advance_deduction: 0, special_allowance: 0 };
       if (prev) ['basic', 'room_rent', 'utilities', 'mobile', 'travel_food'].forEach((k) => { base[k] = num(prev[k]); });
-      base.trip_allowance = summary.find((r) => r.driver.id === driver.id)?.tripAllowance || 0;
-      const row = { ...base, [field]: value, driver_id: driver.id, month: monthStart(month) };
+      base.trip_allowance = plan.current;
+      base.allowance_carried = plan.carried;
+      const row = { ...base, [field]: value, allowance_carried_note: plan.note || null, driver_id: driver.id, month: monthStart(month) };
       const { data, error } = await sb().from('transport_salaries').insert(row).select().single();
       if (error) { flash(error.message, 'err'); return; }
+      if (plan.linkIds.length) {
+        await sb().from('transport_entries').update({ allowance_salary_id: data.id }).in('id', plan.linkIds);
+        setEntries((list) => list.map((x) => (plan.linkIds.includes(x.id) ? { ...x, allowance_salary_id: data.id } : x)));
+      }
       setSalaries((list) => [...list, data]);
     }
     flash('Salary saved');
@@ -375,7 +386,8 @@ function TransportPage() {
                   <tr key={k} className={k === '_total' ? 'sum' : k === '_payable' ? 'profit' : ''}>
                     <td>
                       {label}
-                      {k === 'trip_allowance' && <small className="muted"> (from trips)</small>}
+                      {k === 'trip_allowance' && <small className="muted"> (paid, this month's trips)</small>}
+                      {k === 'allowance_carried' && <small className="muted"> (paid now)</small>}
                     </td>
                     {drivers.map((d) => {
                       const s = salaryOf(d.id);
