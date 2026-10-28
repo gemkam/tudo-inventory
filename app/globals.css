@@ -1364,9 +1364,9 @@ span.omr { font-size: inherit !important; font-weight: inherit !important; lette
 }
 
 /* Office Expense tile: Tudo Num Group logo (no background) */
-.hub-brand { position: absolute; top: 26px; left: 28px; z-index: 1; pointer-events: none; }
+.hub-brand { position: absolute; top: 26px; left: 50%; transform: translateX(-50%); z-index: 1; pointer-events: none; }
 .hub-brand img { display: block; width: 210px; max-width: 62vw; height: auto; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .35)); }
-@media screen and (max-width: 680px) { .hub-brand { top: 22px; left: 22px; } .hub-brand img { width: 170px; } }
+@media screen and (max-width: 680px) { .hub-brand { top: 22px; left: 50%; } .hub-brand img { width: 170px; } }
 
 /* Summary pill in the company switch + Summary page */
 .co-switch a.co-tab, .co-switch span.co-tab { font-weight: 600; font-size: 14px; padding: 9px 18px; border-radius: 999px; text-decoration: none; color: var(--ink); transition: background .2s ease, color .2s ease; }
