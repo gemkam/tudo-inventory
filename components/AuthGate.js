@@ -92,7 +92,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
 
   if (!user) return <div className="loading">Loading...</div>;
 
-  const nav = user.isEntry ? [['/entry', 'Data entry']] : [['/', 'Home']];
+  const nav = user.isEntry ? [['/entry', 'Data entry']] : [['/', 'Home'], ['/sitemap', '🗺 Sitemap']];
   // Phone / tablet: quick buttons next to Home (on Home the alerts list pushes the tiles far down)
   const quick = user.canRead ? [['/transport', '🚚 Transport'], ['/inventory', '📦 Inventory'], ['/expenses', '🧾 Office Expense']] : [];
 
@@ -121,6 +121,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
               {user.name} <small className="who-role">· {ROLES[user.role]?.short || user.role}</small>
             </span>
             <button className="btn small switch" onClick={switchUser}>Switch user</button>
+            <button className="btn small switch logout" onClick={switchUser} title="Log out of Tudo Num Office Systems">⎋ Logout</button>
           </div>
         </div>
       </header>

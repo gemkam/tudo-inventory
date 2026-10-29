@@ -47,7 +47,7 @@ export async function POST(req) {
   });
 
   const pages = [
-    ['Home (alerts)', '/'],
+    ['Home (alerts)', '/'], ['Sitemap (every page and where it is)', '/sitemap'],
     ['Documents Checklist: Company Docs', '/docs?tab=company'], ['Documents Checklist: Govt License', '/docs?tab=govt'],
     ['Documents Checklist: Cars Docs', '/docs?tab=car'], ['Documents Checklist: Heavy Vehicles', '/docs?tab=heavy'], ['Documents Checklist: Employee Docs', '/docs?tab=employee'],
     ['Transport Expense (monthly summary per driver)', '/transport'], ['Transport Reports', '/transport/reports'],
