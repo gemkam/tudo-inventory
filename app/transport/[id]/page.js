@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import AuthGate, { useUser } from '@/components/AuthGate';
-import DataGrid from '@/components/DataGrid';
+import TripCards from '@/components/TripCards';
 import Modal from '@/components/Modal';
 import CompanyHeader, { COMPANY_NAME } from '@/components/CompanyHeader';
 import { sb } from '@/lib/supabase';
@@ -17,13 +17,13 @@ import { SALARY_FIELDS, salaryTotal, salaryPayable, allowancePlan } from '@/lib/
 const NUM_KEYS = ['rent', 'received', 'driver_allowance', 'diesel', 'toll', 'maintenance'];
 
 /* Print / export: pick the columns (indexes into tableData().head). Saved on this device. */
-const COLS_KEY = 'tudo-trip-print-cols';
-const DEFAULT_COLS = [0, 1, 2, 3, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16];
+const COLS_KEY = 'tudo-trip-print-cols-v2';
+const DEFAULT_COLS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14];
 const PRESETS = [
   ['All columns', null],
-  ['Driver copy (no money in)', [0, 1, 2, 3, 4, 5, 11, 12, 13, 16]],
-  ['Money only', [0, 1, 2, 6, 7, 8, 9, 10]],
-  ['Costs only', [0, 1, 2, 3, 11, 13, 14, 15]],
+  ['Driver copy (no money in)', [0, 1, 2, 3, 9, 10, 11, 14]],
+  ['Money only', [0, 1, 2, 4, 5, 6, 7, 8]],
+  ['Costs only', [0, 1, 2, 3, 9, 11, 12, 13]],
   ['Standard', DEFAULT_COLS]
 ];
 
@@ -198,8 +198,6 @@ function DriverSheet() {
     { key: 'toll', label: 'Toll / other', type: 'number', min: 0, width: 100, render: amt('toll') },
     { key: 'maintenance', label: 'Maintenance', type: 'number', min: 0, width: 112, render: amt('maintenance') },
     { key: 'description', label: 'Description', type: 'text', width: 200 },
-    { key: 'cargo', label: 'Cargo detail', type: 'text', width: 130 },
-    { key: 'consignee', label: 'Consignee', type: 'text', width: 120 },
     { key: 'remarks', label: 'Status', type: 'select', options: ['Completed', 'Loading', 'On the way', 'Done', 'Cancelled'], width: 116 },
     { key: 'credit_in', label: 'Payment credit in', type: 'text', width: 140 },
     { key: 'entered_by', label: 'Entered by', type: 'text', width: 120 }
@@ -208,17 +206,17 @@ function DriverSheet() {
   /* ---------- Export ---------- */
 
   function tableData(list = rows) {
-    const head = ['Date', 'From', 'To', 'Description', 'Cargo', 'Consignee', 'Rent', 'Received', 'Received on', 'Balance', 'Payment', 'Driver allow.', 'Allowance', 'Diesel', 'Toll/other', 'Maint.', 'Status', 'Credit in', 'Entered by'];
+    const head = ['Date', 'From', 'To', 'Description', 'Rent', 'Received', 'Received on', 'Balance', 'Payment', 'Driver allow.', 'Allowance', 'Diesel', 'Toll/other', 'Maint.', 'Status', 'Credit in', 'Entered by'];
     const data = list.map((r) => [
-      fmtFullDate(r.entry_date), r.from_place || '', r.to_place || '', r.description || '', r.cargo || '', r.consignee || '',
+      fmtFullDate(r.entry_date), r.from_place || '', r.to_place || '', r.description || '',
       num(r.rent), num(r.received), r.received_date ? fmtFullDate(r.received_date) : '', num(Number(r.rent || 0) - Number(r.received || 0)), r.payment_status || '',
       num(r.driver_allowance), r.allowance_status || '', num(r.diesel), num(r.toll), num(r.maintenance), r.remarks || '', r.credit_in || '', r.entered_by || ''
     ]);
     const tot = (k) => num(list.reduce((t, e) => t + Number(e[k] || 0), 0));
     const trips = list.filter((e) => Number(e.rent) > 0).length;
     const T = { rent: tot('rent'), received: tot('received'), driver_allowance: tot('driver_allowance'), diesel: tot('diesel'), toll: tot('toll'), maintenance: tot('maintenance') };
-    const totalsRow = ['Total', `${trips} trips`, '', '', '', '', T.rent, T.received, '', num(T.rent - T.received), '', T.driver_allowance, '', T.diesel, T.toll, T.maintenance, '', '', ''];
-    return { head, data, totalsRow, numCols: [6, 7, 9, 11, 13, 14, 15] };
+    const totalsRow = ['Total', `${trips} trips`, '', '', T.rent, T.received, '', num(T.rent - T.received), '', T.driver_allowance, '', T.diesel, T.toll, T.maintenance, '', '', ''];
+    return { head, data, totalsRow, numCols: [4, 5, 7, 9, 11, 12, 13] };
   }
 
   async function doExcel() {
@@ -229,7 +227,7 @@ function DriverSheet() {
         name: driver.name, title: `${driver.name} · Vehicle # ${driver.vehicle_no || ''} · ${monthLabel(month)}`,
         subtitle: `${COMPANY_NAME} · Transport Division · Exported ${exportStamp()} · OMR`,
         head: t.head, rows: t.data, numCols: t.numCols, totalsRow: t.totalsRow,
-        widths: [13, 14, 18, 26, 14, 14, 10, 10, 10, 14, 11, 11, 9, 10, 10, 12, 14]
+        widths: [13, 14, 18, 26, 10, 10, 12, 10, 14, 11, 11, 9, 10, 12, 14, 14, 12]
       }]);
       flash('Excel file downloaded');
     } catch {
@@ -241,7 +239,7 @@ function DriverSheet() {
     try {
       flash('Preparing PDF...');
       const t = tableData();
-      const keep = [0, 1, 2, 3, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16];
+      const keep = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14];
       const pick = (r) => keep.map((i) => (t.numCols.includes(i) && typeof r[i] === 'number' ? fmtAmt(r[i]) : r[i]));
       await exportPdf(`${driver.name} ${monthLabel(month)}.pdf`, {
         title: `${driver.name} · Vehicle # ${driver.vehicle_no || ''}`,
@@ -305,10 +303,10 @@ function DriverSheet() {
   async function doDriverCopy() {
     try {
       flash('Preparing driver copy...');
-      const head = ['Date', 'From', 'To', 'Description', 'Cargo', 'Consignee', 'Status', 'Driver allowance', 'Allowance', 'Diesel'];
+      const head = ['Date', 'From', 'To', 'Description', 'Status', 'Driver allowance', 'Allowance', 'Diesel'];
       const list = rows.filter((r) => Number(r.rent) > 0 || Number(r.driver_allowance) > 0 || Number(r.diesel) > 0 || r.to_place);
       const data = list.map((r) => [
-        fmtFullDate(r.entry_date), r.from_place || '', r.to_place || '', r.description || '', r.cargo || '', r.consignee || '', r.remarks || '',
+        fmtFullDate(r.entry_date), r.from_place || '', r.to_place || '', r.description || '', r.remarks || '',
         Number(r.driver_allowance) ? fmtAmt(r.driver_allowance) : '', r.allowance_status || '', Number(r.diesel) ? fmtAmt(r.diesel) : ''
       ]);
       const allowPaid = num(list.filter((r) => r.allowance_status === 'Paid').reduce((t, r) => t + Number(r.driver_allowance || 0), 0));
@@ -317,8 +315,8 @@ function DriverSheet() {
         subtitle: `${COMPANY_NAME} · Transport Division  |  ${monthLabel(month)}  |  Printed ${exportStamp()}  |  OMR`,
         sections: [{
           head, rows: data,
-          totalsRow: ['Total', `${list.length} trips`, '', '', '', '', '', fmtAmt(totals.driver_allowance), '', fmtAmt(totals.diesel)],
-          numCols: [7, 9]
+          totalsRow: ['Total', `${list.length} trips`, '', '', '', fmtAmt(totals.driver_allowance), '', fmtAmt(totals.diesel)],
+          numCols: [5, 7]
         }, {
           heading: 'Allowance',
           head: ['Trips', 'Driver allowance', 'Paid', 'Still to pay', 'Diesel given'],
@@ -519,7 +517,7 @@ function DriverSheet() {
         </div>
         {editMode && (
           <div className="edit-banner">
-            Edit mode is on. Click any cell to change it, then press Enter. Amounts accept maths like 25+4. Click <strong>✓ Done</strong> when finished.
+            Edit mode is on. Type in any box, then press Enter or tap outside to save. Amounts accept maths like 25+4. Click <strong>✓ Done</strong> when finished.
           </div>
         )}
         {isAdmin && month !== 'all' && (() => {
@@ -563,27 +561,20 @@ function DriverSheet() {
             {prevOpenTotal > 0 && <small>This month {fmtAmt(totals.driver_allowance)} + previous {fmtAmt(prevOpenTotal)} = <b>{fmtAmt(totals.driver_allowance + prevOpenTotal)}</b> driver allowance due</small>}
           </div>
         )}
-        <DataGrid
-          columns={columns}
+        <TripCards
           rows={rows}
+          columns={columns}
           canEdit={canChange}
           onSave={save}
           onAdd={addRow}
-          addLabel="+ Add trip or expense"
           onDelete={(r) => setDel(r)}
-          rowClass={(r) => (Number(r.rent) === 0 && Number(r.maintenance) > 0 ? 'expense-row' : Number(r.rent) > Number(r.received) ? 'due-row' : '')}
-          emptyText="No trips in this month."
-          footer={{
-            entry_date: `${totals.trips} trips`,
-            rent: fmtAmt(totals.rent), received: fmtAmt(totals.received),
-            balance: <span className={totals.balance > 0 ? 'neg' : ''}>{fmtAmt(totals.balance)}</span>,
-            driver_allowance: prevOpenTotal > 0 ? <span className="fa-prev">{fmtAmt(totals.driver_allowance)}<small>+ prev. {fmtAmt(prevOpenTotal)} not paid</small></span> : fmtAmt(totals.driver_allowance), diesel: fmtAmt(totals.diesel),
-            toll: fmtAmt(totals.toll), maintenance: fmtAmt(totals.maintenance)
-          }}
           flash={flash}
+          totals={totals}
+          prevOpenTotal={prevOpenTotal}
+          allowLabel={(r) => `${r.allowance_status}${r.allowance_status === 'Paid' && r.allowance_salary_id && salMonths[r.allowance_salary_id] > monthKey(r.entry_date) ? ` (${monthLabel(salMonths[r.allowance_salary_id])})` : ''}`}
         />
         <p className="sheet-hint">
-          Red mark: money still to collect. Amber mark: maintenance or other expense without a trip. All amounts in OMR.
+          Red edge: money still to collect. Amber edge: expense without a trip. All amounts in OMR.
           {!isAdmin && ' View only.'}
         </p>
       </section>
