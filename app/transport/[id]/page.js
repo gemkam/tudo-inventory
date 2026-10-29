@@ -277,7 +277,7 @@ function DriverSheet() {
     const p = profit;
     const out = [['Total rent', p.rent]];
     if (p.vat) out.push(['VAT 5% (inside rent, kept aside)', -p.vat], ['Rent without VAT', p.income]);
-    out.push(['Trip costs (diesel, toll, maintenance)', -p.costs], ['Driver allowance', -p.allowance], ['Driver salary (fixed)', -p.salary], ['Profit before tax', p.before]);
+    out.push(['Trip costs (diesel, toll, maintenance)', -p.costs], ['Driver allowance', -p.allowance], ['Profit before tax', p.before]);
     if (taxOn) out.push([`Govt tax ${TAX_RATE}%`, -p.tax], ['Profit after tax', p.after]);
     out.push(['Profit taken', -p.taken], ['Profit balance', p.balance]);
     if (month !== 'all') out.push(['Profit balance, all months', profitAll.balance]);
@@ -717,7 +717,6 @@ function DriverSheet() {
               {profit.vat > 0 && <div className="pc-row total"><span className="pc-l">Rent without VAT</span><span className="pc-v">{fmtAmt(profit.income)}</span></div>}
               <div className="pc-row minus"><span className="pc-l">Trip costs (diesel, toll, maintenance)</span><span className="pc-v">{profit.costs ? `− ${fmtAmt(profit.costs)}` : '–'}</span></div>
               <div className="pc-row minus"><span className="pc-l">Driver allowance</span><span className="pc-v">{profit.allowance ? `− ${fmtAmt(profit.allowance)}` : '–'}</span></div>
-              <div className="pc-row minus"><span className="pc-l">Driver salary (fixed)</span><span className="pc-v">{profit.salary ? `− ${fmtAmt(profit.salary)}` : '–'}</span></div>
               <div className="pc-row total"><span className="pc-l">Profit before tax</span><span className={`pc-v ${profit.before < 0 ? 'neg' : ''}`}>{fmtAmt(profit.before)}</span></div>
               {taxOn && <div className="pc-row minus"><span className="pc-l">Govt tax {TAX_RATE}%{profit.before <= 0 ? <small>No tax on a loss</small> : null}</span><span className="pc-v">{profit.tax ? `− ${fmtAmt(profit.tax)}` : '–'}</span></div>}
               {taxOn && <div className="pc-row total"><span className="pc-l">Profit after tax</span><span className={`pc-v ${profit.after < 0 ? 'neg' : ''}`}>{fmtAmt(profit.after)}</span></div>}
