@@ -2238,3 +2238,7 @@ textarea.drv-input { resize: vertical; }
 @media screen and (max-width: 1080px) {
   .topnav a.nav-quick { display: inline-block; }
 }
+
+/* Reminder pop-up: "OK, remind me tomorrow" also at the top, stays visible while the list scrolls */
+.alarm-top { position: sticky; top: -22px; z-index: 2; display: flex; justify-content: center; padding: 8px 0; margin: -4px 0 0; background: var(--panel); }
+.alarm-pop { z-index: 200; }

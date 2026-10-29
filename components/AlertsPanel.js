@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { createPortal } from 'react-dom';
 import { sb } from '@/lib/supabase';
 import { todayISO } from '@/lib/sheet';
 import { buildReminders, buildPeopleReminders, fmtD, whenText, daysLeft } from '@/lib/reminders';
@@ -211,11 +212,14 @@ export default function AlertsPanel() {
         </div>
       )}
 
-      {popup && urgent.length > 0 && (
+      {popup && urgent.length > 0 && typeof document !== 'undefined' && createPortal(
         <div className="modal-back alarm-pop" role="dialog" aria-modal="true" aria-label="Reminder alarm" onClick={closePopup}>
           <div className="modal alarm-card" onClick={(e) => e.stopPropagation()}>
             <AlarmClock ringing />
             <h2>Reminder</h2>
+            <div className="alarm-top">
+              <button type="button" className="btn in" onClick={closePopup}>OK, remind me tomorrow</button>
+            </div>
             <ul className="rem-list">
               {urgent.map((r) => (
                 <li key={r.key} className="urgent">
@@ -229,7 +233,8 @@ export default function AlertsPanel() {
               <button type="button" className="btn in" onClick={closePopup}>OK, remind me tomorrow</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </aside>
   );
