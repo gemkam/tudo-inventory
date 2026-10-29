@@ -6,7 +6,7 @@ import AuthGate, { useUser } from '@/components/AuthGate';
 import Omr from '@/components/Omr';
 import Modal from '@/components/Modal';
 import { useShare } from '@/components/ShareModal';
-import { Donut, Bars, PairBars, SERIES } from '@/components/Charts';
+import { Donut, Bars, PairBars, HBars, SERIES } from '@/components/Charts';
 import { sb } from '@/lib/supabase';
 import { fmtAmt, monthLabel, todayISO, exportStamp } from '@/lib/sheet';
 import { COMPANIES, HEADS, r3 } from '@/lib/expenses';
@@ -14,7 +14,7 @@ import { buildReminders, whenText } from '@/lib/reminders';
 import { useRaufPage } from '@/components/RaufContext';
 import { groupContext, groupGreeting } from '@/lib/groupAssistantContext';
 import { attendanceSummary } from '@/lib/attendance';
-import { GROUP_SOURCES as SOURCES, TRANSPORT_HEADS, buildLines, buildIncome, computeGroup, periodLabelOf, shiftMonth } from '@/lib/groupSummary';
+import { GROUP_SOURCES as SOURCES, TRANSPORT_HEADS, buildLines, buildIncome, computeGroup, computeAnalytics, periodLabelOf, shiftMonth } from '@/lib/groupSummary';
 
 const PICK_KEY = 'tudo-summary-pick';
 const dmy = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
@@ -39,7 +39,7 @@ function SummaryPage() {
     const s = sb();
     const [e, te, ts, tx, dr, bu, ve, ma, st, at] = await Promise.all([
       s.from('exp_entries').select('company, entry_date, bill_no, description, category, head, paid, unpaid, vat, department, source_kind'),
-      s.from('transport_entries').select('entry_date, received_date, driver_id, from_place, to_place, description, rent, received, diesel, toll, maintenance'),
+      s.from('transport_entries').select('entry_date, received_date, driver_id, from_place, to_place, description, rent, received, diesel, toll, maintenance, driver_allowance'),
       s.from('transport_salaries').select('*'),
       s.from('transport_extras').select('driver_id, month, description, amount'),
       s.from('transport_drivers').select('id, name'),
@@ -82,6 +82,8 @@ function SummaryPage() {
   useEffect(() => { if (!period && allMonths.length) setPeriod(allMonths[allMonths.length - 1]); }, [allMonths, period]);
 
   const G = useMemo(() => (data && period ? computeGroup({ lines, income, budgets: data.budgets, pick, period, today }) : null), [data, lines, income, pick, period, today]);
+
+  const AN = useMemo(() => (G && data ? computeAnalytics({ G, lines, income, ts: data.ts, drivers: data.drivers, pick, period, today }) : null), [G, data, lines, income, pick, period, today]);
 
   // Attendance of office staff (companies only, Fri and Sat off) for the chosen period
   const ATT = useMemo(() => {
@@ -429,6 +431,108 @@ function SummaryPage() {
                 onPick={(i) => drillMonth(`${G.yoy.year}-${String(i + 1).padStart(2, '0')}`)} />
             </div>
           </div>
+
+          {AN && (
+            <>
+              <h2 className="an-h2">📊 Analytics <span>{periodLabel}</span></h2>
+              <div className="rp-grid">
+                <div className="rp-card">
+                  <div className="rp-card-title">⏱ Spending pace <span className="rp-card-note">({monthLabel(AN.pace.thisMonth)})</span></div>
+                  <div className="rp-takeaway">
+                    {AN.pace.avg
+                      ? AN.pace.vsAvg > 10 ? `On track to spend ${AN.pace.vsAvg}% MORE than an average month.` : AN.pace.vsAvg < -10 ? `On track to spend ${Math.abs(AN.pace.vsAvg)}% less than an average month.` : 'Spending is close to an average month.'
+                      : 'Not enough past months to compare yet.'}
+                  </div>
+                  <dl className="an-kv">
+                    <div><dt>Average month</dt><dd>{AN.pace.avg ? fmtO(AN.pace.avg) : '–'}<small>{AN.pace.months ? `last ${AN.pace.months} month${AN.pace.months === 1 ? '' : 's'}` : ''}</small></dd></div>
+                    <div><dt>Spent so far</dt><dd>{fmtO(AN.pace.soFar)}<small>day {AN.pace.day} of {AN.pace.dim}</small></dd></div>
+                    <div className={AN.pace.vsAvg > 10 ? 'bad' : ''}><dt>Forecast month end</dt><dd>{fmtO(AN.pace.forecast)}<small>{AN.pace.vsAvg == null ? 'at this daily rate' : `${AN.pace.vsAvg > 0 ? '▲' : '▼'} ${Math.abs(AN.pace.vsAvg)}% vs average`}</small></dd></div>
+                  </dl>
+                </div>
+
+                <div className="rp-card">
+                  <div className="rp-card-title">↕ Biggest changes <span className="rp-card-note">({G.prevPeriod ? `vs ${G.prevPeriod.length === 4 ? G.prevPeriod : monthLabel(G.prevPeriod)}` : 'pick a month or year'})</span></div>
+                  {AN.movers.length ? (
+                    <table className="rp-block-table an-move">
+                      <thead><tr><th>Head</th><th className="num">Before</th><th className="num">Now</th><th className="num">Change</th></tr></thead>
+                      <tbody>
+                        {AN.movers.map((m) => (
+                          <tr key={m.head} className="pickable" onClick={() => setDrill({ title: `${m.head} · ${periodLabel}`, lines: G.sel.filter((l) => l.head === m.head) })}>
+                            <td>{m.head}</td><td className="num">{fmtAmt(m.before)}</td><td className="num">{fmtAmt(m.now)}</td>
+                            <td className={`num ${m.diff > 0 ? 'neg' : 'pos'}`}>{m.diff > 0 ? '▲' : '▼'} {fmtAmt(Math.abs(m.diff))}{m.pct != null ? ` (${Math.abs(m.pct)}%)` : ' (new)'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : <div className="rp-empty">No previous period to compare.</div>}
+                </div>
+
+                <div className="rp-card">
+                  <div className="rp-card-title">🏷 By department</div>
+                  <div className="rp-takeaway">{AN.depts[0] ? `${AN.depts[0].dept} spent the most: ${pct(AN.depts[0].total, G.grand.spent)}%.` : ' '}</div>
+                  <HBars rows={AN.depts.slice(0, 8).map((d) => ({ label: d.dept, value: d.total, sub: `${pct(d.total, G.grand.spent)}%` }))} fmt={(v) => fmtAmt(v)}
+                    onPick={(i, r) => setDrill({ title: `${r.label} · ${periodLabel}`, lines: G.sel.filter((l) => (l.dept || 'No department') === r.label) })} />
+                </div>
+
+                <div className="rp-card">
+                  <div className="rp-card-title">💸 10 biggest bills</div>
+                  {AN.biggest.length ? (
+                    <table className="rp-block-table an-big">
+                      <tbody>
+                        {AN.biggest.map((l, i) => (
+                          <tr key={i}>
+                            <td className="an-rank">{i + 1}</td>
+                            <td><b>{l.desc || l.head}</b><small>{dmy(l.date)} · {labelOf(l.src)} · {l.head}</small></td>
+                            <td className="num">{fmtAmt(l.amount)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : <div className="rp-empty">No bills in this period.</div>}
+                </div>
+
+                {AN.transport && (
+                  <div className="rp-card rp-wide">
+                    <div className="rp-card-title">🚚 Transport analytics</div>
+                    <div className="rp-takeaway">
+                      {AN.transport.trips
+                        ? `${AN.transport.trips} trips. Each trip brings ${fmtO(AN.transport.avgRent)} and costs ${fmtO(AN.transport.avgCost)} (diesel, toll, maintenance), so ${fmtO(AN.transport.avgMargin)} is left per trip before salary.`
+                        : 'No trips in this period.'}
+                    </div>
+                    <div className="an-tiles">
+                      <div><span>Trips</span><b>{AN.transport.trips}</b></div>
+                      <div><span>Avg rent / trip</span><b>{fmtAmt(AN.transport.avgRent)}</b></div>
+                      <div><span>Avg cost / trip</span><b>{fmtAmt(AN.transport.avgCost)}</b></div>
+                      <div><span>Margin / trip</span><b className={AN.transport.avgMargin < 0 ? 'neg' : 'pos'}>{fmtAmt(AN.transport.avgMargin)}</b></div>
+                      <div><span>Money collected</span><b className={AN.transport.collectRate != null && AN.transport.collectRate < 80 ? 'neg' : ''}>{AN.transport.collectRate == null ? '–' : `${AN.transport.collectRate}%`}</b></div>
+                      <div><span>Days to collect</span><b>{AN.transport.avgDays == null ? '–' : AN.transport.avgDays}</b>{AN.transport.slowest ? <small>slowest {AN.transport.slowest}</small> : null}</div>
+                    </div>
+                    {AN.transport.perDriver.length > 0 && (
+                      <div className="table-wrap">
+                        <table className="rp-block-table an-drv">
+                          <thead><tr><th>Driver</th><th className="num">Trips</th><th className="num">Work</th><th className="num">Received</th><th className="num">To collect</th><th className="num">Trip costs</th><th className="num">Salary</th><th className="num">Profit</th></tr></thead>
+                          <tbody>
+                            {AN.transport.perDriver.map((d) => (
+                              <tr key={d.id}>
+                                <td><Link href={`/transport/${d.id}`}><b>{d.name}</b></Link></td>
+                                <td className="num">{d.trips}</td><td className="num">{fmtAmt(d.work)}</td><td className="num">{fmtAmt(d.received)}</td>
+                                <td className={`num ${d.toCollect > 0 ? 'neg' : ''}`}>{fmtAmt(d.toCollect)}</td>
+                                <td className="num">{fmtAmt(d.costs)}</td><td className="num">{fmtAmt(d.salary)}</td>
+                                <td className={`num ${d.profit < 0 ? 'neg' : 'pos'}`}><b>{fmtAmt(d.profit)}</b></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                    {AN.transport.routes.length > 0 && (
+                      <p className="an-routes"><b>Most used routes:</b> {AN.transport.routes.map((r) => `${r.route} (${r.trips} trip${r.trips === 1 ? '' : 's'}, ${fmtAmt(r.work)})`).join(' · ')}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
           <section className="panel">
             <h2>By company</h2>
