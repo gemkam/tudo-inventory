@@ -2756,3 +2756,23 @@ a.tl-what { color: var(--brown); }
   .co-switch::-webkit-scrollbar { display: none; }
   .co-switch > * { flex: 0 0 auto; white-space: nowrap; }
 }
+
+/* ---------- Phone fix 3 (30 Oct 2026): buttons go DOWN to the next line, nothing can stick out to the right ---------- */
+html, body { max-width: 100%; overflow-x: hidden; }
+@supports (overflow-x: clip) { html, body { overflow-x: clip; } }
+@media (max-width: 760px) {
+  .page-tools .tools, .gs-tabs, .co-switch, .topnav, .sum-pills, .rp-filters, .tools {
+    flex-wrap: wrap !important; overflow-x: visible !important; white-space: normal;
+  }
+  .page-tools .tools > *, .gs-tab, .co-switch > *, .topnav a { flex: 0 1 auto !important; }
+  .page-tools .tools { justify-content: flex-start; gap: 6px; }
+  .page-tools .tools .btn, .page-tools .tools a.btn { font-size: 13px; padding: 6px 11px; }
+  .co-switch { display: flex; border-radius: 14px; }
+  .co-switch a.co-tab, .co-switch span.co-tab { padding: 7px 12px; font-size: 13.5px; }
+  .gs-tab { font-size: 13px; padding: 6px 11px; }
+  .topnav { gap: 6px 8px; }
+  .month-select { flex-wrap: wrap; }
+  .month-select select { min-width: 0; max-width: 100%; }
+}
+@media (max-width: 600px) { .noor-face.big .noor-aura, .noor-aura { inset: -6px !important; } }
+@media (max-width: 600px) { .noor-orb { right: calc(22px + env(safe-area-inset-right, 0px)) !important; } }
