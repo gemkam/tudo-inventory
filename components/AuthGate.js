@@ -1,6 +1,7 @@
 'use client';
 
 import TableCards, { ViewSwitch } from '@/components/TableCards';
+import TransportSideNav, { showTransportSide } from '@/components/TransportSideNav';
 import PrintColumns from '@/components/PrintColumns';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -108,7 +109,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
           <Link href={user.isEntry ? '/entry' : '/'} className="brand">Tudo Num Office Systems</Link>
           <nav className="topnav">
             {nav.map(([href, label]) => (
-              <Link key={href} href={href} className={(href === '/' ? path === '/' : path.startsWith(href)) ? 'active' : ''}>{label}</Link>
+              <Link key={href} href={href === '/sitemap' && path !== '/sitemap' ? `/sitemap?from=${encodeURIComponent(path)}` : href} className={(href === '/' ? path === '/' : path.startsWith(href)) ? 'active' : ''}>{label}</Link>
             ))}
             {quick.map(([href, label]) => (
               <Link key={href} href={href} className={`nav-quick${path === href || (path.startsWith(`${href}/`)) ? ' active' : ''}`}>{label}</Link>
@@ -125,9 +126,16 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
           </div>
         </div>
       </header>
-      <main className={`page${wide ? ' wide' : ''}`}>
-        {blocked ? <div className="error">{blocked}</div> : children}
-      </main>
+      {!blocked && !user.isEntry && showTransportSide(path) ? (
+        <main className="page wide has-side">
+          <TransportSideNav />
+          <div className="side-main">{children}</div>
+        </main>
+      ) : (
+        <main className={`page${wide ? ' wide' : ''}`}>
+          {blocked ? <div className="error">{blocked}</div> : children}
+        </main>
+      )}
       {user.canRead && !blocked && <PrintColumns />}
       {user.canRead && !blocked && <TableCards />}
       {user.canRead && (
