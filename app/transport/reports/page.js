@@ -56,16 +56,19 @@ function TransportReports() {
       const o = {
         d, color: SERIES[i % SERIES.length], trips: dt.length,
         work: sum(de, 'rent'), received: sum(de, 'received'), diesel: sum(de, 'diesel'), toll: sum(de, 'toll'), maintenance: sum(de, 'maintenance'),
-        salary: num(sal.filter((s) => s.driver_id === d.id).reduce((t, s) => t + salaryPayable(s), 0)),
+        // salary without the driver allowance part (that is counted per trip below, by trip date, paid or not)
+        salary: num(sal.filter((s) => s.driver_id === d.id).reduce((t, s) => t + salaryPayable(s) - Number(s.trip_allowance || 0) - Number(s.allowance_carried || 0), 0)),
+        allowance: sum(de, 'driver_allowance'),
+        allowanceOpen: sum(de.filter((e) => e.allowance_status !== 'Paid'), 'driver_allowance'),
         other: sum(ex.filter((x) => x.driver_id === d.id), 'amount')
       };
-      o.expenses = num(o.diesel + o.toll + o.maintenance + o.salary + o.other);
+      o.expenses = num(o.diesel + o.toll + o.maintenance + o.salary + o.allowance + o.other);
       o.profit = num(o.work - o.expenses);
       o.dieselPerTrip = o.trips ? num(o.diesel / o.trips) : 0;
       return o;
     });
     const tot = (k) => num(perDriver.reduce((t, x) => t + x[k], 0));
-    const T = { trips: trips.length, work: tot('work'), received: tot('received'), diesel: tot('diesel'), toll: tot('toll'), maintenance: tot('maintenance'), salary: tot('salary'), other: tot('other'), expenses: tot('expenses'), profit: tot('profit') };
+    const T = { trips: trips.length, work: tot('work'), received: tot('received'), diesel: tot('diesel'), toll: tot('toll'), maintenance: tot('maintenance'), salary: tot('salary'), allowance: tot('allowance'), allowanceOpen: tot('allowanceOpen'), other: tot('other'), expenses: tot('expenses'), profit: tot('profit') };
     T.receivable = num(T.work - T.received);
 
     const routes = {};
@@ -82,8 +85,8 @@ function TransportReports() {
     const byMonth = months.map((m) => {
       const me = entries.filter((e) => monthKey(e.entry_date) === m);
       const work = sum(me, 'rent');
-      const cost = num(sum(me, 'diesel') + sum(me, 'toll') + sum(me, 'maintenance')
-        + salaries.filter((s) => monthKey(s.month) === m).reduce((t, s) => t + salaryPayable(s), 0)
+      const cost = num(sum(me, 'diesel') + sum(me, 'toll') + sum(me, 'maintenance') + sum(me, 'driver_allowance')
+        + salaries.filter((s) => monthKey(s.month) === m).reduce((t, s) => t + salaryPayable(s) - Number(s.trip_allowance || 0) - Number(s.allowance_carried || 0), 0)
         + sum(extras.filter((x) => monthKey(x.month) === m), 'amount'));
       return { m, label: monthLabel(m).replace(/ \d{4}$/, (y) => ` '${y.trim().slice(2)}`), work, cost, profit: num(work - cost) };
     });
@@ -100,7 +103,8 @@ function TransportReports() {
     { label: 'Diesel', value: T.diesel, color: SERIES[0] },
     { label: 'Toll + visa exit fee', value: T.toll, color: SERIES[1] },
     { label: 'Maintenance', value: T.maintenance, color: SERIES[2] },
-    { label: 'Salaries', value: T.salary, color: SERIES[3] },
+    { label: 'Driver allowance', value: T.allowance, color: SERIES[5] },
+    { label: 'Salaries (fixed)', value: T.salary, color: SERIES[3] },
     { label: 'Other (trailer rent etc.)', value: T.other, color: SERIES[4] }
   ];
   const biggestCost = [...costSlices].sort((a, b) => b.value - a.value)[0];
@@ -113,9 +117,9 @@ function TransportReports() {
 
   /* ---------- Exports ---------- */
 
-  const driverHead = ['Driver', 'Trips', 'Work', 'Received', 'Diesel', 'Toll', 'Maintenance', 'Salary', 'Other', 'Expenses', 'Profit'];
-  const driverRows = r.perDriver.map((x) => [x.d.name, x.trips, x.work, x.received, x.diesel, x.toll, x.maintenance, x.salary, x.other, x.expenses, x.profit]);
-  const driverTotal = ['Total', T.trips, T.work, T.received, T.diesel, T.toll, T.maintenance, T.salary, T.other, T.expenses, T.profit];
+  const driverHead = ['Driver', 'Trips', 'Work', 'Received', 'Diesel', 'Toll', 'Maintenance', 'Driver allowance', 'Allowance not paid', 'Salary (fixed)', 'Other', 'Expenses', 'Profit'];
+  const driverRows = r.perDriver.map((x) => [x.d.name, x.trips, x.work, x.received, x.diesel, x.toll, x.maintenance, x.allowance, x.allowanceOpen, x.salary, x.other, x.expenses, x.profit]);
+  const driverTotal = ['Total', T.trips, T.work, T.received, T.diesel, T.toll, T.maintenance, T.allowance, T.allowanceOpen, T.salary, T.other, T.expenses, T.profit];
   const tripRows = r.es.map((e) => [fmtFullDate(e.entry_date), driverName(e.driver_id), e.from_place || '', e.to_place || e.description || '', num(e.rent), num(e.received), num(e.diesel), num(e.toll), num(e.maintenance), e.payment_status || '']);
   const collectRows = r.toCollect.map((e) => [fmtFullDate(e.entry_date), driverName(e.driver_id), `${clean(e.from_place)} → ${clean(e.to_place)}`, num(e.rent), num(e.received), e.due]);
   const fileBase = `Transport report ${RANGES[range]} ${new Date().toISOString().slice(0, 10)}`;
@@ -129,7 +133,7 @@ function TransportReports() {
         note: `${COMPANY_NAME} (Transport Division) · ${RANGES[range]} · ${rangeNote(range)} Amounts in OMR.${r.wholeMonths ? '' : ' Salaries and monthly expenses are counted for whole months only, so they are not included in a 7-day view.'}`,
         area: areaRef.current,
         tables: [
-          { heading: 'Drivers compared', head: driverHead, rows: driverRows.map((x) => fmtRow(x, 2)), totalsRow: fmtRow(driverTotal, 2), numCols: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] },
+          { heading: 'Drivers compared', head: driverHead, rows: driverRows.map((x) => fmtRow(x, 2)), totalsRow: fmtRow(driverTotal, 2), numCols: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] },
           { heading: `Money still to collect (${r.toCollect.length})`, head: ['Date', 'Driver', 'Route', 'Rent', 'Received', 'Due'], rows: collectRows.map((x) => fmtRow(x, 3)), totalsRow: ['', '', 'Total', '', '', fmtAmt(T.receivable)], numCols: [3, 4, 5] },
           { heading: `All trips and expenses in this period (${r.es.length})`, head: ['Date', 'Driver', 'From', 'To / description', 'Rent', 'Received', 'Diesel', 'Toll', 'Maint.', 'Payment'], rows: tripRows.map((x) => fmtRow(x, 4)), totalsRow: ['Total', '', '', '', fmtAmt(T.work), fmtAmt(T.received), fmtAmt(T.diesel), fmtAmt(T.toll), fmtAmt(T.maintenance), ''], numCols: [4, 5, 6, 7, 8] }
         ]
@@ -152,12 +156,13 @@ function TransportReports() {
             ['Received', T.received, `${T.work ? Math.round((T.received / T.work) * 100) : 0}% of work amount`],
             ['Receivable', T.receivable, plural(r.toCollect.length, 'trip') + ' not fully paid'],
             ['Diesel', T.diesel, ''], ['Toll + visa exit fee', T.toll, ''], ['Maintenance', T.maintenance, ''],
-            ['Salaries', T.salary, r.wholeMonths ? '' : 'Not included in a 7-day view'], ['Other expenses', T.other, ''],
+            ['Driver allowance', T.allowance, T.allowanceOpen ? `${fmtAmt(T.allowanceOpen)} not paid yet` : 'All paid'],
+            ['Salaries (fixed part)', T.salary, r.wholeMonths ? 'Without driver allowance' : 'Not included in a 7-day view'], ['Other expenses', T.other, ''],
             ['Total expenses', T.expenses, ''], ['Profit', T.profit, `${margin}% of work amount`]
           ],
           boldRows: [8, 9]
         },
-        { name: 'Drivers', title: 'Drivers compared', subtitle: sub, head: driverHead, rows: driverRows, totalsRow: driverTotal, numCols: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], widths: [16, 8, 11, 11, 10, 10, 13, 10, 10, 12, 12] },
+        { name: 'Drivers', title: 'Drivers compared', subtitle: sub, head: driverHead, rows: driverRows, totalsRow: driverTotal, numCols: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], widths: [16, 8, 11, 11, 10, 10, 13, 13, 13, 12, 10, 12, 12] },
         { name: 'Months', title: 'Month by month', subtitle: sub, head: ['Month', 'Work amount', 'Expenses', 'Profit'], rows: r.byMonth.map((x) => [monthLabel(x.m), x.work, x.cost, x.profit]), numCols: [1, 2, 3], widths: [18, 14, 14, 14] },
         { name: 'Routes', title: 'Routes', subtitle: sub, head: ['Route', 'Trips', 'Rent total', 'Average rent'], rows: r.topRoutes.map((x) => [x.label, x.trips, x.rent, num(x.rent / x.trips)]), numCols: [1, 2, 3], widths: [36, 8, 12, 12] },
         { name: 'To collect', title: 'Money still to collect', subtitle: sub, head: ['Date', 'Driver', 'Route', 'Rent', 'Received', 'Due'], rows: collectRows, totalsRow: ['', '', 'Total', '', '', T.receivable], numCols: [3, 4, 5], widths: [14, 14, 32, 10, 10, 10] },
@@ -257,10 +262,11 @@ function TransportReports() {
           <div className="rp-card rp-wide">
             <div className="rp-card-title">Drivers compared</div>
             <div className="rp-takeaway">{T.work ? `${topDriver.d.name} made the most profit: ${fmtAmt(topDriver.profit)} OMR.` : 'No trips in this period.'}</div>
+            <p className="rp-card-note" style={{ margin: '0 0 8px' }}>Driver allowance is counted per trip (by trip date, paid or not). Salary shows the fixed part only, so nothing is counted twice.</p>
             <div className="table-wrap">
               <table className="rp-block-table">
                 <thead>
-                  <tr><th>Driver</th><th className="num">Trips</th><th className="num">Work</th><th className="num">Diesel</th><th className="num">Diesel / trip</th><th className="num">Toll</th><th className="num">Maint.</th><th className="num">Salary</th><th className="num">Other</th><th className="num">Profit</th></tr>
+                  <tr><th>Driver</th><th className="num">Trips</th><th className="num">Work</th><th className="num">Diesel</th><th className="num">Diesel / trip</th><th className="num">Toll</th><th className="num">Maint.</th><th className="num">Driver allowance</th><th className="num">Salary</th><th className="num">Other</th><th className="num">Profit</th></tr>
                 </thead>
                 <tbody>
                   {r.perDriver.map((x) => (
@@ -272,6 +278,7 @@ function TransportReports() {
                       <td className="num">{fmtAmt(x.dieselPerTrip)}</td>
                       <td className="num">{fmtAmt(x.toll)}</td>
                       <td className="num">{fmtAmt(x.maintenance)}</td>
+                      <td className="num">{fmtAmt(x.allowance)}{x.allowanceOpen > 0 && <><br /><small className="neg">{fmtAmt(x.allowanceOpen)} not paid</small></>}</td>
                       <td className="num">{fmtAmt(x.salary)}</td>
                       <td className="num">{fmtAmt(x.other)}</td>
                       <td className={`num ${x.profit < 0 ? 'neg' : ''}`}><b>{fmtAmt(x.profit)}</b></td>
@@ -280,6 +287,7 @@ function TransportReports() {
                   <tr className="sum">
                     <td>Total</td><td className="num">{T.trips}</td><td className="num">{fmtAmt(T.work)}</td><td className="num">{fmtAmt(T.diesel)}</td>
                     <td className="num">{T.trips ? fmtAmt(num(T.diesel / T.trips)) : 0}</td><td className="num">{fmtAmt(T.toll)}</td><td className="num">{fmtAmt(T.maintenance)}</td>
+                    <td className="num">{fmtAmt(T.allowance)}{T.allowanceOpen > 0 && <><br /><small className="neg">{fmtAmt(T.allowanceOpen)} not paid</small></>}</td>
                     <td className="num">{fmtAmt(T.salary)}</td><td className="num">{fmtAmt(T.other)}</td><td className="num">{fmtAmt(T.profit)}</td>
                   </tr>
                 </tbody>
