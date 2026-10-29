@@ -94,7 +94,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
 
   if (!user) return <div className="loading">Loading...</div>;
 
-  const nav = user.isEntry ? [['/entry', 'Data entry']] : [['/', 'Home'], ['/sitemap', '🗺 Sitemap']];
+  const nav = user.isEntry ? [['/entry', 'Data entry']] : [['/', 'Home'], ['/sitemap', '🗺 Sitemap'], ['/timeline', '🕒 Timeline']];
   // Phone / tablet: quick buttons next to Home (on Home the alerts list pushes the tiles far down)
   const quick = user.canRead ? [['/transport', '🚚 Transport'], ['/inventory', '📦 Inventory'], ['/expenses', '🧾 Office Expense']] : [];
 

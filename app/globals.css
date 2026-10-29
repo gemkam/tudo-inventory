@@ -2623,3 +2623,24 @@ a.sm-name { color: var(--brown); } a.sm-name:hover { text-decoration: underline;
   .page.has-side > .tsn:hover .tsn-btn .tsn-tx { white-space: normal; }
 }
 @media (prefers-reduced-motion: reduce) { .page.has-side > .tsn { transition: none; } }
+
+/* ===== Timeline page (/timeline, lib/timeline.js) ===== */
+.tl-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tl-tools .sm-search { flex: 1 1 240px; }
+.tl-days { list-style: none; margin: 0; padding: 0 0 0 22px; position: relative; display: grid; gap: 14px; }
+.tl-days::before { content: ''; position: absolute; left: 13px; top: 8px; bottom: 8px; width: 3px; border-radius: 3px; background: linear-gradient(var(--brown), var(--line)); }
+.tl-day { position: relative; background: var(--card, var(--surface)); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px 10px 22px; }
+.tl-dot { position: absolute; left: -22px; top: 10px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 800; color: #fff; background: var(--brown); box-shadow: 0 0 0 4px var(--bg); }
+.tl-day > details > summary { cursor: pointer; list-style: none; }
+.tl-day > details > summary::-webkit-details-marker { display: none; }
+.tl-dayhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; padding: 2px 0; }
+.tl-dayno { font-family: var(--display); font-size: 18px; color: var(--heading, var(--brown)); }
+.tl-date { font-weight: 600; }
+.tl-title { flex-basis: 100%; color: var(--muted); font-size: 14px; }
+.tl-count { font-style: normal; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--tint); color: var(--brown); }
+.tl-groups { margin-top: 6px; }
+.tl-mod { font-size: 15px; }
+.tl-time { font-size: 12px; color: var(--muted); background: var(--tint); padding: 1px 7px; border-radius: 6px; font-variant-numeric: tabular-nums; }
+.tl-what { font-weight: 500; }
+a.tl-what { color: var(--brown); }
+@media (max-width: 600px) { .tl-days { padding-left: 18px; } .tl-day { padding: 10px 10px 10px 18px; } .tl-dot { left: -18px; width: 24px; height: 24px; font-size: 12px; } .tl-days::before { left: 10px; } }
