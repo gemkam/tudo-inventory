@@ -198,11 +198,12 @@ function ExpensesPage() {
     expiryCol('visa_expiry', 'Visa expiry'),
     { key: 'basic', label: 'Basic pay', type: 'number', min: 0, width: 110, render: amt('basic') },
     { key: 'allowances', label: 'Allowances', type: 'number', min: 0, width: 110, render: amt('allowances') },
-    { key: 'working_days', label: 'Working days', type: 'number', min: 0, width: 110 },
+    { key: 'working_days', label: 'Working days', type: 'number', min: 0, width: 120, render: (r) => <span title={r.attendance_month ? `From attendance ${monthLabel(r.attendance_month)}` : undefined}>{num(r.working_days)}{r.attendance_month ? ' 🗓' : ''}</span> },
     { key: 'gross', label: 'Total gross', type: 'calc', width: 120, render: (r) => fmtAmt(staffGross(r)) },
     { key: 'deductions', label: 'Deductions / advances', type: 'number', min: 0, width: 150, render: amt('deductions') },
     { key: 'net', label: 'Net pay', type: 'calc', width: 120, render: (r) => <b>{fmtAmt(staffNet(r))}</b> }
   ];
+  const staffAttMonth = staff.map((x) => x.attendance_month).filter(Boolean).sort().pop() || '';
   const staffNetTotal = r3(staff.reduce((t, s) => t + staffNet(s), 0));
 
   const TD = total(deptRows, 'paid');
@@ -284,6 +285,7 @@ function ExpensesPage() {
               <option value="all">All months</option>
             </select>
           </div>
+          <Link href={`/expenses/attendance?co=${co}`} className="btn">🗓 Attendance</Link>
           <Link href={`/expenses/docs?co=${co}`} className="btn">🧾 Invoice / Receipt</Link>
           <button type="button" className="btn ghost" onClick={doExcel}>Export Excel</button>
           <button type="button" className="btn ghost" onClick={doPdf}>Export PDF</button>
@@ -386,7 +388,11 @@ function ExpensesPage() {
           <h2>Salary sheet</h2>
           <EditToggle show={isAdmin} on={editStaff} onClick={() => setEditStaff((v) => !v)} />
         </div>
-        <p className="note" style={{ margin: '0 0 10px' }}>Total gross = (Basic + Allowances) ÷ 30 × Working days. Net pay = Gross − Deductions.</p>
+        <p className="note" style={{ margin: '0 0 10px' }}>
+          Total gross = (Basic + Allowances) ÷ 30 × Working days. Net pay = Gross − Deductions.
+          {' '}Working days are filled from <Link href={`/expenses/attendance?co=${co}${staffAttMonth ? `&m=${staffAttMonth}` : ''}`}>🗓 Attendance</Link>
+          {staffAttMonth ? ` (${monthLabel(staffAttMonth)})` : ''} when it is marked; you can still change them here.
+        </p>
         <DataGrid
           columns={staffCols}
           rows={staff}

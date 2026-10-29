@@ -13,6 +13,7 @@ import { COMPANIES, HEADS, r3 } from '@/lib/expenses';
 import { buildReminders, whenText } from '@/lib/reminders';
 import { useRaufPage } from '@/components/RaufContext';
 import { groupContext, groupGreeting } from '@/lib/groupAssistantContext';
+import { attendanceSummary } from '@/lib/attendance';
 import { GROUP_SOURCES as SOURCES, TRANSPORT_HEADS, buildLines, buildIncome, computeGroup, periodLabelOf, shiftMonth } from '@/lib/groupSummary';
 
 const PICK_KEY = 'tudo-summary-pick';
@@ -36,7 +37,7 @@ function SummaryPage() {
 
   const load = useCallback(async () => {
     const s = sb();
-    const [e, te, ts, tx, dr, bu, ve, ma] = await Promise.all([
+    const [e, te, ts, tx, dr, bu, ve, ma, st, at] = await Promise.all([
       s.from('exp_entries').select('company, entry_date, bill_no, description, category, head, paid, unpaid, vat, department, source_kind'),
       s.from('transport_entries').select('entry_date, received_date, driver_id, from_place, to_place, description, rent, received, diesel, toll, maintenance'),
       s.from('transport_salaries').select('*'),
@@ -44,9 +45,11 @@ function SummaryPage() {
       s.from('transport_drivers').select('id, name'),
       s.from('exp_budgets').select('*'),
       s.from('transport_vehicles').select('*'),
-      s.from('vehicle_maintenance').select('*')
+      s.from('vehicle_maintenance').select('*'),
+      s.from('exp_staff').select('id, name, company, department, active'),
+      s.from('exp_attendance').select('company, staff_id, day, mark')
     ]);
-    setData({ exp: e.data || [], te: te.data || [], ts: ts.data || [], tx: tx.data || [], drivers: dr.data || [], budgets: bu.data || [], vehicles: ve.data || [], maint: ma.data || [] });
+    setData({ exp: e.data || [], te: te.data || [], ts: ts.data || [], tx: tx.data || [], drivers: dr.data || [], budgets: bu.data || [], vehicles: ve.data || [], maint: ma.data || [], staff: st.data || [], att: at.error ? [] : at.data || [] });
   }, []);
 
   useEffect(() => {
@@ -80,6 +83,21 @@ function SummaryPage() {
 
   const G = useMemo(() => (data && period ? computeGroup({ lines, income, budgets: data.budgets, pick, period, today }) : null), [data, lines, income, pick, period, today]);
 
+  // Attendance of office staff (companies only, Fri and Sat off) for the chosen period
+  const ATT = useMemo(() => {
+    if (!data || !period) return null;
+    let months;
+    if (period === 'all') months = [...new Set((data.att || []).map((a) => String(a.day).slice(0, 7)))].sort();
+    else if (period.length === 4) months = Array.from({ length: 12 }, (_, i) => `${period}-${String(i + 1).padStart(2, '0')}`);
+    else months = [period];
+    return attendanceSummary({ staff: data.staff, att: data.att, pick, months, today, companies: COMPANIES });
+  }, [data, period, pick, today]);
+  const attAlerts = useMemo(() => (ATT && ATT.marked ? ATT.topAbsent.filter((p) => p.absent >= 3).map((p) => ({
+    level: p.absent >= 5 ? 'bad' : 'warn', icon: '🗓',
+    text: `${p.name} (${p.companyLabel}) was absent ${p.absent} day${p.absent === 1 ? '' : 's'}${p.half ? ` and ${p.half} half day${p.half === 1 ? '' : 's'}` : ''}.`,
+    link: `/expenses/attendance?co=${p.company}${period && period.length === 7 ? `&m=${period}` : ''}`
+  })) : []), [ATT, period]);
+
   // vehicle reminders (VOC, Mulkiya, PDC) join the alerts when Transport is chosen
   const vehicleAlerts = useMemo(() => {
     if (!data) return []; // always: Rauf and the alerts box see renewals and cheques whatever companies are picked
@@ -92,8 +110,15 @@ function SummaryPage() {
   // Everything on this page as text, for Noor (the AI assistant)
   const aiContext = useMemo(() => {
     if (!G || !period) return '';
-    try { return groupContext({ G, lines, income, allMonths, pick, periodLabel: periodLabelOf(period, monthLabel), extraAlerts: vehicleAlerts }); } catch { return ''; }
-  }, [G, lines, income, allMonths, pick, period, vehicleAlerts]);
+    let txt = '';
+    try { txt = groupContext({ G, lines, income, allMonths, pick, periodLabel: periodLabelOf(period, monthLabel), extraAlerts: [...vehicleAlerts, ...attAlerts] }); } catch { txt = ''; }
+    if (ATT && ATT.marked) {
+      txt += `\nATTENDANCE (office staff, Fri and Sat off, ${periodLabelOf(period, monthLabel)}):\n`
+        + ATT.rows.map((r) => `${r.label}: ${r.staff} staff, present ${r.present}, absent ${r.absent}, leave ${r.leave}, half day ${r.half}, not marked ${r.unmarked}${r.rate == null ? '' : `, attendance ${r.rate}%`}`).join('\n')
+        + (ATT.topAbsent.length ? `\nMost absent: ${ATT.topAbsent.map((p) => `${p.name} (${p.companyLabel}) ${p.absent} absent`).join('; ')}` : '');
+    }
+    return txt;
+  }, [G, lines, income, allMonths, pick, period, vehicleAlerts, attAlerts, ATT]);
   const aiGreeting = useMemo(() => {
     if (!G || !period) return null;
     const pl = periodLabelOf(period, monthLabel);
@@ -101,14 +126,14 @@ function SummaryPage() {
   }, [G, period, vehicleAlerts]);
 
   // Rauf (in AuthGate, on every page) gets this page's numbers too
-  const aiAlerts = G ? G.alerts.filter((a) => a.level !== 'info').length + vehicleAlerts.length : 0;
+  const aiAlerts = G ? G.alerts.filter((a) => a.level !== 'info').length + vehicleAlerts.length + attAlerts.length : 0;
   useRaufPage({ context: aiContext, greeting: aiGreeting, alertCount: aiAlerts });
 
   if (!data || !period || !G) return <div className="loading">Loading summary...</div>;
 
   const periodLabel = periodLabelOf(period, monthLabel);
   const years = [...new Set(allMonths.map((m) => m.slice(0, 4)))];
-  const alerts = [...G.alerts.filter((a) => a.level !== 'info'), ...vehicleAlerts, ...G.alerts.filter((a) => a.level === 'info')];
+  const alerts = [...G.alerts.filter((a) => a.level !== 'info'), ...vehicleAlerts, ...attAlerts, ...G.alerts.filter((a) => a.level === 'info')];
   const ranked = [...G.perSource].sort((a, b) => b.spent - a.spent);
   const topCo = ranked[0];
   const topHead = G.heads[0];
@@ -163,7 +188,7 @@ function SummaryPage() {
         const blob = await (await fetch('/tudonum-group.png')).blob();
         logo = await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(blob); });
       } catch { /* no logo */ }
-      const doc = buildGroupPdf(G, { periodLabel, monthLabel, logo, extraAlerts: vehicleAlerts });
+      const doc = buildGroupPdf(G, { periodLabel, monthLabel, logo, extraAlerts: [...vehicleAlerts, ...attAlerts], att: ATT });
       doc.save(`Group Summary ${periodLabel}.pdf`);
     } finally { setBusy(false); }
   }
@@ -312,6 +337,43 @@ function SummaryPage() {
               <PairBars labels={G.cash.months.map(shortM)} a={G.cash.in} b={G.cash.out} aLabel="Money in (received)" bLabel="Money spent" aColor={SERIES[2]} bColor={SERIES[1]} fmt={fmtO} onPick={(i) => drillMonth(G.cash.months[i])} />
               {G.owed > 0 && <p className="note">Still to receive from transport work: <b>{fmtO(G.owed)}</b></p>}
             </div>
+
+            {ATT && ATT.rows.length > 0 && (
+              <div className="rp-card rp-wide">
+                <div className="rp-card-title">🗓 Attendance <span className="rp-card-note">(office staff · Friday and Saturday off · {periodLabel})</span></div>
+                {ATT.marked ? (() => {
+                  const tot = ATT.rows.reduce((t, r) => { ['staff', 'present', 'absent', 'leave', 'half', 'unmarked'].forEach((k) => { t[k] += r[k]; }); return t; }, { staff: 0, present: 0, absent: 0, leave: 0, half: 0, unmarked: 0 });
+                  const counted = tot.present + tot.absent + tot.leave + tot.half;
+                  return (
+                    <>
+                      <div className="rp-takeaway">
+                        {counted ? `Attendance ${Math.round(((tot.present + tot.half * 0.5) / counted) * 100)}% across ${tot.staff} staff.` : ''}
+                        {tot.absent ? ` ${tot.absent} absent day${tot.absent === 1 ? '' : 's'}.` : ' No absences.'}
+                        {tot.unmarked ? ` ${tot.unmarked} working days not marked yet.` : ''}
+                      </div>
+                      <table className="rp-block-table sum-att">
+                        <thead><tr><th>Company</th><th className="num">Staff</th><th className="num">Present</th><th className="num">Absent</th><th className="num">Leave</th><th className="num">Half day</th><th className="num">Not marked</th><th className="num">Attendance</th><th className="no-print" /></tr></thead>
+                        <tbody>
+                          {ATT.rows.map((r) => (
+                            <tr key={r.key}>
+                              <td>{r.label}</td><td className="num">{r.staff}</td><td className="num">{r.present}</td>
+                              <td className={`num ${r.absent ? 'neg' : ''}`}>{r.absent}</td><td className="num">{r.leave}</td><td className="num">{r.half}</td>
+                              <td className="num">{r.unmarked}</td><td className="num"><b>{r.rate == null ? '–' : `${r.rate}%`}</b></td>
+                              <td className="no-print"><Link href={`/expenses/attendance?co=${r.key}${period.length === 7 ? `&m=${period}` : ''}`}>Open ›</Link></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {ATT.topAbsent.length > 0 && (
+                        <p className="note">Most absent: {ATT.topAbsent.map((p) => `${p.name} (${p.companyLabel}) ${p.absent}${p.half ? ` + ${p.half} half` : ''}`).join(' · ')}</p>
+                      )}
+                    </>
+                  );
+                })() : (
+                  <div className="rp-empty">No attendance marked for {periodLabel}. Open {ATT.rows.map((r, i) => <span key={r.key}>{i ? ', ' : ''}<Link href={`/expenses/attendance?co=${r.key}`}>{r.label}</Link></span>)} to mark it.</div>
+                )}
+              </div>
+            )}
 
             <div className="rp-card">
               <div className="rp-card-title">⏳ Unpaid bills by age</div>
