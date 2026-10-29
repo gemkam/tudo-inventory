@@ -2667,3 +2667,23 @@ a.tl-what { color: var(--brown); }
 .take-form label.wide { grid-column: 1 / -1; }
 .take-form input { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line, #cfdcd8); font: inherit; background: var(--surface, #fff); color: inherit; }
 @media (max-width: 760px) { .profit-grid, .take-form { grid-template-columns: 1fr; } .taken-list li { grid-template-columns: 80px 1fr auto auto; } }
+
+/* ---------- Group Summary: Profit and Loss statement (29 Oct 2026) ---------- */
+.pl-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.pl-top h2 { margin: 0; }
+.pl-period { font-size: 13px; font-weight: 600; color: var(--muted, #6b7c77); margin-left: 6px; }
+.pl-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 12px 0; }
+.pl-kpis > div { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line, #dfe8e5); background: var(--surface, #fff); display: flex; flex-direction: column; gap: 2px; }
+.pl-kpis span { font-size: 12px; font-weight: 600; color: var(--muted, #6b7c77); }
+.pl-kpis b { font-size: 18px; font-variant-numeric: tabular-nums; }
+.pl-kpis small { font-size: 11.5px; color: var(--muted, #6b7c77); }
+.pl-kpis .hero { background: var(--brown); border-color: var(--brown); }
+.pl-kpis .hero span, .pl-kpis .hero b, .pl-kpis .hero small { color: #fff; }
+.pl-table td:first-child { min-width: 260px; }
+.pl-table tr.pl-head td { font-weight: 700; background: var(--tint); color: var(--heading, #0f3d33); padding-top: 9px; }
+.pl-table tr.pl-line td:first-child, .pl-table tr.pl-memo td:first-child { padding-left: 22px; }
+.pl-table tr.pl-memo td { color: var(--muted, #6b7c77); font-style: italic; }
+.pl-table tr.pl-total td { font-weight: 700; border-top: 1px solid var(--line, #cfdcd8); }
+.pl-table tr.pl-result td { font-weight: 800; background: var(--grid-head); border-top: 2px solid var(--brown); }
+.pl-table tr.pl-result.pl-big td { font-size: 15px; }
+@media (max-width: 760px) { .pl-kpis { grid-template-columns: 1fr 1fr; } .pl-table td:first-child { min-width: 200px; } }

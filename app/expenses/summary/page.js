@@ -10,7 +10,7 @@ import Modal from '@/components/Modal';
 import { useShare } from '@/components/ShareModal';
 import { Donut, Bars, PairBars, HBars, SERIES } from '@/components/Charts';
 import { sb } from '@/lib/supabase';
-import { fmtAmt, monthLabel, todayISO, exportStamp } from '@/lib/sheet';
+import { fmtAmt, monthLabel, todayISO, exportStamp, exportExcel } from '@/lib/sheet';
 import { COMPANIES, HEADS, r3 } from '@/lib/expenses';
 import { buildReminders, whenText } from '@/lib/reminders';
 import { useRaufPage } from '@/components/RaufContext';
@@ -539,6 +539,8 @@ function SummaryPage() {
             </>
           )}
 
+          <PLStatement G={G} periodLabel={periodLabel} />
+
           <section className="panel">
             <h2>By company</h2>
             <div className="table-wrap">
@@ -680,6 +682,59 @@ function BudgetModal({ budgets, onClose, onSaved }) {
         <div className="modal-actions"><span className="note" style={{ marginRight: 'auto' }}>{msg}</span><button type="button" className="btn" onClick={onClose}>Done</button></div>
       </div>
     </Modal>
+  );
+}
+
+/* 📑 Profit and Loss statement (lib/groupSummary.js computePL). Negative amounts in brackets. */
+const plFmt = (v) => (v == null ? '' : Math.abs(v) < 0.0005 ? '–' : v < 0 ? `(${fmtAmt(-v)})` : fmtAmt(v));
+const plShort = (m) => monthLabel(m).replace(/ (\d{4})$/, (y) => ` '${y.trim().slice(2)}`);
+function PLStatement({ G, periodLabel }) {
+  const P = G.pl;
+  if (!P || !P.cols.length) return null;
+  const many = P.cols.length > 1;
+  async function excel() {
+    const head = ['Profit and Loss', ...(many ? P.cols.map((m) => monthLabel(m)) : []), 'Total'];
+    const rows = P.rows.map((r) => [r.kind === 'line' || r.kind === 'memo' ? `   ${r.label}` : r.label, ...(many ? r.vals.map((v) => (v == null ? '' : v)) : []), r.total == null ? '' : r.total]);
+    const bold = P.rows.map((r, i) => (r.kind !== 'line' && r.kind !== 'memo' ? i : -1)).filter((i) => i >= 0);
+    try {
+      await exportExcel(`Profit and Loss ${periodLabel}.xlsx`, [{
+        name: 'Profit and Loss', title: `Profit and Loss statement · ${periodLabel}`,
+        subtitle: `${G.chosen.map((s) => s.label).join(', ')} · OMR · Salary is not subtracted from gross profit · Printed ${exportStamp()}`,
+        head, rows, numCols: head.map((_, i) => i).slice(1), widths: [46, ...head.slice(1).map(() => 13)], boldRows: bold
+      }]);
+    } catch { /* ignore */ }
+  }
+  return (
+    <section className="panel pl-panel">
+      <div className="pl-top">
+        <h2>📑 Profit and Loss statement <span className="pl-period">{periodLabel}</span></h2>
+        <button type="button" className="btn small ghost" onClick={excel}>⬇ Excel</button>
+      </div>
+      <div className="pl-kpis">
+        <div><span>Gross profit</span><b className={P.gross < 0 ? 'neg' : 'pos'}>{plFmt(P.gross)}</b><small>Salary not subtracted</small></div>
+        <div><span>Net before tax</span><b className={P.before < 0 ? 'neg' : 'pos'}>{plFmt(P.before)}</b><small>After salaries and bills</small></div>
+        <div><span>Tax 15% (estimate)</span><b>{plFmt(P.tax)}</b><small>Only on profit</small></div>
+        <div className="hero"><span>Net after tax</span><b>{plFmt(P.after)}</b><small>{G.chosen.map((s) => s.label).join(', ')}</small></div>
+      </div>
+      <div className="table-wrap">
+        <table className="summary-table pl-table">
+          <thead><tr><th>OMR</th>{many && P.cols.map((m) => <th key={m} className="num">{plShort(m)}</th>)}<th className="num">Total</th></tr></thead>
+          <tbody>
+            {P.rows.map((r, i) => (
+              <tr key={i} className={`pl-${r.kind} ${r.big ? 'pl-big' : ''}`}>
+                <td>{r.note ? <span className="muted">{r.label}</span> : r.label}</td>
+                {many && r.vals.map((v, j) => <td key={j} className={`num ${r.kind === 'result' && v < 0 ? 'neg' : ''}`}>{r.kind === 'head' ? '' : plFmt(v)}</td>)}
+                <td className={`num ${r.kind === 'result' ? (r.total < 0 ? 'neg' : 'pos') : ''}`}>{r.kind === 'head' ? '' : plFmt(r.total)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="note" style={{ margin: '8px 0 0' }}>
+        Income is the Transport work amount (the 3 companies have no income in the system). VAT 5% is kept aside, not income.
+        Gross profit does not subtract salary. Company bills count when entered (paid + unpaid). Tax 15% is an estimate; the real tax is on the yearly profit.
+      </p>
+    </section>
   );
 }
 
