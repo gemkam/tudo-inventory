@@ -16,7 +16,7 @@ import { buildReminders, whenText } from '@/lib/reminders';
 import { useRaufPage } from '@/components/RaufContext';
 import { groupContext, groupGreeting } from '@/lib/groupAssistantContext';
 import { attendanceSummary } from '@/lib/attendance';
-import { GROUP_SOURCES as SOURCES, TRANSPORT_HEADS, buildLines, buildIncome, computeGroup, computeAnalytics, periodLabelOf, shiftMonth } from '@/lib/groupSummary';
+import { GROUP_SOURCES as SOURCES, TRANSPORT_HEADS, buildLines, buildIncome, buildDocSales, computeGroup, computeAnalytics, periodLabelOf, shiftMonth } from '@/lib/groupSummary';
 
 const PICK_KEY = 'tudo-summary-pick';
 const dmy = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
@@ -39,7 +39,7 @@ function SummaryPage() {
 
   const load = useCallback(async () => {
     const s = sb();
-    const [e, te, ts, tx, dr, bu, ve, ma, st, at] = await Promise.all([
+    const [e, te, ts, tx, dr, bu, ve, ma, st, at, docs] = await Promise.all([
       s.from('exp_entries').select('company, entry_date, bill_no, description, category, head, paid, unpaid, vat, department, source_kind'),
       s.from('transport_entries').select('entry_date, received_date, driver_id, from_place, to_place, description, rent, received, diesel, toll, maintenance, driver_allowance, vat_included'),
       s.from('transport_salaries').select('*'),
@@ -49,9 +49,10 @@ function SummaryPage() {
       s.from('transport_vehicles').select('*'),
       s.from('vehicle_maintenance').select('*'),
       s.from('exp_staff').select('*'),
-      s.from('exp_attendance').select('company, staff_id, day, mark')
+      s.from('exp_attendance').select('company, staff_id, day, mark'),
+      s.from('company_docs').select('company, kind, doc_no, doc_date, party, items, vat_pct').eq('kind', 'invoice')
     ]);
-    setData({ exp: e.data || [], te: te.data || [], ts: ts.data || [], tx: tx.data || [], drivers: dr.data || [], budgets: bu.data || [], vehicles: ve.data || [], maint: ma.data || [], staff: st.data || [], att: at.error ? [] : at.data || [] });
+    setData({ exp: e.data || [], te: te.data || [], ts: ts.data || [], tx: tx.data || [], drivers: dr.data || [], budgets: bu.data || [], vehicles: ve.data || [], maint: ma.data || [], staff: st.data || [], att: at.error ? [] : at.data || [], docs: docs.error ? [] : docs.data || [] });
   }, []);
 
   useEffect(() => {
@@ -76,6 +77,7 @@ function SummaryPage() {
 
   const lines = useMemo(() => (data ? buildLines(data) : []), [data]);
   const income = useMemo(() => (data ? buildIncome(data) : []), [data]);
+  const docSales = useMemo(() => (data ? buildDocSales(data.docs) : []), [data]);
   const today = todayISO();
   const thisMonth = today.slice(0, 7);
   const lastMonth = shiftMonth(thisMonth, -1);
@@ -83,7 +85,7 @@ function SummaryPage() {
   const allMonths = useMemo(() => [...new Set([...lines.map((l) => l.month), ...income.map((i) => i.month)])].filter(Boolean).sort(), [lines, income]);
   useEffect(() => { if (!period && allMonths.length) setPeriod(allMonths[allMonths.length - 1]); }, [allMonths, period]);
 
-  const G = useMemo(() => (data && period ? computeGroup({ lines, income, budgets: data.budgets, pick, period, today }) : null), [data, lines, income, pick, period, today]);
+  const G = useMemo(() => (data && period ? computeGroup({ lines, income, budgets: data.budgets, pick, period, today, docSales }) : null), [data, lines, income, pick, period, today, docSales]);
 
   const AN = useMemo(() => (G && data ? computeAnalytics({ G, lines, income, ts: data.ts, drivers: data.drivers, pick, period, today }) : null), [G, data, lines, income, pick, period, today]);
 
@@ -202,6 +204,7 @@ function SummaryPage() {
       <div className="page-tools">
         <Link href="/expenses" className="crumb">← Office Expense</Link>
         <div className="tools">
+          <button type="button" className="btn in" onClick={() => jumpTo('sales-sheet')} title="Go to the Sales sheet">💰 Sales</button>
           <button type="button" className="btn in" onClick={() => {
             const el = document.getElementById('pl-statement');
             if (!el) return;
@@ -268,6 +271,8 @@ function SummaryPage() {
         <div className="panel"><p className="empty">Choose one or more from the list above.</p></div>
       ) : (
         <div className="sum-report">
+          <SalesSheet G={G} periodLabel={periodLabel} />
+
           {alerts.length > 0 && (
             <section className="sum-alerts" aria-label="Alerts">
               <div className="sum-alerts-title">🔔 Needs attention <span>({alerts.length})</span></div>
@@ -688,6 +693,96 @@ function BudgetModal({ budgets, onClose, onSaved }) {
         <div className="modal-actions"><span className="note" style={{ marginRight: 'auto' }}>{msg}</span><button type="button" className="btn" onClick={onClose}>Done</button></div>
       </div>
     </Modal>
+  );
+}
+
+/* Scroll to a section and flash it */
+function jumpTo(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  el.classList.remove('pl-flash'); void el.offsetWidth; el.classList.add('pl-flash');
+}
+
+/* 💰 Sales sheet: everything earned (Transport trips + company invoices) for the chosen companies and period */
+function SalesSheet({ G, periodLabel }) {
+  const S = G.sales;
+  const [all, setAll] = useState(false);
+  if (!S) return null;
+  const many = S.cols.length > 1;
+  const shown = all ? S.list : S.list.slice(0, 15);
+  const srcLabel = (k) => (S.rows.find((r) => r.key === k) || { label: k }).label;
+  async function excel() {
+    try {
+      const sub = `${G.chosen.map((s) => s.label).join(', ')} · ${periodLabel} · OMR · Printed ${exportStamp()}`;
+      await exportExcel(`Sales ${periodLabel}.xlsx`, [
+        { name: 'Sales', title: `Sales · ${periodLabel}`, subtitle: sub, head: ['Source', 'Sales', 'VAT 5%', 'Without VAT', 'Received', 'To collect', 'Count'],
+          rows: S.rows.map((r) => [r.label, r.amount, r.vat, r.net, r.tracked ? r.received : '', r.tracked ? r.toCollect : '', r.count]),
+          totalsRow: ['Total', S.T.amount, S.T.vat, S.T.net, S.T.received, S.T.toCollect, S.T.count], numCols: [1, 2, 3, 4, 5, 6], widths: [28, 13, 11, 13, 13, 13, 8] },
+        ...(many ? [{ name: 'By month', title: 'Sales by month', subtitle: sub, head: ['Month', ...S.rows.map((r) => r.label), 'Total'],
+          rows: S.byMonth.map((m) => [monthLabel(m.month), ...m.vals, m.total]), numCols: S.rows.map((_, i) => i + 1).concat(S.rows.length + 1), widths: [16, ...S.rows.map(() => 18), 13] }] : []),
+        { name: 'All sales', title: `All sales · ${periodLabel}`, subtitle: sub, head: ['Date', 'Source', 'Ref', 'Customer / route', 'Sales', 'VAT 5%', 'Received'],
+          rows: S.list.map((x) => [x.date ? String(x.date).slice(0, 10).split('-').reverse().join('/') : '', srcLabel(x.src), x.ref || '', x.party || '', x.amount, x.vat, x.received == null ? '' : x.received]),
+          numCols: [4, 5, 6], widths: [12, 22, 14, 36, 12, 10, 12] }
+      ]);
+    } catch { /* ignore */ }
+  }
+  return (
+    <section className="panel pl-panel sales-panel" id="sales-sheet">
+      <div className="pl-top">
+        <h2>💰 Sales <span className="pl-period">{periodLabel}</span></h2>
+        <button type="button" className="btn small ghost" onClick={excel}>⬇ Excel</button>
+      </div>
+      <div className="pl-kpis sales-kpis">
+        <div className="hero"><span>Total sales</span><b>{fmtAmt(S.T.amount)}</b><small>{S.T.count} {S.T.count === 1 ? 'sale' : 'sales'}</small></div>
+        <div><span>VAT 5% inside</span><b>{fmtAmt(S.T.vat)}</b><small>Kept aside</small></div>
+        <div><span>Sales without VAT</span><b>{fmtAmt(S.T.net)}</b><small>Real income</small></div>
+        <div><span>Received</span><b className="pos">{fmtAmt(S.T.received)}</b><small>Transport trips</small></div>
+        <div><span>Still to collect</span><b className={S.T.toCollect > 0 ? 'neg' : ''}>{fmtAmt(S.T.toCollect)}</b><small>Transport trips</small></div>
+      </div>
+      <div className="table-wrap">
+        <table className="summary-table">
+          <thead><tr><th>Source</th>{many && S.cols.map((m) => <th key={m} className="num">{plShort(m)}</th>)}<th className="num">Sales</th><th className="num">VAT 5%</th><th className="num">Without VAT</th><th className="num">To collect</th></tr></thead>
+          <tbody>
+            {S.rows.map((r, i) => (
+              <tr key={r.key}>
+                <td><b>{r.label}</b><div className="note">{r.count} {r.count === 1 ? 'sale' : 'sales'}</div></td>
+                {many && S.byMonth.map((m) => <td key={m.month} className="num">{m.vals[i] ? fmtAmt(m.vals[i]) : <span className="muted">–</span>}</td>)}
+                <td className="num"><b>{r.amount ? fmtAmt(r.amount) : <span className="muted">–</span>}</b></td>
+                <td className="num">{r.vat ? fmtAmt(r.vat) : <span className="muted">–</span>}</td>
+                <td className="num">{r.net ? fmtAmt(r.net) : <span className="muted">–</span>}</td>
+                <td className={`num ${r.toCollect > 0 ? 'neg' : ''}`}>{r.tracked ? (r.toCollect ? fmtAmt(r.toCollect) : '–') : <span className="muted">not tracked</span>}</td>
+              </tr>
+            ))}
+            <tr className="sum"><td>Total</td>{many && S.byMonth.map((m) => <td key={m.month} className="num">{fmtAmt(m.total)}</td>)}<td className="num">{fmtAmt(S.T.amount)}</td><td className="num">{fmtAmt(S.T.vat)}</td><td className="num">{fmtAmt(S.T.net)}</td><td className="num">{fmtAmt(S.T.toCollect)}</td></tr>
+          </tbody>
+        </table>
+      </div>
+      {S.list.length > 0 && (
+        <>
+          <h3 className="sales-h3">Sales list {S.list.length > 15 && !all ? `(latest 15 of ${S.list.length})` : `(${S.list.length})`}</h3>
+          <div className="table-wrap">
+            <table className="summary-table">
+              <thead><tr><th>Date</th><th>Source</th><th>Customer / route</th><th className="num">Sales</th><th className="num">VAT 5%</th><th className="num">Received</th></tr></thead>
+              <tbody>
+                {shown.map((x, i) => (
+                  <tr key={i}>
+                    <td>{String(x.date).slice(0, 10).split('-').reverse().join('/')}</td>
+                    <td>{srcLabel(x.src)}{x.ref ? <div className="note">{x.ref}</div> : null}</td>
+                    <td>{x.party || '–'}</td>
+                    <td className="num"><b>{fmtAmt(x.amount)}</b></td>
+                    <td className="num">{x.vat ? fmtAmt(x.vat) : <span className="muted">–</span>}</td>
+                    <td className={`num ${x.received != null && x.received < x.amount ? 'neg' : ''}`}>{x.received == null ? <span className="muted">–</span> : fmtAmt(x.received)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {S.list.length > 15 && <button type="button" className="btn small ghost" style={{ marginTop: 8 }} onClick={() => setAll((v) => !v)}>{all ? 'Show less' : `Show all ${S.list.length}`}</button>}
+        </>
+      )}
+      <p className="note" style={{ margin: '8px 0 0' }}>Sales = Transport trips (work amount) + invoices made in 🧾 Invoice / Receipt for the 3 companies. VAT 5% is inside the amount and kept aside. Transport invoices are not added again (they bill the same trips).</p>
+    </section>
   );
 }
 

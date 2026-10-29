@@ -2690,3 +2690,9 @@ a.tl-what { color: var(--brown); }
 .pl-panel { scroll-margin-top: 80px; }
 .pl-panel.pl-flash { animation: pl-flash 1.6s ease-out; }
 @keyframes pl-flash { 0% { box-shadow: 0 0 0 4px var(--brown); } 100% { box-shadow: 0 0 0 0 transparent; } }
+
+/* ---------- Group Summary: Sales sheet (29 Oct 2026) ---------- */
+.sales-panel { margin-bottom: 14px; }
+.sales-kpis { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.sales-h3 { margin: 14px 0 6px; font-size: 15px; color: var(--heading, #0f3d33); }
+@media (max-width: 900px) { .sales-kpis { grid-template-columns: 1fr 1fr; } }
