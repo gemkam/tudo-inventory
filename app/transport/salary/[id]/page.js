@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import AuthGate from '@/components/AuthGate';
+import AuthGate, { useUser } from '@/components/AuthGate';
 import { sb } from '@/lib/supabase';
 import { monthKey, monthLabel } from '@/lib/sheet';
 import { SALARY_FIELDS, salaryTotal, salaryPayable } from '@/lib/transport';
@@ -32,6 +32,7 @@ function SlipPage() {
   const [error, setError] = useState('');
   const { open: openShare, modal } = useShare();
   const salLabels = useSalaryLabels();
+  const { isAdmin } = useUser();
 
   useEffect(() => {
     (async () => {
@@ -94,6 +95,9 @@ function SlipPage() {
           </div>
           <button type="button" className="btn in" onClick={() => window.print()} disabled={!sal}>Print / PDF</button>
           <button type="button" className="btn ghost" onClick={share} disabled={!sal}>Share</button>
+          {isAdmin && month && (
+            <Link href={`/transport/${id}?m=${month}&slip=edit`} className="btn ghost" title="Change salary amounts and driver allowance (trip sheets update too)">✏️ Edit</Link>
+          )}
         </div>
       </div>
 

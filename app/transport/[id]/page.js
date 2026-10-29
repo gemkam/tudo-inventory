@@ -73,6 +73,16 @@ function DriverSheet() {
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
+  /* Opened from a salary slip page: ?m=YYYY-MM&slip=1 (show slip) or slip=edit (open the slip Edit) */
+  const autoEdit = useRef(false);
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search);
+      const m = q.get('m');
+      if (m && /^\d{4}-\d{2}$/.test(m)) setMonth(m);
+      if (q.get('slip')) { setSlipOpen(true); autoEdit.current = q.get('slip') === 'edit'; }
+    } catch { /* ignore */ }
+  }, []);
   useEffect(() => {
     try { const c = JSON.parse(localStorage.getItem(COLS_KEY) || 'null'); if (Array.isArray(c) && c.length) setCols(c); } catch { /* ignore */ }
   }, []);
@@ -353,6 +363,12 @@ function DriverSheet() {
     .sort((a, b) => String(a.entry_date).localeCompare(String(b.entry_date))) : [];
 
   const allowMonths = [...new Set(allowTrips.map((e) => monthKey(e.entry_date)))].sort();
+
+  // Opened with ?slip=edit: start the slip Edit once the salary is loaded (once only)
+  if (autoEdit.current && slipOpen && slipSal && isAdmin && !slipEdit) {
+    autoEdit.current = false;
+    setTimeout(() => openSlipEdit(), 0);
+  }
 
   function openSlipEdit() {
     const v = Object.fromEntries(EDIT_FIELDS.map(([k]) => [k, Number(slipSal[k] || 0)]));
