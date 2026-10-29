@@ -2277,3 +2277,8 @@ textarea.drv-input { resize: vertical; }
 .rav-panel-txt { flex: 1; min-width: 200px; }
 .rav-panel-txt h2 { margin: 0 0 4px; }
 .rav-panel-txt .sub { margin: 0; }
+
+/* Documents Checklist: All employees table (29 Oct 2026) */
+.dc-sponsor { width: 150px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: inherit; font: inherit; }
+.dc-from { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.dc-table .btn.sm { padding: 3px 10px; font-size: 12px; }
