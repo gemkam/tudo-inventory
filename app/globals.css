@@ -2687,3 +2687,6 @@ a.tl-what { color: var(--brown); }
 .pl-table tr.pl-result td { font-weight: 800; background: var(--grid-head); border-top: 2px solid var(--brown); }
 .pl-table tr.pl-result.pl-big td { font-size: 15px; }
 @media (max-width: 760px) { .pl-kpis { grid-template-columns: 1fr 1fr; } .pl-table td:first-child { min-width: 200px; } }
+.pl-panel { scroll-margin-top: 80px; }
+.pl-panel.pl-flash { animation: pl-flash 1.6s ease-out; }
+@keyframes pl-flash { 0% { box-shadow: 0 0 0 4px var(--brown); } 100% { box-shadow: 0 0 0 0 transparent; } }

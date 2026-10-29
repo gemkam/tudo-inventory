@@ -202,6 +202,12 @@ function SummaryPage() {
       <div className="page-tools">
         <Link href="/expenses" className="crumb">← Office Expense</Link>
         <div className="tools">
+          <button type="button" className="btn in" onClick={() => {
+            const el = document.getElementById('pl-statement');
+            if (!el) return;
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            el.classList.remove('pl-flash'); void el.offsetWidth; el.classList.add('pl-flash');
+          }} title="Go to the Profit and Loss statement">📑 Profit and Loss</button>
           {isAdmin && <button type="button" className="btn ghost" onClick={() => setBudgetOpen(true)}>🎯 Budgets</button>}
           <button type="button" className="btn ghost" onClick={downloadPdf} disabled={busy}>{busy ? 'Making PDF...' : '⬇ PDF'}</button>
           <button type="button" className="btn ghost" onClick={share}>📤 Share</button>
@@ -705,7 +711,7 @@ function PLStatement({ G, periodLabel }) {
     } catch { /* ignore */ }
   }
   return (
-    <section className="panel pl-panel">
+    <section className="panel pl-panel" id="pl-statement">
       <div className="pl-top">
         <h2>📑 Profit and Loss statement <span className="pl-period">{periodLabel}</span></h2>
         <button type="button" className="btn small ghost" onClick={excel}>⬇ Excel</button>
