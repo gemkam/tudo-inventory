@@ -81,7 +81,8 @@ function TransportReports() {
       };
       o.expenses = num(o.diesel + o.toll + o.maintenance + o.salary + o.allowance + o.other);
       o.workNet = num(o.work - o.vat);
-      o.profit = num(o.workNet - o.expenses); // VAT 5% is not income: kept aside
+      // Profit: salary is NOT subtracted (client rule); VAT 5% kept aside
+      o.profit = num(o.workNet - o.diesel - o.toll - o.maintenance - o.allowance - o.other);
       o.dieselPerTrip = o.trips ? num(o.diesel / o.trips) : 0;
       return o;
     });
@@ -103,11 +104,11 @@ function TransportReports() {
     const byMonth = months.map((m) => {
       const me = entries.filter((e) => monthKey(e.entry_date) === m);
       const work = sum(me, 'rent');
-      const cost = num(sum(me, 'diesel') + sum(me, 'toll') + sum(me, 'maintenance') + sum(me, 'driver_allowance')
-        + salaries.filter((s) => monthKey(s.month) === m).reduce((t, s) => t + salaryPayable(s) - Number(s.trip_allowance || 0) - Number(s.allowance_carried || 0), 0)
+      const salPart = num(salaries.filter((s) => monthKey(s.month) === m).reduce((t, s) => t + salaryPayable(s) - Number(s.trip_allowance || 0) - Number(s.allowance_carried || 0), 0));
+      const cost = num(sum(me, 'diesel') + sum(me, 'toll') + sum(me, 'maintenance') + sum(me, 'driver_allowance') + salPart
         + sum(extras.filter((x) => monthKey(x.month) === m), 'amount'));
       const vat = vatSum(me);
-      return { m, label: monthLabel(m).replace(/ \d{4}$/, (y) => ` '${y.trim().slice(2)}`), work, vat, cost, profit: num(work - vat - cost) };
+      return { m, label: monthLabel(m).replace(/ \d{4}$/, (y) => ` '${y.trim().slice(2)}`), work, vat, cost, profit: num(work - vat - (cost - salPart)) };
     });
 
     const toCollect = es.filter((e) => Number(e.rent) > Number(e.received)).map((e) => ({ ...e, due: num(Number(e.rent) - Number(e.received)) }));
@@ -179,7 +180,7 @@ function TransportReports() {
             ['Diesel', T.diesel, ''], ['Toll + visa exit fee', T.toll, ''], ['Maintenance', T.maintenance, ''],
             ['Driver allowance', T.allowance, T.allowanceOpen ? `${fmtAmt(T.allowanceOpen)} not paid yet` : 'All paid'],
             ['Salaries (fixed part)', T.salary, r.wholeMonths ? 'Without driver allowance' : 'Not included in a 7-day view'], ['Other expenses', T.other, ''],
-            ['Total expenses', T.expenses, ''], ['Profit', T.profit, `${margin}% of work amount`]
+            ['Total expenses', T.expenses, 'Includes salaries'], ['Profit', T.profit, `${margin}% of work amount · salary not subtracted`]
           ],
           boldRows: [10, 11]
         },
@@ -254,7 +255,7 @@ function TransportReports() {
           </div>
           <div className="rp-card">
             <div className="rp-card-title">Work amount and expenses each month</div>
-            <div className="rp-takeaway">{r.byMonth.length ? `The gap between the two bars is the profit.` : 'No data yet.'}</div>
+            <div className="rp-takeaway">{r.byMonth.length ? 'Expenses include salaries. Profit does not subtract salary.' : 'No data yet.'}</div>
             <PairBars labels={r.byMonth.map((x) => x.label)} a={r.byMonth.map((x) => x.work)} b={r.byMonth.map((x) => x.cost)} aLabel="Work amount" bLabel="Expenses" fmt={(v) => `${fmtAmt(v)} OMR`} />
           </div>
           <div className="rp-card">

@@ -7,7 +7,7 @@ import Link from 'next/link';
 import AuthGate, { useUser } from '@/components/AuthGate';
 import { sb } from '@/lib/supabase';
 import { num, fmtAmt, monthKey, monthLabel, exportStamp, exportExcel, exportPdf } from '@/lib/sheet';
-import { salaryPayable } from '@/lib/transport';
+import { salaryPayable, vatOf } from '@/lib/transport';
 import CompanyHeader, { COMPANY_NAME } from '@/components/CompanyHeader';
 import Omr from '@/components/Omr';
 
@@ -34,7 +34,7 @@ function TransportPage() {
     const s = sb();
     const [d, e, sa, ex] = await Promise.all([
       s.from('transport_drivers').select('*').order('sort').order('name'),
-      s.from('transport_entries').select('id, driver_id, entry_date, from_place, to_place, description, payment_status, sort, rent, received, diesel, toll, maintenance, driver_allowance, allowance_status, allowance_salary_id'),
+      s.from('transport_entries').select('id, driver_id, entry_date, from_place, to_place, description, payment_status, sort, rent, received, diesel, toll, maintenance, driver_allowance, allowance_status, allowance_salary_id, vat_included'),
       s.from('transport_salaries').select('*'),
       s.from('transport_extras').select('*').order('created_at')
     ]);
@@ -84,7 +84,9 @@ function TransportPage() {
       };
       r.receivable = num(r.work - r.received);
       r.expenses = num(r.diesel + r.toll + r.maintenance + r.salary + r.other);
-      r.profit = num(r.work - r.expenses);
+      r.vat = num(es.reduce((t, e) => t + vatOf(e), 0));
+      // Profit: salary is NOT subtracted (client rule). VAT 5% kept aside. Driver allowance counted per trip.
+      r.profit = num(r.work - r.vat - r.diesel - r.toll - r.maintenance - r.tripAllowance - r.other);
       return r;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
