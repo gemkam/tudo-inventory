@@ -46,7 +46,7 @@ function SummaryPage() {
       s.from('exp_budgets').select('*'),
       s.from('transport_vehicles').select('*'),
       s.from('vehicle_maintenance').select('*'),
-      s.from('exp_staff').select('id, name, company, department, active'),
+      s.from('exp_staff').select('*'),
       s.from('exp_attendance').select('company, staff_id, day, mark')
     ]);
     setData({ exp: e.data || [], te: te.data || [], ts: ts.data || [], tx: tx.data || [], drivers: dr.data || [], budgets: bu.data || [], vehicles: ve.data || [], maint: ma.data || [], staff: st.data || [], att: at.error ? [] : at.data || [] });
@@ -340,7 +340,7 @@ function SummaryPage() {
 
             {ATT && ATT.rows.length > 0 && (
               <div className="rp-card rp-wide">
-                <div className="rp-card-title">🗓 Attendance <span className="rp-card-note">(office staff · Friday and Saturday off · {periodLabel})</span></div>
+                <div className="rp-card-title">🗓 Attendance <span className="rp-card-note">(office staff Fri + Sat off · site staff Fri off · {periodLabel})</span></div>
                 {ATT.marked ? (() => {
                   const tot = ATT.rows.reduce((t, r) => { ['staff', 'present', 'absent', 'leave', 'half', 'unmarked'].forEach((k) => { t[k] += r[k]; }); return t; }, { staff: 0, present: 0, absent: 0, leave: 0, half: 0, unmarked: 0 });
                   const counted = tot.present + tot.absent + tot.leave + tot.half;
@@ -364,6 +364,9 @@ function SummaryPage() {
                           ))}
                         </tbody>
                       </table>
+                      {Object.keys(ATT.leaveWhy || {}).length > 0 && (
+                        <p className="note">Leave (paid): {Object.entries(ATT.leaveWhy).map(([k, v]) => `${k} ${v}`).join(' · ')}</p>
+                      )}
                       {ATT.topAbsent.length > 0 && (
                         <p className="note">Most absent: {ATT.topAbsent.map((p) => `${p.name} (${p.companyLabel}) ${p.absent}${p.half ? ` + ${p.half} half` : ''}`).join(' · ')}</p>
                       )}

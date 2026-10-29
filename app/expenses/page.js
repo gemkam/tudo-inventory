@@ -198,6 +198,7 @@ function ExpensesPage() {
     expiryCol('visa_expiry', 'Visa expiry'),
     { key: 'basic', label: 'Basic pay', type: 'number', min: 0, width: 110, render: amt('basic') },
     { key: 'allowances', label: 'Allowances', type: 'number', min: 0, width: 110, render: amt('allowances') },
+    ...(staff.some((x) => Object.prototype.hasOwnProperty.call(x, 'staff_type')) ? [{ key: 'staff_type', label: 'Type', type: 'select', options: ['Office', 'Site'], width: 100, render: (r) => r.staff_type || 'Office' }] : []),
     { key: 'working_days', label: 'Working days', type: 'number', min: 0, width: 120, render: (r) => <span title={r.attendance_month ? `From attendance ${monthLabel(r.attendance_month)}` : undefined}>{num(r.working_days)}{r.attendance_month ? ' 🗓' : ''}</span> },
     { key: 'gross', label: 'Total gross', type: 'calc', width: 120, render: (r) => fmtAmt(staffGross(r)) },
     { key: 'deductions', label: 'Deductions / advances', type: 'number', min: 0, width: 150, render: amt('deductions') },

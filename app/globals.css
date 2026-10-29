@@ -2325,3 +2325,9 @@ textarea.drv-input { resize: vertical; }
   .at-day, .at-cell { width: 18px; min-width: 18px; height: 18px; }
   .at-name { position: static; min-width: 90px; }
 }
+.at-table .off-office { background: color-mix(in srgb, var(--row-alt) 55%, transparent); }
+.at-reason { padding: 5px 10px; border-radius: 999px; border: 1.5px solid #2563eb; background: var(--surface); color: inherit; font: inherit; font-size: 13px; }
+.at-why { font-size: 9px; margin-left: 1px; }
+.at-type { border: 1px solid var(--line); background: var(--surface); color: inherit; border-radius: 999px; padding: 0 7px; font: inherit; font-size: 10px; cursor: pointer; }
+.at-type:disabled { cursor: default; }
+.at-type.site { border-color: #b45309; color: #b45309; }
