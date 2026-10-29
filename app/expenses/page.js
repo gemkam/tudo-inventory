@@ -11,6 +11,8 @@ import { HBars } from '@/components/Charts';
 import { useShare } from '@/components/ShareModal';
 import { sb } from '@/lib/supabase';
 import StaffPayCards from '@/components/StaffPayCards';
+import { expiryCol } from '@/components/Expiry';
+import { useViewMode } from '@/lib/viewMode';
 import { hasPaidCols, staffBalance } from '@/lib/payBalance';
 import { num, fmtAmt, monthKey, monthLabel, todayISO, exportExcel, exportPdf, exportStamp, fmtFullDate } from '@/lib/sheet';
 import { HEADS, CATEGORIES, COMPANIES, DEPARTMENTS, SOURCE_LABEL, companyOf, n, r3, staffGross, staffNet } from '@/lib/expenses';
@@ -28,6 +30,7 @@ function ExpensesPage() {
   const [dept, setDept] = useState('');
   const [editRows, setEditRows] = useState(false);
   const [editStaff, setEditStaff] = useState(false);
+  const [view] = useViewMode('cards');
   const [del, setDel] = useState(null);
   const [toast, setToast] = useState(null);
   const [error, setError] = useState('');
@@ -191,6 +194,26 @@ function ExpensesPage() {
     { key: 'vat_reg_no', label: 'VAT Reg No', type: 'text', width: 140 }
   ];
 
+  const staffPaidCols = staff.some(hasPaidCols);
+  const staffCols = [
+    { key: 'name', label: 'Name', type: 'text', width: 220, render: (r) => <b>{r.name}</b> },
+    { key: 'department', label: 'Department', type: 'text', width: 170 },
+    { key: 'resident_card', label: 'Resident Card No.', type: 'text', width: 140 },
+    expiryCol('resident_card_expiry', 'Resident Card expiry'),
+    expiryCol('visa_expiry', 'Visa expiry'),
+    { key: 'basic', label: 'Basic pay', type: 'number', min: 0, width: 110, render: amt('basic') },
+    { key: 'allowances', label: 'Allowances', type: 'number', min: 0, width: 110, render: amt('allowances') },
+    ...(staff.some((x) => Object.prototype.hasOwnProperty.call(x, 'staff_type')) ? [{ key: 'staff_type', label: 'Type', type: 'select', options: ['Office', 'Site'], width: 100, render: (r) => r.staff_type || 'Office' }] : []),
+    { key: 'working_days', label: 'Working days', type: 'number', min: 0, width: 120, render: (r) => <span title={r.attendance_month ? `From attendance ${monthLabel(r.attendance_month)}` : undefined}>{num(r.working_days)}{r.attendance_month ? ' 🗓' : ''}</span> },
+    { key: 'gross', label: 'Total gross', type: 'calc', width: 120, render: (r) => fmtAmt(staffGross(r)) },
+    { key: 'deductions', label: 'Deductions / advances', type: 'number', min: 0, width: 150, render: amt('deductions') },
+    { key: 'net', label: 'Net pay', type: 'calc', width: 120, render: (r) => <b>{fmtAmt(staffNet(r))}</b> },
+    ...(staffPaidCols ? [
+      { key: 'prev_balance', label: 'Previous unpaid', type: 'number', min: 0, width: 130, render: amt('prev_balance') },
+      { key: 'paid_amount', label: 'Paid', type: 'number', min: 0, width: 110, render: amt('paid_amount') },
+      { key: 'unpaid_bal', label: 'Unpaid balance', type: 'calc', width: 130, render: (r) => { const b = Math.max(0, staffBalance(r, staffNet(r))); return b ? <b className="neg">{fmtAmt(b)}</b> : <span className="pos">Nil</span>; } }
+    ] : [])
+  ];
   const staffAttMonth = staff.map((x) => x.attendance_month).filter(Boolean).sort().pop() || '';
   const staffNetTotal = r3(staff.reduce((t, s) => t + staffNet(s), 0));
 
@@ -382,7 +405,22 @@ function ExpensesPage() {
           {' '}Working days are filled from <Link href={`/expenses/attendance?co=${co}${staffAttMonth ? `&m=${staffAttMonth}` : ''}`}>🗓 Attendance</Link>
           {staffAttMonth ? ` (${monthLabel(staffAttMonth)})` : ''} when it is marked; you can still change them here.
         </p>
-        <StaffPayCards staff={staff} canEdit={isAdmin && editStaff} canPay={isAdmin} onSave={saveStaff} onAdd={addStaff} onDelete={deleteStaff} />
+        {view === 'cards' ? (
+          <StaffPayCards staff={staff} canEdit={isAdmin && editStaff} canPay={isAdmin} onSave={saveStaff} onAdd={addStaff} onDelete={deleteStaff} />
+        ) : (
+          <DataGrid
+            columns={staffCols}
+            rows={staff}
+            canEdit={isAdmin && editStaff}
+            onSave={(row, key, value) => { saveStaff(row, key, value); if (key === 'paid_amount') saveStaff(row, 'paid_on', value ? (row.paid_on || todayISO()) : null); }}
+            onAdd={addStaff}
+            addLabel="+ Add staff"
+            onDelete={deleteStaff}
+            emptyText="No staff yet. Press ✏️ Edit, then + Add staff."
+            footer={{ net: <Omr v={staffNetTotal} />, ...(staffPaidCols ? { paid_amount: fmtAmt(r3(staff.reduce((a, x) => a + n(x.paid_amount), 0))), unpaid_bal: fmtAmt(r3(staff.reduce((a, x) => a + Math.max(0, staffBalance(x, staffNet(x))), 0))) } : {}) }}
+            flash={flash}
+          />
+        )}
       </section>
 
       {del && (

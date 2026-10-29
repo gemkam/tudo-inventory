@@ -10,6 +10,7 @@ import EditToggle from '@/components/EditToggle';
 import DriverDesk from '@/components/DriverDesk';
 import Omr from '@/components/Omr';
 import DateInput from '@/components/DateInput';
+import { useViewMode } from '@/lib/viewMode';
 import { sb } from '@/lib/supabase';
 import { num, fmtAmt, monthKey, monthStart, monthLabel, todayISO, exportExcel, exportStamp } from '@/lib/sheet';
 import { SALARY_FIELDS, salaryTotal, salaryPayable } from '@/lib/transport';
@@ -44,6 +45,7 @@ function DriverSheet() {
   const [entries, setEntries] = useState([]);
   const [editSal, setEditSal] = useState(null);
   const [undo, setUndo] = useState({});
+  const [view] = useViewMode('cards');
   const [editMode, setEditMode] = useState(false);
   const [del, setDel] = useState(null);
   const [toast, setToast] = useState(null);
@@ -203,6 +205,7 @@ function DriverSheet() {
         {byMonth.length > 0 && (
           <>
             <h3 className="pc-h3">Salary by month</h3>
+            {view === 'cards' ? (
             <div className="pc-grid">
               {byMonth.map((s) => {
                 const k = monthKey(s.month);
@@ -257,6 +260,44 @@ function DriverSheet() {
                 );
               })}
             </div>
+            ) : (
+            <div className="table-wrap no-cards">
+              <table className="ss-table">
+                <thead>
+                  <tr>
+                    <th className="l">Month</th>
+                    {cardFields.map(([f]) => <th key={f}>{label(f)}</th>)}
+                    <th className="hi">Total</th><th>{label('advance_deduction')}</th><th>{label('special_allowance')}</th><th className="hi">Net payable</th>
+                    <th>Paid</th><th>Paid on</th><th className="hi">Not paid</th>{isAdmin && <th />}
+                  </tr>
+                </thead>
+                <tbody>
+                  {byMonth.map((s) => {
+                    const due = salaryDue(s);
+                    return (
+                      <tr key={s.id}>
+                        <td className="l"><b>{monthLabel(monthKey(s.month))}</b></td>
+                        {cardFields.map(([f]) => <td key={f}>{n(s[f]) ? fmtAmt(s[f]) : '–'}</td>)}
+                        <td className="hi">{fmtAmt(salaryTotal(s))}</td>
+                        <td>{n(s.advance_deduction) ? `−${fmtAmt(s.advance_deduction)}` : '–'}</td>
+                        <td>{n(s.special_allowance) ? fmtAmt(s.special_allowance) : '–'}</td>
+                        <td className="hi"><b>{fmtAmt(salaryPayable(s))}</b></td>
+                        <td>{isAdmin && hasPaidCols(s) ? <AmountInput value={s.paid_amount} width={95} onSave={(v) => savePaid(s, v)} /> : (s.paid_amount == null ? '–' : fmtAmt(s.paid_amount))}</td>
+                        <td>{fmtD(s.paid_on) || '–'}</td>
+                        <td className="hi">{due == null ? '–' : due > 0.0005 ? <b className="neg">{fmtAmt(due)}</b> : 'Paid ✓'}</td>
+                        {isAdmin && (
+                          <td className="c">
+                            {(undo[s.id] || []).length > 0 && <button type="button" className="btn small ghost" onClick={() => undoSal(s)}>↶ Undo</button>}
+                            {hasPaidCols(s) && due > 0.0005 && <button type="button" className="btn small in" onClick={() => savePaid(s, salaryPayable(s))}>✓ Paid</button>}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            )}
           </>
         )}
       </div>

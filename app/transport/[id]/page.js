@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import AuthGate, { useUser } from '@/components/AuthGate';
 import TripCards from '@/components/TripCards';
+import DataGrid from '@/components/DataGrid';
+import { useViewMode } from '@/lib/viewMode';
 import Modal from '@/components/Modal';
 import CompanyHeader, { COMPANY_NAME } from '@/components/CompanyHeader';
 import { sb } from '@/lib/supabase';
@@ -46,6 +48,7 @@ function DriverSheet() {
   const [colsOpen, setColsOpen] = useState(false);
   const toastTimer = useRef(null);
   const canChange = isAdmin && editMode;
+  const [view] = useViewMode('cards');
 
   const flash = useCallback((text, kind = 'ok') => {
     setToast({ text, kind });
@@ -561,18 +564,42 @@ function DriverSheet() {
             {prevOpenTotal > 0 && <small>This month {fmtAmt(totals.driver_allowance)} + previous {fmtAmt(prevOpenTotal)} = <b>{fmtAmt(totals.driver_allowance + prevOpenTotal)}</b> driver allowance due</small>}
           </div>
         )}
-        <TripCards
-          rows={rows}
+        {view === 'cards' ? (
+          <TripCards
+            rows={rows}
+            columns={columns}
+            canEdit={canChange}
+            onSave={save}
+            onAdd={addRow}
+            onDelete={(r) => setDel(r)}
+            flash={flash}
+            totals={totals}
+            prevOpenTotal={prevOpenTotal}
+            allowLabel={(r) => `${r.allowance_status}${r.allowance_status === 'Paid' && r.allowance_salary_id && salMonths[r.allowance_salary_id] > monthKey(r.entry_date) ? ` (${monthLabel(salMonths[r.allowance_salary_id])})` : ''}`}
+          />
+        ) : (
+          <div className="no-cards">
+        <DataGrid
           columns={columns}
+          rows={rows}
           canEdit={canChange}
           onSave={save}
           onAdd={addRow}
+          addLabel="+ Add trip or expense"
           onDelete={(r) => setDel(r)}
+          rowClass={(r) => (Number(r.rent) === 0 && Number(r.maintenance) > 0 ? 'expense-row' : Number(r.rent) > Number(r.received) ? 'due-row' : '')}
+          emptyText="No trips in this month."
+          footer={{
+            entry_date: `${totals.trips} trips`,
+            rent: fmtAmt(totals.rent), received: fmtAmt(totals.received),
+            balance: <span className={totals.balance > 0 ? 'neg' : ''}>{fmtAmt(totals.balance)}</span>,
+            driver_allowance: prevOpenTotal > 0 ? <span className="fa-prev">{fmtAmt(totals.driver_allowance)}<small>+ prev. {fmtAmt(prevOpenTotal)} not paid</small></span> : fmtAmt(totals.driver_allowance), diesel: fmtAmt(totals.diesel),
+            toll: fmtAmt(totals.toll), maintenance: fmtAmt(totals.maintenance)
+          }}
           flash={flash}
-          totals={totals}
-          prevOpenTotal={prevOpenTotal}
-          allowLabel={(r) => `${r.allowance_status}${r.allowance_status === 'Paid' && r.allowance_salary_id && salMonths[r.allowance_salary_id] > monthKey(r.entry_date) ? ` (${monthLabel(salMonths[r.allowance_salary_id])})` : ''}`}
         />
+          </div>
+        )}
         <p className="sheet-hint">
           Red edge: money still to collect. Amber edge: expense without a trip. All amounts in OMR.
           {!isAdmin && ' View only.'}

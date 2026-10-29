@@ -1,5 +1,6 @@
 'use client';
 
+import TableCards, { ViewSwitch } from '@/components/TableCards';
 import PrintColumns from '@/components/PrintColumns';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -114,6 +115,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
             ))}
           </nav>
           <div className="top-user">
+            {user.canRead && !user.isEntry && <ViewSwitch />}
             <ThemeMenu />
             <span className="who">
               {user.name} <small className="who-role">· {ROLES[user.role]?.short || user.role}</small>
@@ -126,6 +128,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
         {blocked ? <div className="error">{blocked}</div> : children}
       </main>
       {user.canRead && !blocked && <PrintColumns />}
+      {user.canRead && !blocked && <TableCards />}
       {user.canRead && (
         <RaufAssistant
           context={pageAi?.context || ''}

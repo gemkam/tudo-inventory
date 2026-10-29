@@ -10,6 +10,7 @@ import AllowanceNotes from '@/components/AllowanceNotes';
 import { PayCard, PaySection, PayRow, AmountInput, BalanceBox, PaySummary, money } from '@/components/PayCard';
 import { hasPaidCols, driverBalance } from '@/lib/payBalance';
 import { useSalaryLabels } from '@/lib/labels';
+import { useViewMode } from '@/lib/viewMode';
 import { omrInWords } from '@/lib/words';
 import { fmtD } from '@/lib/reminders';
 
@@ -38,6 +39,7 @@ function SheetPage() {
   const [month, setMonth] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
+  const [view] = useViewMode('cards');
 
   const load = useCallback(async () => {
     const s = sb();
@@ -167,7 +169,7 @@ function SheetPage() {
       {!tracked && withSal.length > 0 && <div className="ss-msg warn no-print">Salary payments are not recorded yet. Run <b>supabase/salary-paid.sql</b> once in Supabase so you can type what was paid. Until then only unpaid driver allowance is in the balance.</div>}
       {missing.length > 0 && !isAdmin && <p className="muted no-print">No salary yet for {missing.map((r) => r.d.name).join(', ')}.</p>}
 
-      <article className="ss-paper pc-paper">
+      <article className={`ss-paper ${view === 'cards' ? 'pc-paper' : ''}`}>
         <header className="ss-head">
           <img src="/modern-city-logo.png" alt="Modern City" />
           <div>
@@ -188,6 +190,7 @@ function SheetPage() {
         {withSal.length === 0 ? (
           <p className="ss-empty">No salaries for {monthLabel(month)} yet.{isAdmin && missing.length ? ' Press "Create salary" above.' : ''}</p>
         ) : (
+view === 'cards' ? (
           <div className="pc-grid">
             {withSal.map(({ d, s, bal }, i) => (
               <PayCard key={d.id} no={i + 1} title={d.name} href={`/transport/salary-sheet/${d.id}`}
@@ -220,6 +223,63 @@ function SheetPage() {
               </PayCard>
             ))}
           </div>
+          ) : (
+          <div className="table-wrap no-cards">
+            <table className="ss-table">
+              <thead>
+                <tr>
+                  <th>S.No</th><th className="l">Driver</th><th className="l">Resident Card</th><th className="l">Vehicle</th>
+                  {fields.map(([k]) => <th key={k}>{label(k)}</th>)}
+                  <th className="hi">Total</th><th>{label('advance_deduction')}</th><th>{label('special_allowance')}</th><th className="hi">Net payable</th>
+                  {tracked && <th>Paid</th>}<th className="hi">Unpaid balance</th><th className="sig">Signature</th>
+                </tr>
+              </thead>
+              <tbody>
+                {withSal.map(({ d, s, bal }, i) => (
+                  <tr key={d.id}>
+                    <td className="c">{i + 1}</td>
+                    <td className="l">
+                      <Link href={`/transport/salary-sheet/${d.id}`} className="ss-name"><b>{d.name}</b></Link>
+                      <AllowanceNotes story={allowanceStory(entries, salaries, d.id, month)} month={month} compact />
+                    </td>
+                    <td className="l">{d.resident_card || '–'}</td>
+                    <td className="l">{d.vehicle_no || '–'}</td>
+                    {fields.map(([k]) => (
+                      <td key={k}>
+                        {n(s[k]) ? fmtAmt(s[k]) : '–'}
+                        {k === 'allowance_carried' && s.allowance_carried_note && <small className="ss-note">{s.allowance_carried_note}</small>}
+                      </td>
+                    ))}
+                    <td className="hi">{fmtAmt(salaryTotal(s))}</td>
+                    <td>{n(s.advance_deduction) ? `−${fmtAmt(s.advance_deduction)}` : '–'}</td>
+                    <td>{n(s.special_allowance) ? fmtAmt(s.special_allowance) : '–'}</td>
+                    <td className="hi"><b>{fmtAmt(salaryPayable(s))}</b></td>
+                    {tracked && (
+                      <td>
+                        {isAdmin && hasPaidCols(s) ? <AmountInput value={s.paid_amount} width={95} onSave={(v) => savePaid(s, v)} /> : (s.paid_amount == null ? '–' : fmtAmt(s.paid_amount))}
+                      </td>
+                    )}
+                    <td className="hi">{bal.total > 0.0005 ? <b className="neg">{fmtAmt(bal.total)}</b> : 'Nil'}</td>
+                    <td className="sig" />
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colSpan={4} className="l">TOTAL (OMR)</td>
+                  {fields.map(([k]) => <td key={k}>{fmtAmt(sum((s) => n(s[k])))}</td>)}
+                  <td className="hi">{fmtAmt(sum(salaryTotal))}</td>
+                  <td>{sum((s) => n(s.advance_deduction)) ? `−${fmtAmt(sum((s) => n(s.advance_deduction)))}` : '–'}</td>
+                  <td>{fmtAmt(sum((s) => n(s.special_allowance)))}</td>
+                  <td className="hi"><b>{fmtAmt(netTotal)}</b></td>
+                  {tracked && <td>{fmtAmt(sum((s) => n(s.paid_amount)))}</td>}
+                  <td className="hi"><b>{fmtAmt(num(withSal.reduce((t, r) => t + r.bal.total, 0)))}</b></td>
+                  <td className="sig" />
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          )
         )}
 
         {owedNoSal.length > 0 && (
