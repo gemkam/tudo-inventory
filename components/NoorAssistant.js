@@ -4,6 +4,8 @@
 // Animated face (blinks, listens, thinks, talks), can be dragged anywhere, English and Roman Urdu,
 // polite male voice, hands-free Talk mode that waits for 3 seconds of silence before answering.
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRaufAvatar } from '@/lib/raufAvatar';
+import RaufAvatarEditor from '@/components/RaufAvatarEditor';
 import { sb } from '@/lib/supabase';
 
 const SILENCE_MS = 3000;
@@ -139,20 +141,26 @@ function Avatar({ mode, uid }) {
 }
 
 let faceId = 0;
-function Face({ mode, size = 'big' }) {
+function Face({ mode, size = 'big', pic }) {
   const [uid] = useState(() => `nf${++faceId}`);
   return (
     <span className={`noor-face ${size} m-${mode}`} aria-hidden="true">
       <span className="noor-aura" />
       <span className="noor-ring" />
-      <span className="noor-core"><Avatar mode={mode} uid={uid} /></span>
+      <span className={`noor-core ${pic?.kind === 'photo' ? 'has-photo' : ''}`}>
+        {pic?.kind === 'photo'
+          ? <img className="noor-photo" src={pic.src} alt="" draggable="false" />
+          : <Avatar mode={mode} uid={uid} />}
+      </span>
       {size === 'big' && <><span className="noor-spark s1" /><span className="noor-spark s2" /><span className="noor-spark s3" /></>}
       {mode === 'listening' && <><span className="noor-wave w1" /><span className="noor-wave w2" /><span className="noor-wave w3" /></>}
     </span>
   );
 }
 
-export default function RaufAssistant({ context, greeting, alertCount = 0, page = '' }) {
+export default function RaufAssistant({ context, greeting, alertCount = 0, page = '', canChangePic = false }) {
+  const pic = useRaufAvatar();
+  const [picEdit, setPicEdit] = useState(false);
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState([]);
   const [input, setInput] = useState('');
@@ -479,7 +487,7 @@ export default function RaufAssistant({ context, greeting, alertCount = 0, page 
         aria-label={open ? 'Close Rauf, the AI assistant' : 'Open Rauf, the AI assistant. Drag or use arrow keys to move.'}
         title="Rauf · AI assistant (drag to move)"
       >
-        <Face mode={mode} />
+        <Face mode={mode} pic={pic} />
         {!seen && alertCount > 0 && <span className="noor-badge">{alertCount}</span>}
         {hint && <span className="noor-hint">{t.hint}</span>}
       </button>
@@ -487,7 +495,7 @@ export default function RaufAssistant({ context, greeting, alertCount = 0, page 
       {open && (
         <section className={`noor-panel ${sheet ? 'sheet' : ''}`} style={panelStyle} role="dialog" aria-label="Rauf, AI assistant">
           <header className="noor-head">
-            <Face mode={mode} size="small" />
+            <Face mode={mode} size="small" pic={pic} />
             <div className="noor-who">
               <div className="noor-name">Rauf <span className="noor-tag">AI</span></div>
               <div className={`noor-status s-${mode}`}><span className="noor-dot" />{status}</div>
@@ -496,6 +504,7 @@ export default function RaufAssistant({ context, greeting, alertCount = 0, page 
               <button type="button" className={`noor-ic ${voiceOn ? 'on' : ''}`} onClick={() => { if (voiceOn) stopSpeaking(); setVoiceOn((v) => !v); }} aria-pressed={voiceOn} title={voiceOn ? 'Voice on: Rauf reads answers aloud' : 'Voice off'}>
                 {voiceOn ? '🔊' : '🔇'}
               </button>
+              {canChangePic && <button type="button" className="noor-ic" onClick={() => setPicEdit(true)} title="Change Rauf picture" aria-label="Change Rauf picture">📷</button>}
               {msgs.length > 0 && <button type="button" className="noor-ic" onClick={() => { stopAll(); setMsgs([]); }} title="Clear chat" aria-label="Clear chat">🗑</button>}
               <button type="button" className="noor-ic" onClick={toggle} title="Close" aria-label="Close">✕</button>
             </div>
@@ -572,6 +581,7 @@ export default function RaufAssistant({ context, greeting, alertCount = 0, page 
           </form>
         </section>
       )}
+      {picEdit && <RaufAvatarEditor onClose={() => setPicEdit(false)} />}
     </>
   );
 }

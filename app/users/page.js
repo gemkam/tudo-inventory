@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import AuthGate, { ROLES, useUser } from '@/components/AuthGate';
+import RaufPicturePanel from '@/components/RaufPicturePanel';
 import Modal from '@/components/Modal';
 import { sb } from '@/lib/supabase';
 import { logAction } from '@/lib/activity';
@@ -160,6 +161,8 @@ function UsersPage() {
           <div className="kpi" key={r}><span>{ROLES[r].label}</span><strong>{c}</strong><small>{ROLE_HELP[r]}</small></div>
         ))}
       </div>
+
+      <RaufPicturePanel />
 
       <section className="panel">
         <h2>Create a new user</h2>

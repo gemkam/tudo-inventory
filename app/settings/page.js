@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import AuthGate from '@/components/AuthGate';
+import RaufPicturePanel from '@/components/RaufPicturePanel';
 import Modal from '@/components/Modal';
 import { sb } from '@/lib/supabase';
 
@@ -90,6 +91,8 @@ function SettingsPage() {
 
       {error && <div className="error">{error}</div>}
       {msg && <div className="ok-msg">{msg}</div>}
+
+      <RaufPicturePanel />
 
       <section className="panel">
         <h2>Categories</h2>

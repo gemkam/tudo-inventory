@@ -132,6 +132,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
           greeting={pageAi?.greeting || greet}
           alertCount={pageAi?.alertCount || 0}
           page={path}
+          canChangePic={user.isOwner}
         />
       )}
       </RaufCtx.Provider>

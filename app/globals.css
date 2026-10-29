@@ -2242,3 +2242,38 @@ textarea.drv-input { resize: vertical; }
 /* Reminder pop-up: "OK, remind me tomorrow" also at the top, stays visible while the list scrolls */
 .alarm-top { position: sticky; top: -22px; z-index: 2; display: flex; justify-content: center; padding: 8px 0; margin: -4px 0 0; background: var(--panel); }
 .alarm-pop { z-index: 200; }
+
+/* ===== Rauf (AI assistant) photo + picture editor ===== */
+.noor-core.has-photo { background: #fff; }
+.noor-photo { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; user-select: none; -webkit-user-drag: none; pointer-events: none; }
+.noor-face.m-speaking .noor-photo { animation: rav-talk .5s ease-in-out infinite; }
+@keyframes rav-talk { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+@media (prefers-reduced-motion: reduce) { .noor-face.m-speaking .noor-photo { animation: none; } }
+
+.rav-back { z-index: 300; }
+.rav-modal { max-width: 380px; justify-items: center; text-align: center; }
+.rav-modal h2 { margin: 0; font-size: 18px; }
+.rav-modal .error, .rav-modal .ok-msg { width: 100%; text-align: left; }
+.rav-now { display: flex; align-items: center; gap: 14px; text-align: left; }
+.rav-now-txt { display: grid; gap: 2px; }
+.rav-now-txt small { color: var(--muted); }
+.rav-round { width: 110px; height: 110px; border-radius: 50%; overflow: hidden; flex: none; display: grid; place-items: center;
+  background: var(--tint); box-shadow: 0 0 0 3px var(--brown), 0 4px 12px rgba(0, 0, 0, .18); }
+.rav-round.sm { width: 64px; height: 64px; }
+.rav-round img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rav-drawn { font-size: 12px; color: var(--muted); }
+.rav-crop { display: grid; gap: 8px; justify-items: center; }
+.rav-box { position: relative; border-radius: 12px; overflow: hidden; touch-action: none; cursor: grab; background: #eee; outline-offset: 3px; }
+.rav-box:active { cursor: grabbing; }
+.rav-box canvas { display: block; }
+.rav-mask { position: absolute; inset: 0; pointer-events: none; border-radius: 50%; box-shadow: 0 0 0 999px rgba(0, 0, 0, .5); outline: 2px solid rgba(255, 255, 255, .9); }
+.rav-help { margin: 0; font-size: 12px; color: var(--muted); }
+.rav-tools { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.rav-tools input[type=range] { width: 120px; accent-color: var(--brown); }
+.rav-tools .btn { padding: 4px 11px; min-width: 34px; }
+.rav-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.rav-modal .modal-actions { width: 100%; }
+.rav-panel { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.rav-panel-txt { flex: 1; min-width: 200px; }
+.rav-panel-txt h2 { margin: 0 0 4px; }
+.rav-panel-txt .sub { margin: 0; }
