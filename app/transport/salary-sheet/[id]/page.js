@@ -14,13 +14,20 @@ import { num, fmtAmt, monthKey, monthStart, monthLabel, todayISO, exportExcel, e
 import { SALARY_FIELDS, salaryTotal, salaryPayable } from '@/lib/transport';
 import { useSalaryLabels, SALARY_EXTRA_LABELS } from '@/lib/labels';
 import { fmtD } from '@/lib/reminders';
+import AllowanceNotes from '@/components/AllowanceNotes';
+import { allowanceStory } from '@/lib/transport';
+import { PayCard, PaySection, PayRow, AmountInput, BalanceBox, money } from '@/components/PayCard';
+import { hasPaidCols, driverBalance, salaryDue } from '@/lib/payBalance';
 
 /*
   One driver's own salary sheet (/transport/salary-sheet/<driver id>).
   Letterhead + driver details, salary detail of every month (create, edit, open slip: components/DriverDesk with full columns),
   trip sheet tab, and this driver's OWN other expenses (transport_extras of this driver only).
   Replaces the Salary detail and Other expenses sections that used to be on the main Transport page.
+  Salary by month is shown VERTICALLY: one card per month (latest first) with net payable, paid and the
+  UNPAID BALANCE (salary not paid + driver allowance of trips not paid yet). Paid needs supabase/salary-paid.sql.
 */
+const short = (k) => monthLabel(k).replace(/^(\w{3})\w*/, '$1');
 
 const n = (v) => Number(v || 0);
 
@@ -33,6 +40,7 @@ function DriverSheet() {
   const [drivers, setDrivers] = useState(null);
   const [extras, setExtras] = useState([]);
   const [salaries, setSalaries] = useState([]);
+  const [entries, setEntries] = useState([]);
   const [editMode, setEditMode] = useState(false);
   const [del, setDel] = useState(null);
   const [toast, setToast] = useState(null);
@@ -47,14 +55,20 @@ function DriverSheet() {
 
   const load = useCallback(async () => {
     const s = sb();
-    const [d, ex] = await Promise.all([
+    const [d, ex, en] = await Promise.all([
       s.from('transport_drivers').select('*').order('sort').order('name'),
-      s.from('transport_extras').select('*').eq('driver_id', id).order('month', { ascending: false }).order('created_at')
+      s.from('transport_extras').select('*').eq('driver_id', id).order('month', { ascending: false }).order('created_at'),
+      s.from('transport_entries').select('id, driver_id, entry_date, driver_allowance, allowance_status, allowance_salary_id').eq('driver_id', id)
     ]);
     setDrivers(d.data || []);
     setExtras(ex.data || []);
+    setEntries(en.data || []);
   }, [id]);
   useEffect(() => { load(); }, [load]);
+  const loadEntries = useCallback(async () => {
+    const { data } = await sb().from('transport_entries').select('id, driver_id, entry_date, driver_allowance, allowance_status, allowance_salary_id').eq('driver_id', id);
+    if (data) setEntries(data);
+  }, [id]);
 
   const driver = useMemo(() => (drivers || []).find((d) => d.id === id), [drivers, id]);
   const sorted = useMemo(() => [...(drivers || [])].sort((a, b) => String(a.name).localeCompare(String(b.name))), [drivers]);
@@ -85,18 +99,27 @@ function DriverSheet() {
     flash('Deleted');
   }
 
+  async function savePaid(sal, v) {
+    const patch = { paid_amount: v, paid_on: v ? (sal.paid_on || todayISO()) : null };
+    setSalaries((l) => l.map((x) => (x.id === sal.id ? { ...x, ...patch } : x)));
+    const { error } = await sb().from('transport_salaries').update(patch).eq('id', sal.id);
+    if (error) { flash(error.message, 'err'); return; }
+    flash('Payment saved');
+  }
+
   async function doExcel() {
     const fields = SALARY_FIELDS.filter(([k]) => k !== 'allowance_carried' || salaries.some((s) => n(s.allowance_carried)));
+    const tracked = salaries.some(hasPaidCols);
     const salRows = [...salaries].sort((a, b) => String(b.month).localeCompare(String(a.month))).map((s) => [
-      monthLabel(monthKey(s.month)), ...fields.map(([k]) => num(s[k])), salaryTotal(s), num(s.advance_deduction), num(s.special_allowance), salaryPayable(s), s.allowance_carried_note || ''
+      monthLabel(monthKey(s.month)), ...fields.map(([k]) => num(s[k])), salaryTotal(s), num(s.advance_deduction), num(s.special_allowance), salaryPayable(s), ...(tracked ? [num(s.paid_amount), Math.max(0, salaryDue(s))] : []), s.allowance_carried_note || ''
     ]);
     const exRows = extras.map((x) => [monthLabel(monthKey(x.month)), x.description || '', num(x.amount)]);
     await exportExcel(`${driver?.name || 'Driver'} salary sheet ${exportStamp()}.xlsx`, [
       {
         name: 'Salary detail', title: `Salary sheet · ${driver?.name}`, subtitle: `Modern City for Express Services LLC · Transport Division · Resident Card ${driver?.resident_card || '-'}`,
-        head: ['Month', ...fields.map(([k]) => label(k)), 'Total', label('advance_deduction'), label('special_allowance'), 'Net payable', 'Note'],
-        rows: salRows, numCols: [...fields.map((_, i) => i + 1), fields.length + 1, fields.length + 2, fields.length + 3, fields.length + 4],
-        widths: [16, ...fields.map(() => 13), 13, 13, 13, 14, 34]
+        head: ['Month', ...fields.map(([k]) => label(k)), 'Total', label('advance_deduction'), label('special_allowance'), 'Net payable', ...(tracked ? ['Paid', 'Not paid'] : []), 'Note'],
+        rows: salRows, numCols: [...fields.map((_, i) => i + 1), fields.length + 1, fields.length + 2, fields.length + 3, fields.length + 4, ...(tracked ? [fields.length + 5, fields.length + 6] : [])],
+        widths: [16, ...fields.map(() => 13), 13, 13, 13, 14, ...(tracked ? [13, 13] : []), 34]
       },
       { name: 'Other expenses', title: `Other expenses · ${driver?.name}`, subtitle: 'Trailer rent and anything not tied to a trip', head: ['Month', 'Description', 'Amount (OMR)'], rows: exRows, numCols: [2], widths: [16, 36, 14] }
     ]);
@@ -108,6 +131,12 @@ function DriverSheet() {
 
   const paidTotal = salaries.reduce((t, s) => t + salaryPayable(s), 0);
   const extraTotal = extras.reduce((t, x) => t + n(x.amount), 0);
+  const nowKey = monthKey(todayISO());
+  const lastKey = [nowKey, ...salaries.map((x) => monthKey(x.month))].sort().pop();
+  const bal = driverBalance(salaries, entries, id, lastKey);
+  const byMonth = [...salaries].sort((a, b) => String(b.month).localeCompare(String(a.month)));
+  const showCarried = salaries.some((x) => n(x.allowance_carried));
+  const cardFields = SALARY_FIELDS.filter(([k]) => k !== 'allowance_carried' || showCarried);
 
   return (
     <>
@@ -125,7 +154,7 @@ function DriverSheet() {
         </div>
       </div>
 
-      <div className="ss-paper ds-paper">
+      <div className="ss-paper ds-paper pc-paper">
         <header className="ss-head">
           <img src="/modern-city-logo.png" alt="Modern City" />
           <div>
@@ -147,10 +176,53 @@ function DriverSheet() {
           <div className="kpi"><span>Salary paid (all months)</span><strong><Omr v={paidTotal} /></strong><small>net payable</small></div>
           <div className="kpi"><span>Other expenses</span><strong><Omr v={extraTotal} /></strong><small>{extras.length} lines</small></div>
           <div className="kpi hero"><span>Total cost of driver</span><strong><Omr v={paidTotal + extraTotal} /></strong><small>salary + other</small></div>
+          <div className={`kpi ${bal.total > 0.0005 ? 'kpi-due' : ''}`}><span>Unpaid balance</span><strong>{bal.total > 0.0005 ? <Omr v={bal.total} /> : 'Nil ✓'}</strong><small>{bal.tracked ? 'salary + allowance not paid' : 'driver allowance not paid'}</small></div>
         </div>
+        <BalanceBox total={bal.total} tracked={bal.tracked} lines={[
+          [`${monthLabel(lastKey)} salary not paid`, bal.thisMonth],
+          [`Earlier months salary not paid (${bal.earlier.map((x) => short(x.month)).join(', ')})`, bal.earlierTotal],
+          [`Driver allowance not paid (${bal.allowance.months.map((x) => `${short(x.month)}: ${x.trips} trip${x.trips > 1 ? 's' : ''}`).join(', ')})`, bal.allowance.total]
+        ]} missingNote="Salary payments are not recorded yet (run supabase/salary-paid.sql). Only unpaid driver allowance is counted." />
+
+        {byMonth.length > 0 && (
+          <>
+            <h3 className="pc-h3">Salary by month</h3>
+            <div className="pc-grid">
+              {byMonth.map((s) => {
+                const k = monthKey(s.month);
+                const due = salaryDue(s);
+                return (
+                  <PayCard key={s.id} title={monthLabel(k)} badge={due == null ? null : due > 0.0005 ? <span className="pc-tag due">Not paid {money(due)}</span> : <span className="pc-tag ok">Paid ✓</span>}>
+                    <PaySection title="Salary">
+                      {cardFields.map(([f]) => <PayRow key={f} label={label(f)} value={n(s[f]) ? s[f] : null} note={f === 'allowance_carried' ? s.allowance_carried_note : undefined} />)}
+                      <div className="pc-notes"><AllowanceNotes story={allowanceStory(entries, salaries, id, k)} month={k} compact /></div>
+                      <PayRow label="Total salary" value={salaryTotal(s)} kind="total" />
+                    </PaySection>
+                    <PaySection title="Deduction and additions">
+                      <PayRow label={label('advance_deduction')} value={s.advance_deduction} kind="minus" />
+                      <PayRow label={label('special_allowance')} value={s.special_allowance} kind="plus" />
+                    </PaySection>
+                    <PayRow label="Net payable" value={salaryPayable(s)} kind="net" />
+                    {hasPaidCols(s) && (
+                      <PayRow label="Paid" kind="paid" note={s.paid_on ? `on ${fmtD(s.paid_on)}` : undefined}>
+                        {isAdmin ? (
+                          <span className="pc-pay">
+                            <AmountInput value={s.paid_amount} onSave={(v) => savePaid(s, v)} />
+                            {n(s.paid_amount) < salaryPayable(s) && <button type="button" className="btn small in no-print" onClick={() => savePaid(s, salaryPayable(s))}>✓ Full</button>}
+                          </span>
+                        ) : (s.paid_amount == null ? '–' : money(s.paid_amount))}
+                      </PayRow>
+                    )}
+                    {due != null && <PayRow label="Not paid" value={Math.max(0, due)} kind={due > 0.0005 ? 'due' : 'total'} />}
+                  </PayCard>
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
 
-      <DriverDesk drivers={drivers} canEdit={isAdmin} flash={flash} fixedDriverId={id} full onChange={setSalaries} />
+      <DriverDesk drivers={drivers} canEdit={isAdmin} flash={flash} fixedDriverId={id} onChange={(list) => { setSalaries(list); loadEntries(); }} />
 
       <section className="panel ds-extras">
         <div className="section-head">

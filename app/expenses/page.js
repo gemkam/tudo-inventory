@@ -10,7 +10,8 @@ import EditToggle from '@/components/EditToggle';
 import { HBars } from '@/components/Charts';
 import { useShare } from '@/components/ShareModal';
 import { sb } from '@/lib/supabase';
-import { expiryCol } from '@/components/Expiry';
+import StaffPayCards from '@/components/StaffPayCards';
+import { hasPaidCols, staffBalance } from '@/lib/payBalance';
 import { num, fmtAmt, monthKey, monthLabel, todayISO, exportExcel, exportPdf, exportStamp, fmtFullDate } from '@/lib/sheet';
 import { HEADS, CATEGORIES, COMPANIES, DEPARTMENTS, SOURCE_LABEL, companyOf, n, r3, staffGross, staffNet } from '@/lib/expenses';
 
@@ -190,20 +191,6 @@ function ExpensesPage() {
     { key: 'vat_reg_no', label: 'VAT Reg No', type: 'text', width: 140 }
   ];
 
-  const staffCols = [
-    { key: 'name', label: 'Name', type: 'text', width: 220, render: (r) => <b>{r.name}</b> },
-    { key: 'department', label: 'Department', type: 'text', width: 170 },
-    { key: 'resident_card', label: 'Resident Card No.', type: 'text', width: 140 },
-    expiryCol('resident_card_expiry', 'Resident Card expiry'),
-    expiryCol('visa_expiry', 'Visa expiry'),
-    { key: 'basic', label: 'Basic pay', type: 'number', min: 0, width: 110, render: amt('basic') },
-    { key: 'allowances', label: 'Allowances', type: 'number', min: 0, width: 110, render: amt('allowances') },
-    ...(staff.some((x) => Object.prototype.hasOwnProperty.call(x, 'staff_type')) ? [{ key: 'staff_type', label: 'Type', type: 'select', options: ['Office', 'Site'], width: 100, render: (r) => r.staff_type || 'Office' }] : []),
-    { key: 'working_days', label: 'Working days', type: 'number', min: 0, width: 120, render: (r) => <span title={r.attendance_month ? `From attendance ${monthLabel(r.attendance_month)}` : undefined}>{num(r.working_days)}{r.attendance_month ? ' 🗓' : ''}</span> },
-    { key: 'gross', label: 'Total gross', type: 'calc', width: 120, render: (r) => fmtAmt(staffGross(r)) },
-    { key: 'deductions', label: 'Deductions / advances', type: 'number', min: 0, width: 150, render: amt('deductions') },
-    { key: 'net', label: 'Net pay', type: 'calc', width: 120, render: (r) => <b>{fmtAmt(staffNet(r))}</b> }
-  ];
   const staffAttMonth = staff.map((x) => x.attendance_month).filter(Boolean).sort().pop() || '';
   const staffNetTotal = r3(staff.reduce((t, s) => t + staffNet(s), 0));
 
@@ -248,9 +235,10 @@ function ExpensesPage() {
       if (staff.length) {
         sheets.push({
           name: 'Salary sheet', title: 'SALARY SHEET', subtitle: EXP_COMPANY,
-          head: ['Name', 'Department', 'Basic pay', 'Allowances', 'Working days', 'Total gross', 'Deductions', 'Net pay'],
-          rows: staff.map((s) => [s.name, s.department || '', num(s.basic), num(s.allowances), num(s.working_days), staffGross(s), num(s.deductions), staffNet(s)]),
-          totalsRow: ['Total', '', '', '', '', r3(staff.reduce((a, s) => a + staffGross(s), 0)), '', staffNetTotal], numCols: [2, 3, 4, 5, 6, 7], widths: [30, 20, 12, 12, 12, 14, 14, 14]
+          head: ['Name', 'Department', 'Basic pay', 'Allowances', 'Working days', 'Total gross', 'Deductions', 'Net pay', 'Previous unpaid', 'Paid', 'Unpaid balance'],
+          rows: staff.map((s) => [s.name, s.department || '', num(s.basic), num(s.allowances), num(s.working_days), staffGross(s), num(s.deductions), staffNet(s), num(s.prev_balance), num(s.paid_amount), hasPaidCols(s) ? Math.max(0, staffBalance(s, staffNet(s))) : '']),
+          totalsRow: ['Total', '', '', '', '', r3(staff.reduce((a, s) => a + staffGross(s), 0)), '', staffNetTotal, r3(staff.reduce((a, s) => a + n(s.prev_balance), 0)), r3(staff.reduce((a, s) => a + n(s.paid_amount), 0)), r3(staff.reduce((a, s) => a + (hasPaidCols(s) ? Math.max(0, staffBalance(s, staffNet(s))) : 0), 0))],
+          numCols: [2, 3, 4, 5, 6, 7, 8, 9, 10], widths: [30, 20, 12, 12, 12, 14, 14, 14, 14, 12, 14]
         });
       }
       await exportExcel(`Office Expense ${month === 'all' ? 'All' : monthLabel(month)}.xlsx`, sheets);
@@ -390,22 +378,11 @@ function ExpensesPage() {
           <EditToggle show={isAdmin} on={editStaff} onClick={() => setEditStaff((v) => !v)} />
         </div>
         <p className="note" style={{ margin: '0 0 10px' }}>
-          Total gross = (Basic + Allowances) ÷ 30 × Working days. Net pay = Gross − Deductions.
+          Total gross = (Basic + Allowances) ÷ 30 × Working days. Net pay = Gross − Deductions. Unpaid balance = Previous unpaid + Net pay − Paid.
           {' '}Working days are filled from <Link href={`/expenses/attendance?co=${co}${staffAttMonth ? `&m=${staffAttMonth}` : ''}`}>🗓 Attendance</Link>
           {staffAttMonth ? ` (${monthLabel(staffAttMonth)})` : ''} when it is marked; you can still change them here.
         </p>
-        <DataGrid
-          columns={staffCols}
-          rows={staff}
-          canEdit={isAdmin && editStaff}
-          onSave={saveStaff}
-          onAdd={addStaff}
-          addLabel="+ Add staff"
-          onDelete={deleteStaff}
-          emptyText="No staff yet. Press ✏️ Edit, then + Add staff."
-          footer={{ net: <Omr v={staffNetTotal} /> }}
-          flash={flash}
-        />
+        <StaffPayCards staff={staff} canEdit={isAdmin && editStaff} canPay={isAdmin} onSave={saveStaff} onAdd={addStaff} onDelete={deleteStaff} />
       </section>
 
       {del && (
