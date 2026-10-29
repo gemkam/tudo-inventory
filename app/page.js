@@ -53,7 +53,11 @@ function Home() {
 
   return (
     <>
-      <h1 className="center">Tudo Num Office Systems</h1>
+      <div className="home-hero">
+        <span className="home-kicker">Modern City · Abu Wasif · Sumptuosity</span>
+        <h1 className="center">Tudo Num Office Systems</h1>
+        <span className="home-rule" aria-hidden="true"><i /></span>
+      </div>
       <HomeSearch />
       <div className="home-grid">
       <div className="home-main">

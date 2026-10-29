@@ -4,7 +4,7 @@ import TableCards, { ViewSwitch } from '@/components/TableCards';
 import TransportSideNav, { showTransportSide } from '@/components/TransportSideNav';
 import ExpenseSideNav, { showExpenseSide } from '@/components/ExpenseSideNav';
 import PrintColumns from '@/components/PrintColumns';
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { sb } from '@/lib/supabase';
@@ -94,9 +94,9 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
 
   if (!user) return <div className="loading">Loading...</div>;
 
-  const nav = user.isEntry ? [['/entry', 'Data entry']] : [['/', 'Home'], ['/sitemap', '🗺 Sitemap'], ['/timeline', '🕒 Timeline']];
+  const nav = user.isEntry ? [['/entry', 'Data entry', 'entry']] : [['/', 'Home', 'home'], ['/sitemap', 'Sitemap', 'map'], ['/timeline', 'Timeline', 'clock']];
   // Phone / tablet: quick buttons next to Home (on Home the alerts list pushes the tiles far down)
-  const quick = user.canRead ? [['/transport', '🚚 Transport'], ['/inventory', '📦 Inventory'], ['/expenses', '🧾 Office Expense']] : [];
+  const quick = user.canRead ? [['/transport', 'Transport', 'truck'], ['/inventory', 'Inventory', 'box'], ['/expenses', 'Office Expense', 'receipt']] : [];
 
   let blocked = '';
   if (ownerOnly && !user.isOwner) blocked = 'Only Administrator can open this page.';
@@ -105,26 +105,35 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
   return (
     <UserCtx.Provider value={user}>
       <RaufCtx.Provider value={raufValue}>
-      <header className="topbar">
-        <div className="topbar-inner">
-          <Link href={user.isEntry ? '/entry' : '/'} className="brand">Tudo Num Office Systems</Link>
-          <nav className="topnav">
-            {nav.map(([href, label]) => (
-              <Link key={href} href={href === '/sitemap' && path !== '/sitemap' ? `/sitemap?from=${encodeURIComponent(path)}` : href} className={(href === '/' ? path === '/' : path.startsWith(href)) ? 'active' : ''}>{label}</Link>
+      <header className="topbar tbx">
+        <div className="tbx-inner">
+          <div className="tbx-row">
+            <Link href={user.isEntry ? '/entry' : '/'} className="tbx-brand" aria-label="Tudo Num Office Systems, home">
+              <span className="tbx-logo"><img src="/tudonum-logo-lg.png" alt="" /></span>
+              <span className="tbx-name">
+                <b>Tudo Num</b>
+                <small>Office Systems</small>
+              </span>
+            </Link>
+            <div className="tbx-tools">
+              {user.canRead && !user.isEntry && <span className="tbx-view"><ViewSwitch /></span>}
+              <ThemeMenu />
+              <AccountMenu user={user} onLogout={switchUser} showView={user.canRead && !user.isEntry} />
+            </div>
+          </div>
+          <nav className={`tbx-nav n${nav.length + quick.length}`} aria-label="Main">
+            {nav.map(([href, label, ico]) => (
+              <Link key={href} href={href === '/sitemap' && path !== '/sitemap' ? `/sitemap?from=${encodeURIComponent(path)}` : href} className={(href === '/' ? path === '/' : path.startsWith(href)) ? 'active' : ''}>
+                <Ico name={ico} /><span>{label}</span>
+              </Link>
             ))}
-            {quick.map(([href, label]) => (
-              <Link key={href} href={href} className={`nav-quick${path === href || (path.startsWith(`${href}/`)) ? ' active' : ''}`}>{label}</Link>
+            {quick.length > 0 && <i className="tbx-sep" aria-hidden="true" />}
+            {quick.map(([href, label, ico]) => (
+              <Link key={href} href={href} className={path === href || path.startsWith(`${href}/`) ? 'active' : ''}>
+                <Ico name={ico} /><span>{label}</span>
+              </Link>
             ))}
           </nav>
-          <div className="top-user">
-            {user.canRead && !user.isEntry && <ViewSwitch />}
-            <ThemeMenu />
-            <span className="who">
-              {user.name} <small className="who-role">· {ROLES[user.role]?.short || user.role}</small>
-            </span>
-            <button className="btn small switch" onClick={switchUser}>Switch user</button>
-            <button className="btn small switch logout" onClick={switchUser} title="Log out of Tudo Num Office Systems">⎋ Logout</button>
-          </div>
         </div>
       </header>
       {!blocked && !user.isEntry && (showTransportSide(path) || showExpenseSide(path)) ? (
@@ -150,5 +159,62 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
       )}
       </RaufCtx.Provider>
     </UserCtx.Provider>
+  );
+}
+
+/* Line icons for the top bar (follow the text colour) */
+const ICONS = {
+  home: <><path d="M3 10.5 12 3l9 7.5" /><path d="M5 9.5V21h5v-6h4v6h5V9.5" /></>,
+  map: <><path d="M9 4 3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5z" /><path d="M9 4v13.5M15 6.5V20" /></>,
+  clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></>,
+  truck: <><path d="M2 6h11v10H2z" /><path d="M13 9h4.5L21 12.5V16h-8z" /><circle cx="6" cy="17.5" r="2" /><circle cx="17" cy="17.5" r="2" /></>,
+  box: <><path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z" /><path d="M3.5 7.5 12 12l8.5-4.5M12 12v9" /></>,
+  receipt: <><path d="M6 3h12v18l-2.5-1.5L13 21l-2.5-1.5L8 21l-2-1.5z" /><path d="M9 8h6M9 12h6M9 16h3" /></>,
+  entry: <><path d="M8 4h8v3H8z" /><path d="M16 5.5h2.5V21h-13V5.5H8" /><path d="M9 12h6M9 16h4" /></>,
+  swap: <><path d="M7 4 3 8l4 4" /><path d="M3 8h13" /><path d="m17 12 4 4-4 4" /><path d="M21 16H8" /></>,
+  logout: <><path d="M15 4h4v16h-4" /><path d="M10 8l-4 4 4 4" /><path d="M6 12h10" /></>
+};
+
+function Ico({ name }) {
+  return (
+    <svg className="tbx-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {ICONS[name]}
+    </svg>
+  );
+}
+
+/* Round button with the user's first letter; opens name, role, Switch user, Logout */
+function AccountMenu({ user, onLogout, showView }) {
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = (e) => { if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false); };
+    const esc = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('pointerdown', close);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('pointerdown', close); document.removeEventListener('keydown', esc); };
+  }, [open]);
+  const role = ROLES[user.role]?.label || user.role;
+  const display = user.name ? user.name.charAt(0).toUpperCase() + user.name.slice(1) : '';
+  return (
+    <div className="tbx-acct" ref={boxRef}>
+      <button type="button" className={`tbx-me${open ? ' on' : ''}`} onClick={() => setOpen((v) => !v)} aria-haspopup="menu" aria-expanded={open} title={`${display} · ${role}`}>
+        <span className="tbx-av">{display.charAt(0) || '?'}</span>
+        <span className="tbx-me-text"><b>{display}</b><small>{ROLES[user.role]?.short || user.role}</small></span>
+        <svg className="tbx-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+      </button>
+      {open && (
+        <div className="tbx-pop" role="menu">
+          <div className="tbx-pop-who">
+            <span className="tbx-av big">{display.charAt(0) || '?'}</span>
+            <span><b>{display}</b><small>{role}</small></span>
+          </div>
+          {showView && <div className="tbx-pop-view"><small>View</small><ViewSwitch /></div>}
+          <button type="button" role="menuitem" onClick={onLogout}><Ico name="swap" /> Switch user</button>
+          <button type="button" role="menuitem" className="out" onClick={onLogout}><Ico name="logout" /> Logout</button>
+        </div>
+      )}
+    </div>
   );
 }
