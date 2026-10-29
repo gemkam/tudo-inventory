@@ -40,6 +40,8 @@ function AttendancePage() {
   const [edit, setEdit] = useState(false);
   const [brush, setBrush] = useState('P');
   const [reason, setReason] = useState('Sick');
+  const [undo, setUndo] = useState([]); // stack of earlier states of the changed days
+  const [askDel, setAskDel] = useState(null); // { who: staff or null (= everyone), list }
   const [toast, setToast] = useState(null);
   const timer = useRef(null);
   const canChange = isAdmin && edit && !noTable;
@@ -102,10 +104,14 @@ function AttendancePage() {
   }
 
   /* changes: [{ staff_id, day, mark|null }] */
-  async function apply(changes) {
+  async function apply(changes, record = true) {
     if (!changes.length) return;
+    if (record) {
+      const before = changes.map((c) => ({ staff_id: c.staff_id, day: c.day, mark: marks[c.staff_id]?.[c.day] || null, note: notes[c.staff_id]?.[c.day] || null }));
+      setUndo((u) => [...u.slice(-29), before]);
+    }
     const s = sb();
-    const put = changes.filter((c) => c.mark).map((c) => ({ company: co, staff_id: c.staff_id, day: c.day, mark: c.mark, note: c.mark === 'L' ? c.note || null : null, entered_by: me || null, updated_at: new Date().toISOString() }));
+    const put = changes.filter((c) => c.mark).map((c) => ({ company: co, staff_id: c.staff_id, day: c.day, mark: c.mark, note: c.mark === 'L' || c.mark === 'A' ? c.note || null : null, entered_by: me || null, updated_at: new Date().toISOString() }));
     const clear = changes.filter((c) => !c.mark);
     const key = (r) => `${r.staff_id}|${String(r.day).slice(0, 10)}`;
     const changed = new Set(changes.map(key));
@@ -121,6 +127,27 @@ function AttendancePage() {
     }
     await syncWorkingDays([...new Set(changes.map((c) => c.staff_id))], next);
     flash(changes.length === 1 ? 'Saved. Salary sheet working days updated.' : `${changes.length} days saved. Salary sheet working days updated.`);
+  }
+
+  async function undoLast() {
+    const last = undo[undo.length - 1];
+    if (!last) return;
+    setUndo((u) => u.slice(0, -1));
+    await apply(last, false);
+    flash('Undone');
+  }
+  /* Delete every mark of this month: one person, or everyone */
+  function askDelete(p) {
+    const list = [];
+    for (const x of p ? [p] : staff) for (const d of days) if (marks[x.id]?.[d.iso]) list.push({ staff_id: x.id, day: d.iso, mark: null });
+    if (!list.length) { flash(`Nothing marked in ${monthLabel(month)}${p ? ` for ${p.name}` : ''}.`); return; }
+    setAskDel({ who: p, list });
+  }
+  async function confirmDelete() {
+    const d = askDel;
+    setAskDel(null);
+    await apply(d.list);
+    flash(`${d.list.length} day${d.list.length === 1 ? '' : 's'} deleted. Press ↶ Undo to bring them back.`);
   }
 
   const isOff = (p, day) => offDaysFor(typeOf(p)).includes(day.wd);
@@ -281,8 +308,19 @@ function AttendancePage() {
             <span className="at-sep" />
             {todayIn && <button type="button" className="btn in sm" onClick={allPresentToday}>✓ All present today</button>}
             <button type="button" className="btn ghost sm" onClick={fillUnmarked}>Fill unmarked days as Present</button>
+            <span className="at-sep" />
+            <button type="button" className="btn ghost sm" onClick={undoLast} disabled={!undo.length} title="Go back one step">↶ Undo{undo.length > 1 ? ` (${undo.length})` : ''}</button>
+            <button type="button" className="btn danger sm" onClick={() => askDelete(null)}>🗑 Delete {monthLabel(month)}</button>
           </div>
         )}
+        {askDel && (
+          <div className="at-confirm no-print" role="alertdialog">
+            <span>Delete <b>{askDel.list.length}</b> marked day{askDel.list.length === 1 ? '' : 's'} of <b>{askDel.who ? askDel.who.name : 'everyone'}</b> in {monthLabel(month)}? You can Undo it.</span>
+            <button type="button" className="btn ghost sm" onClick={() => setAskDel(null)}>Cancel</button>
+            <button type="button" className="btn danger sm" onClick={confirmDelete}>Yes, delete</button>
+          </div>
+        )}
+        {!canChange && isAdmin && !noTable && <p className="note no-print" style={{ margin: 0 }}>Press ✏️ Edit to mark, change, undo or delete attendance.</p>}
 
         {!staff.length ? (
           <p className="empty">No staff for {C.short}. Add them on the <Link href={`/expenses?co=${co}`}>Office Expense salary sheet</Link>.</p>
@@ -308,6 +346,7 @@ function AttendancePage() {
                     <tr key={p.id}>
                       <td className="at-name">
                         <b>{p.name}</b>
+                        {canChange && <button type="button" className="at-del" onClick={() => askDelete(p)} title={`Delete all marks of ${p.name} in ${monthLabel(month)}`}>🗑</button>}
                         <small>
                           {hasType ? (
                             <button type="button" className={`at-type ${typeOf(p) === 'Site' ? 'site' : ''}`} onClick={() => toggleType(p)} disabled={!canChange}
