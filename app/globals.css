@@ -2644,3 +2644,26 @@ a.sm-name { color: var(--brown); } a.sm-name:hover { text-decoration: underline;
 .tl-what { font-weight: 500; }
 a.tl-what { color: var(--brown); }
 @media (max-width: 600px) { .tl-days { padding-left: 18px; } .tl-day { padding: 10px 10px 10px 18px; } .tl-dot { left: -18px; width: 24px; height: 24px; font-size: 12px; } .tl-days::before { left: 10px; } }
+
+/* ---------- VAT 5% button, 15% Govt Tax button, Profit box on the trip sheet (29 Oct 2026) ---------- */
+.vat-pill { display: inline-flex; align-items: center; gap: 4px; padding: 4px 11px; border-radius: 999px; border: 1.5px dashed var(--pill-line, #b9cfc8); background: transparent; color: var(--muted, #6b7c77); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background .15s, color .15s, border-color .15s; }
+.vat-pill:hover { border-color: var(--brown); color: var(--brown); }
+.vat-pill.on { border-style: solid; border-color: var(--brown); background: var(--brown); color: #fff; }
+.vat-pill.on:hover { background: var(--brown-hover, var(--brown)); color: #fff; }
+.vat-pill.ro { cursor: default; }
+.vat-pill.tax { font-size: 13px; padding: 5px 13px; }
+.vat-row .pc-l { padding: 2px 0; }
+.vat-cell { display: inline-flex; align-items: center; gap: 8px; }
+.profit-box .sheet-title { flex-wrap: wrap; gap: 10px; }
+.profit-btns { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.profit-grid { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(280px, 1fr); gap: 14px; align-items: start; }
+.profit-card .pc-v.neg, .profit-card .neg { color: #b3261e; }
+.profit-h { margin: 0 0 6px; font-size: 14px; color: var(--heading, #0f3d33); }
+.taken-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.taken-list li { display: grid; grid-template-columns: 92px 1fr auto auto; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line, #e3ebe8); font-size: 14px; }
+.taken-list .tk-note small { display: block; color: var(--muted, #6b7c77); font-size: 12px; }
+.take-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.take-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; }
+.take-form label.wide { grid-column: 1 / -1; }
+.take-form input { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line, #cfdcd8); font: inherit; background: var(--surface, #fff); color: inherit; }
+@media (max-width: 760px) { .profit-grid, .take-form { grid-template-columns: 1fr; } .taken-list li { grid-template-columns: 80px 1fr auto auto; } }

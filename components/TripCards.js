@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import DateInput from '@/components/DateInput';
 import { TextInput, PayRow, money } from '@/components/PayCard';
 import { fmtDay } from '@/lib/sheet';
+import { vatOf } from '@/lib/transport';
 
 /*
   Trip sheet VERTICAL (app/transport/[id]): one card per trip, easy to read on phone and PC.
@@ -40,7 +41,21 @@ function MathInput({ value, onSave, flash }) {
 
 const tagCls = (v, bad, good) => (bad.test(v || '') ? 'due' : good.test(v || '') ? 'ok' : 'info');
 
-export default function TripCards({ rows, columns, canEdit, onSave, onAdd, onDelete, flash, allowLabel, totals, prevOpenTotal = 0, addLabel = '+ Add trip or expense' }) {
+/* VAT 5% button next to the trip total: on = "VAT 5% added" (VAT is inside the amount), off = normal */
+export function VatButton({ row, canVat, onVat }) {
+  const on = Boolean(row.vat_included);
+  const label = on ? '✓ VAT 5% added' : 'VAT 5% not added';
+  if (!canVat) return <span className={`vat-pill ${on ? 'on' : ''} ro`}>{label}</span>;
+  return (
+    <button type="button" className={`vat-pill ${on ? 'on' : ''}`} aria-pressed={on}
+      onClick={(e) => { e.stopPropagation(); onVat?.(row); }}
+      title={on ? 'VAT 5% is inside this amount. Click to remove.' : 'Click if this amount includes VAT 5%'}>
+      {label}
+    </button>
+  );
+}
+
+export default function TripCards({ rows, columns, canEdit, onSave, onAdd, onDelete, flash, allowLabel, totals, prevOpenTotal = 0, addLabel = '+ Add trip or expense', canVat = false, onVat }) {
   const col = (k) => columns.find((c) => c.key === k) || { key: k, label: k };
   const opts = (k) => col(k).options || [];
   const lab = (k) => col(k).label;
@@ -100,6 +115,13 @@ export default function TripCards({ rows, columns, canEdit, onSave, onAdd, onDel
                     <div className="pc-sec">
                       <h4>Money</h4>
                       <PayRow label={lab('rent')} value={r.rent}>{canEdit ? field(r, 'rent') : undefined}</PayRow>
+                      {n(r.rent) > 0 && (
+                        <div className="pc-row vat-row">
+                          <span className="pc-l"><VatButton row={r} canVat={canVat} onVat={onVat} /></span>
+                          <span className="pc-v">{r.vat_included ? money(vatOf(r)) : '–'}</span>
+                        </div>
+                      )}
+                      {r.vat_included && n(r.rent) > 0 ? <PayRow label="Rent without VAT" value={r3(n(r.rent) - vatOf(r))} /> : null}
                       <PayRow label={lab('received')} value={r.received}>{canEdit ? field(r, 'received') : undefined}</PayRow>
                       {(canEdit || r.received_date) && (
                         <PayRow label={lab('received_date')}>
@@ -169,6 +191,8 @@ export default function TripCards({ rows, columns, canEdit, onSave, onAdd, onDel
             <div className="pc-sec">
               <h4>Money</h4>
               <PayRow label="Total rent" value={totals.rent} />
+              {totals.vat > 0 && <PayRow label="VAT 5% (inside rent)" value={totals.vat} kind="minus" />}
+              {totals.vat > 0 && <PayRow label="Rent without VAT" value={totals.rentNet} kind="total" />}
               <PayRow label="Received" value={totals.received} />
               <PayRow label="Balance to collect" kind={totals.balance > 0 ? 'due' : 'total'}>{totals.balance ? money(totals.balance) : 'Nil ✓'}</PayRow>
             </div>

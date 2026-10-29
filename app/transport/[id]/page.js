@@ -6,7 +6,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import AuthGate, { useUser } from '@/components/AuthGate';
-import TripCards from '@/components/TripCards';
+import TripCards, { VatButton } from '@/components/TripCards';
+import DateInput from '@/components/DateInput';
 import DataGrid from '@/components/DataGrid';
 import { useViewMode } from '@/lib/viewMode';
 import Modal from '@/components/Modal';
@@ -16,7 +17,7 @@ import { num, fmtAmt, fmtDay, fmtFullDate, monthKey, monthLabel, monthStart, tod
 import Omr from '@/components/Omr';
 import EditToggle from '@/components/EditToggle';
 import SalarySlipPaper from '@/components/SalarySlip';
-import { SALARY_FIELDS, salaryTotal, salaryPayable, allowancePlan } from '@/lib/transport';
+import { SALARY_FIELDS, salaryTotal, salaryPayable, allowancePlan, vatOf, driverProfit, TAX_RATE } from '@/lib/transport';
 
 const NUM_KEYS = ['rent', 'received', 'driver_allowance', 'diesel', 'toll', 'maintenance'];
 
@@ -33,7 +34,7 @@ const PRESETS = [
 
 function DriverSheet() {
   const { id } = useParams();
-  const { isAdmin } = useUser();
+  const { isAdmin, name: userName } = useUser() || {};
   const [driver, setDriver] = useState(null);
   const [entries, setEntries] = useState([]);
   const [salMonths, setSalMonths] = useState({}); // salary receipt id -> YYYY-MM
@@ -47,6 +48,11 @@ function DriverSheet() {
   const [del, setDel] = useState(null);
   const [error, setError] = useState('');
   const [cols, setCols] = useState(DEFAULT_COLS);
+  const [taken, setTaken] = useState([]); // profit taken (transport_profit_taken)
+  const [takeOpen, setTakeOpen] = useState(false);
+  const [takeForm, setTakeForm] = useState({ date: '', amount: '', note: '' });
+  const [takeBusy, setTakeBusy] = useState(false);
+  const [takeDel, setTakeDel] = useState(null);
   const [colsOpen, setColsOpen] = useState(false);
   const toastTimer = useRef(null);
   const canChange = isAdmin && editMode;
@@ -60,11 +66,13 @@ function DriverSheet() {
 
   const load = useCallback(async () => {
     const s = sb();
-    const [d, e, sa] = await Promise.all([
+    const [d, e, sa, pt] = await Promise.all([
       s.from('transport_drivers').select('*').eq('id', id).single(),
       s.from('transport_entries').select('*').eq('driver_id', id).order('entry_date').order('sort').order('created_at'),
-      s.from('transport_salaries').select('*').eq('driver_id', id)
+      s.from('transport_salaries').select('*').eq('driver_id', id),
+      s.from('transport_profit_taken').select('*').eq('driver_id', id).order('taken_on').order('created_at')
     ]);
+    setTaken(pt.error ? [] : (pt.data || []));
     setSalMonths(Object.fromEntries((sa.data || []).map((x) => [x.id, monthKey(x.month)])));
     setSalaries(sa.data || []);
     if (d.error) { setError('This driver was not found.'); return; }
@@ -118,6 +126,14 @@ function DriverSheet() {
   totals.balance = num(totals.rent - totals.received);
   totals.costs = num(totals.diesel + totals.toll + totals.maintenance);
   totals.net = num(totals.rent - totals.costs);
+  totals.vat = num(rows.reduce((t, e) => t + vatOf(e), 0));
+  totals.rentNet = num(totals.rent - totals.vat);
+
+  /* Profit of this sheet (month or all months) and the running balance of all months */
+  const inPeriod = (d) => month === 'all' || monthKey(d) === month;
+  const taxOn = Boolean(driver?.tax_on);
+  const profit = driverProfit({ trips: rows, salaries: salaries.filter((x) => inPeriod(x.month)), taken: taken.filter((x) => inPeriod(x.taken_on)), taxOn });
+  const profitAll = driverProfit({ trips: entries, salaries, taken, taxOn });
 
   /* Driver allowance brought forward: earlier months' allowance still not paid shows on this month's sheet.
      When it is paid (Mark paid), it shows as Paid here and on the earlier month's sheet. */
@@ -148,6 +164,47 @@ function DriverSheet() {
     const { error: err } = await sb().from('transport_entries').update({ allowance_status: 'Not paid' }).in('id', ids);
     if (err) { flash(err.message, 'err'); return; }
     flash('Undone: back to Not paid');
+    load();
+  }
+
+  /* ---------- VAT 5%, 15% Govt tax, Profit taken ---------- */
+
+  function toggleVat(r) {
+    save(r, 'vat_included', !r.vat_included);
+  }
+
+  async function toggleTax() {
+    const next = !taxOn;
+    setDriver((d) => ({ ...d, tax_on: next }));
+    const { error: err } = await sb().from('transport_drivers').update({ tax_on: next }).eq('id', id);
+    if (err) { flash(err.message, 'err'); load(); return; }
+    flash(next ? `${TAX_RATE}% Govt tax is ON` : `${TAX_RATE}% Govt tax is OFF`);
+  }
+
+  function openTake() {
+    setTakeForm({ date: todayISO(), amount: '', note: '' });
+    setTakeOpen(true);
+  }
+
+  async function saveTake() {
+    const amount = Math.round(Number(takeForm.amount || 0) * 1000) / 1000;
+    if (!takeForm.date) { flash('Pick the date', 'err'); return; }
+    if (!amount || Number.isNaN(amount) || amount <= 0) { flash('Type the amount, e.g. 500', 'err'); return; }
+    setTakeBusy(true);
+    const { error: err } = await sb().from('transport_profit_taken')
+      .insert({ driver_id: id, taken_on: takeForm.date, amount, note: takeForm.note.trim() || null, entered_by: userName || null });
+    setTakeBusy(false);
+    if (err) { flash(err.message, 'err'); return; }
+    setTakeOpen(false);
+    flash(`Profit taken ${fmtAmt(amount)} saved`);
+    load();
+  }
+
+  async function deleteTake() {
+    const { error: err } = await sb().from('transport_profit_taken').delete().eq('id', takeDel.id);
+    if (err) { flash(err.message, 'err'); return; }
+    setTakeDel(null);
+    flash('Profit taken line deleted');
     load();
   }
 
@@ -190,6 +247,12 @@ function DriverSheet() {
     { key: 'from_place', label: 'From', type: 'text', width: 130 },
     { key: 'to_place', label: 'To', type: 'text', width: 170, render: (r) => r.to_place || (r.description ? <em className="muted">{r.description}</em> : '') },
     { key: 'rent', label: 'Total rent', type: 'number', min: 0, width: 104, render: amt('rent') },
+    {
+      key: 'vat_included', label: 'VAT 5%', type: 'calc', width: 170,
+      render: (r) => (Number(r.rent) > 0 ? (
+        <span className="vat-cell"><VatButton row={r} canVat={isAdmin} onVat={toggleVat} />{r.vat_included ? <b>{fmtAmt(vatOf(r))}</b> : null}</span>
+      ) : <span className="muted">–</span>)
+    },
     { key: 'received', label: 'Received', type: 'number', min: 0, width: 104, render: amt('received') },
     { key: 'received_date', label: 'Received on', type: 'date', width: 128, render: (r) => (r.received_date ? <span className={r.received_date !== r.entry_date ? 'late-pay' : ''}>{fmtDay(r.received_date)}</span> : <span className="muted">–</span>) },
     {
@@ -210,18 +273,31 @@ function DriverSheet() {
 
   /* ---------- Export ---------- */
 
+  function profitLines() {
+    const p = profit;
+    const out = [['Total rent', p.rent]];
+    if (p.vat) out.push(['VAT 5% (inside rent, kept aside)', -p.vat], ['Rent without VAT', p.income]);
+    out.push(['Trip costs (diesel, toll, maintenance)', -p.costs], ['Driver allowance', -p.allowance], ['Driver salary (fixed)', -p.salary], ['Profit before tax', p.before]);
+    if (taxOn) out.push([`Govt tax ${TAX_RATE}%`, -p.tax], ['Profit after tax', p.after]);
+    out.push(['Profit taken', -p.taken], ['Profit balance', p.balance]);
+    if (month !== 'all') out.push(['Profit balance, all months', profitAll.balance]);
+    return out;
+  }
+
   function tableData(list = rows) {
-    const head = ['Date', 'From', 'To', 'Description', 'Rent', 'Received', 'Received on', 'Balance', 'Payment', 'Driver allow.', 'Allowance', 'Diesel', 'Toll/other', 'Maint.', 'Status', 'Credit in', 'Entered by'];
+    const head = ['Date', 'From', 'To', 'Description', 'Rent', 'Received', 'Received on', 'Balance', 'Payment', 'Driver allow.', 'Allowance', 'Diesel', 'Toll/other', 'Maint.', 'Status', 'Credit in', 'Entered by', 'VAT 5%', 'Rent w/o VAT'];
     const data = list.map((r) => [
       fmtFullDate(r.entry_date), r.from_place || '', r.to_place || '', r.description || '',
       num(r.rent), num(r.received), r.received_date ? fmtFullDate(r.received_date) : '', num(Number(r.rent || 0) - Number(r.received || 0)), r.payment_status || '',
-      num(r.driver_allowance), r.allowance_status || '', num(r.diesel), num(r.toll), num(r.maintenance), r.remarks || '', r.credit_in || '', r.entered_by || ''
+      num(r.driver_allowance), r.allowance_status || '', num(r.diesel), num(r.toll), num(r.maintenance), r.remarks || '', r.credit_in || '', r.entered_by || '',
+      vatOf(r), num(Number(r.rent || 0) - vatOf(r))
     ]);
     const tot = (k) => num(list.reduce((t, e) => t + Number(e[k] || 0), 0));
     const trips = list.filter((e) => Number(e.rent) > 0).length;
     const T = { rent: tot('rent'), received: tot('received'), driver_allowance: tot('driver_allowance'), diesel: tot('diesel'), toll: tot('toll'), maintenance: tot('maintenance') };
-    const totalsRow = ['Total', `${trips} trips`, '', '', T.rent, T.received, '', num(T.rent - T.received), '', T.driver_allowance, '', T.diesel, T.toll, T.maintenance, '', '', ''];
-    return { head, data, totalsRow, numCols: [4, 5, 7, 9, 11, 12, 13] };
+    const V = num(list.reduce((t, e) => t + vatOf(e), 0));
+    const totalsRow = ['Total', `${trips} trips`, '', '', T.rent, T.received, '', num(T.rent - T.received), '', T.driver_allowance, '', T.diesel, T.toll, T.maintenance, '', '', '', V, num(T.rent - V)];
+    return { head, data, totalsRow, numCols: [4, 5, 7, 9, 11, 12, 13, 17, 18] };
   }
 
   async function doExcel() {
@@ -232,7 +308,11 @@ function DriverSheet() {
         name: driver.name, title: `${driver.name} · Vehicle # ${driver.vehicle_no || ''} · ${monthLabel(month)}`,
         subtitle: `${COMPANY_NAME} · Transport Division · Exported ${exportStamp()} · OMR`,
         head: t.head, rows: t.data, numCols: t.numCols, totalsRow: t.totalsRow,
-        widths: [13, 14, 18, 26, 10, 10, 12, 10, 14, 11, 11, 9, 10, 12, 14, 14, 12]
+        widths: [13, 14, 18, 26, 10, 10, 12, 10, 14, 11, 11, 9, 10, 12, 14, 14, 12, 10, 12]
+      }, {
+        name: 'Profit', title: `${driver.name} · Profit · ${monthLabel(month)}`,
+        subtitle: `${COMPANY_NAME} · Transport Division · Exported ${exportStamp()} · OMR`,
+        head: ['Item', 'Amount'], rows: profitLines(), numCols: [1], widths: [44, 16]
       }]);
       flash('Excel file downloaded');
     } catch {
@@ -244,7 +324,7 @@ function DriverSheet() {
     try {
       flash('Preparing PDF...');
       const t = tableData();
-      const keep = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14];
+      const keep = [0, 1, 2, 3, 4, 17, 5, 6, 7, 8, 9, 11, 12, 13, 14];
       const pick = (r) => keep.map((i) => (t.numCols.includes(i) && typeof r[i] === 'number' ? fmtAmt(r[i]) : r[i]));
       await exportPdf(`${driver.name} ${monthLabel(month)}.pdf`, {
         title: `${driver.name} · Vehicle # ${driver.vehicle_no || ''}`,
@@ -257,6 +337,9 @@ function DriverSheet() {
           head: ['Trips', 'Work amount', 'Received', 'Balance', 'Diesel', 'Toll / other', 'Maintenance', 'Net (before salary)'],
           rows: [[totals.trips, fmtAmt(totals.rent), fmtAmt(totals.received), fmtAmt(totals.balance), fmtAmt(totals.diesel), fmtAmt(totals.toll), fmtAmt(totals.maintenance), fmtAmt(totals.net)]],
           numCols: [0, 1, 2, 3, 4, 5, 6, 7], fontSize: 10
+        }, {
+          heading: 'Profit',
+          head: ['Item', 'Amount'], rows: profitLines().map(([a, b]) => [a, fmtAmt(b)]), numCols: [1], fontSize: 10
         }]
       });
       flash('PDF downloaded');
@@ -501,6 +584,7 @@ function DriverSheet() {
           <button type="button" className="btn ghost" onClick={doExcel}>Export Excel</button>
           <button type="button" className="btn ghost" onClick={doPdf}>Export PDF</button>
           <button type="button" className="btn in" onClick={() => { setSlipEdit(null); setSlipOpen(true); }} title="Salary slip of this month: print, edit, PDF">🧾 Salary slip</button>
+          {isAdmin && <button type="button" className="btn" onClick={openTake} title="Write profit taken from this driver's trips">💰 Profit taken</button>}
           <RangeReport title={`Trip report · ${driver.name}`} company="Modern City for Express Services LLC · Transport Division" landscape
             build={(from, to) => transportReport({ entries, drivers: [driver], salaries, from, to, driverId: driver.id })} label="🖨 Report by dates" />
           <button type="button" className="btn" onClick={doDriverCopy} title="PDF for the driver: trips, allowance and diesel only. No rent, received or profit.">🚚 Driver copy</button>
@@ -579,6 +663,8 @@ function DriverSheet() {
             flash={flash}
             totals={totals}
             prevOpenTotal={prevOpenTotal}
+            canVat={isAdmin}
+            onVat={toggleVat}
             allowLabel={(r) => `${r.allowance_status}${r.allowance_status === 'Paid' && r.allowance_salary_id && salMonths[r.allowance_salary_id] > monthKey(r.entry_date) ? ` (${monthLabel(salMonths[r.allowance_salary_id])})` : ''}`}
           />
         ) : (
@@ -595,7 +681,7 @@ function DriverSheet() {
           emptyText="No trips in this month."
           footer={{
             entry_date: `${totals.trips} trips`,
-            rent: fmtAmt(totals.rent), received: fmtAmt(totals.received),
+            rent: fmtAmt(totals.rent), received: fmtAmt(totals.received), vat_included: totals.vat ? `VAT ${fmtAmt(totals.vat)}` : '',
             balance: <span className={totals.balance > 0 ? 'neg' : ''}>{fmtAmt(totals.balance)}</span>,
             driver_allowance: prevOpenTotal > 0 ? <span className="fa-prev">{fmtAmt(totals.driver_allowance)}<small>+ prev. {fmtAmt(prevOpenTotal)} not paid</small></span> : fmtAmt(totals.driver_allowance), diesel: fmtAmt(totals.diesel),
             toll: fmtAmt(totals.toll), maintenance: fmtAmt(totals.maintenance)
@@ -608,6 +694,57 @@ function DriverSheet() {
           Red edge: money still to collect. Amber edge: expense without a trip. All amounts in OMR.
           {!isAdmin && ' View only.'}
         </p>
+      </section>
+
+      <section className="sheet tp-hide profit-box">
+        <div className="sheet-title sheet-edit-bar">
+          <h2>💰 Profit · {monthLabel(month)}</h2>
+          <span className="profit-btns">
+            {isAdmin ? (
+              <button type="button" className={`vat-pill tax ${taxOn ? 'on' : ''}`} aria-pressed={taxOn} onClick={toggleTax}
+                title={taxOn ? 'Click to stop taking 15% Govt tax' : 'Click to take 15% Govt tax from the profit'}>
+                {taxOn ? `✓ ${TAX_RATE}% Govt Tax added` : `${TAX_RATE}% Govt Tax not added`}
+              </button>
+            ) : <span className={`vat-pill tax ro ${taxOn ? 'on' : ''}`}>{taxOn ? `✓ ${TAX_RATE}% Govt Tax added` : `${TAX_RATE}% Govt Tax not added`}</span>}
+            {isAdmin && <button type="button" className="btn small in" onClick={openTake}>＋ Profit taken</button>}
+          </span>
+        </div>
+        <div className="profit-grid">
+          <div className="pc-card profit-card">
+            <div className="pc-body">
+              <div className="pc-row"><span className="pc-l">Total rent</span><span className="pc-v">{fmtAmt(profit.rent)}</span></div>
+              {profit.vat > 0 && <div className="pc-row minus"><span className="pc-l">VAT 5% (inside rent, kept aside)</span><span className="pc-v">− {fmtAmt(profit.vat)}</span></div>}
+              {profit.vat > 0 && <div className="pc-row total"><span className="pc-l">Rent without VAT</span><span className="pc-v">{fmtAmt(profit.income)}</span></div>}
+              <div className="pc-row minus"><span className="pc-l">Trip costs (diesel, toll, maintenance)</span><span className="pc-v">{profit.costs ? `− ${fmtAmt(profit.costs)}` : '–'}</span></div>
+              <div className="pc-row minus"><span className="pc-l">Driver allowance</span><span className="pc-v">{profit.allowance ? `− ${fmtAmt(profit.allowance)}` : '–'}</span></div>
+              <div className="pc-row minus"><span className="pc-l">Driver salary (fixed)</span><span className="pc-v">{profit.salary ? `− ${fmtAmt(profit.salary)}` : '–'}</span></div>
+              <div className="pc-row total"><span className="pc-l">Profit before tax</span><span className={`pc-v ${profit.before < 0 ? 'neg' : ''}`}>{fmtAmt(profit.before)}</span></div>
+              {taxOn && <div className="pc-row minus"><span className="pc-l">Govt tax {TAX_RATE}%{profit.before <= 0 ? <small>No tax on a loss</small> : null}</span><span className="pc-v">{profit.tax ? `− ${fmtAmt(profit.tax)}` : '–'}</span></div>}
+              {taxOn && <div className="pc-row total"><span className="pc-l">Profit after tax</span><span className={`pc-v ${profit.after < 0 ? 'neg' : ''}`}>{fmtAmt(profit.after)}</span></div>}
+              <div className="pc-row minus"><span className="pc-l">Profit taken</span><span className="pc-v">{profit.taken ? `− ${fmtAmt(profit.taken)}` : '–'}</span></div>
+              <div className="pc-row net"><span className="pc-l">Profit balance</span><span className="pc-v">{fmtAmt(profit.balance)}</span></div>
+              {month !== 'all' && <div className="pc-row"><span className="pc-l">Profit balance, all months</span><span className="pc-v"><b>{fmtAmt(profitAll.balance)}</b></span></div>}
+            </div>
+          </div>
+          <div className="pc-card profit-card">
+            <div className="pc-body">
+              <h4 className="profit-h">Profit taken {month === 'all' ? '(all months)' : `in ${monthLabel(month)}`}</h4>
+              {taken.filter((x) => inPeriod(x.taken_on)).length === 0 ? <p className="muted" style={{ margin: '4px 0' }}>Nothing taken yet.</p> : (
+                <ul className="taken-list">
+                  {taken.filter((x) => inPeriod(x.taken_on)).map((x) => (
+                    <li key={x.id}>
+                      <span>{fmtDay(x.taken_on)}</span>
+                      <span className="tk-note">{x.note || 'Profit taken'}{x.entered_by ? <small>by {x.entered_by}</small> : null}</span>
+                      <b>{fmtAmt(x.amount)}</b>
+                      {isAdmin && <button type="button" className="btn small ghost" onClick={() => setTakeDel(x)} title="Delete this line">🗑</button>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="note" style={{ margin: '8px 0 0' }}>VAT 5% is inside the amount when a trip shows "VAT 5% added" (325 = 309.524 + 15.476).</p>
+            </div>
+          </div>
+        </div>
       </section>
 
       {(() => {
@@ -754,6 +891,31 @@ function DriverSheet() {
             )}
           </div>
         </div>
+      )}
+
+      {takeOpen && (
+        <Modal title={`💰 Profit taken · ${driver.name}`} onClose={() => setTakeOpen(false)}>
+          <div className="take-form">
+            <label><span>Date</span><DateInput value={takeForm.date} onChange={(v) => setTakeForm((f) => ({ ...f, date: v || '' }))} /></label>
+            <label><span>Amount (OMR)</span><input type="number" inputMode="decimal" step="0.001" min="0" placeholder="500" value={takeForm.amount} onChange={(e) => setTakeForm((f) => ({ ...f, amount: e.target.value }))} autoFocus /></label>
+            <label className="wide"><span>Note (who took it, cash / bank)</span><input type="text" placeholder="e.g. Taken by owner, cash" value={takeForm.note} onChange={(e) => setTakeForm((f) => ({ ...f, note: e.target.value }))} /></label>
+          </div>
+          <p className="note" style={{ margin: '10px 0 0' }}>Profit balance now: <b>{fmtAmt(profitAll.balance)}</b>{Number(takeForm.amount) > 0 ? <> · after this: <b>{fmtAmt(num(profitAll.balance - Number(takeForm.amount)))}</b></> : null}</p>
+          <div className="modal-actions">
+            <button type="button" className="btn ghost" onClick={() => setTakeOpen(false)}>Cancel</button>
+            <button type="button" className="btn in" disabled={takeBusy} onClick={saveTake}>{takeBusy ? 'Saving...' : 'OK, save'}</button>
+          </div>
+        </Modal>
+      )}
+
+      {takeDel && (
+        <Modal title="Delete profit taken?" onClose={() => setTakeDel(null)}>
+          <p style={{ margin: 0 }}>Delete {fmtAmt(takeDel.amount)} taken on {fmtFullDate(takeDel.taken_on)}{takeDel.note ? ` (${takeDel.note})` : ''}?</p>
+          <div className="modal-actions">
+            <button className="btn ghost" onClick={() => setTakeDel(null)}>Cancel</button>
+            <button className="btn danger" onClick={deleteTake}>Delete</button>
+          </div>
+        </Modal>
       )}
 
       {toast && <div className={`toast ${toast.kind}`} role="status">{toast.text}</div>}
