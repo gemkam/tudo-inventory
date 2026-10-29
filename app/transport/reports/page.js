@@ -14,6 +14,20 @@ const RANGE_KEYS = ['week', 'month', 'lastmonth', 'quarter', 'all'];
 const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 const clean = (s) => String(s || '').trim().replace(/\s+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
+/* Salary cell in Drivers compared: total, then fixed part and driver allowance with paid / not paid */
+function SalaryCell({ salary, allowance, open }) {
+  const paid = num(allowance - open);
+  return (
+    <span className="rp-sal">
+      <b>{fmtAmt(num(salary + allowance))}</b>
+      <small>Fixed {fmtAmt(salary)}</small>
+      {allowance > 0 && <small>Allowance {fmtAmt(allowance)}</small>}
+      {paid > 0 && <small className="pos">✓ {fmtAmt(paid)} paid</small>}
+      {open > 0 && <small className="neg">✗ {fmtAmt(open)} not paid</small>}
+    </span>
+  );
+}
+
 function TransportReports() {
   const [drivers, setDrivers] = useState(null);
   const [entries, setEntries] = useState([]);
@@ -117,9 +131,9 @@ function TransportReports() {
 
   /* ---------- Exports ---------- */
 
-  const driverHead = ['Driver', 'Trips', 'Work', 'Received', 'Diesel', 'Toll', 'Maintenance', 'Driver allowance', 'Allowance not paid', 'Salary (fixed)', 'Other', 'Expenses', 'Profit'];
-  const driverRows = r.perDriver.map((x) => [x.d.name, x.trips, x.work, x.received, x.diesel, x.toll, x.maintenance, x.allowance, x.allowanceOpen, x.salary, x.other, x.expenses, x.profit]);
-  const driverTotal = ['Total', T.trips, T.work, T.received, T.diesel, T.toll, T.maintenance, T.allowance, T.allowanceOpen, T.salary, T.other, T.expenses, T.profit];
+  const driverHead = ['Driver', 'Trips', 'Work', 'Received', 'Diesel', 'Toll', 'Maintenance', 'Salary (incl. driver allowance)', 'Driver allowance paid', 'Driver allowance not paid', 'Other', 'Expenses', 'Profit'];
+  const driverRows = r.perDriver.map((x) => [x.d.name, x.trips, x.work, x.received, x.diesel, x.toll, x.maintenance, num(x.salary + x.allowance), num(x.allowance - x.allowanceOpen), x.allowanceOpen, x.other, x.expenses, x.profit]);
+  const driverTotal = ['Total', T.trips, T.work, T.received, T.diesel, T.toll, T.maintenance, num(T.salary + T.allowance), num(T.allowance - T.allowanceOpen), T.allowanceOpen, T.other, T.expenses, T.profit];
   const tripRows = r.es.map((e) => [fmtFullDate(e.entry_date), driverName(e.driver_id), e.from_place || '', e.to_place || e.description || '', num(e.rent), num(e.received), num(e.diesel), num(e.toll), num(e.maintenance), e.payment_status || '']);
   const collectRows = r.toCollect.map((e) => [fmtFullDate(e.entry_date), driverName(e.driver_id), `${clean(e.from_place)} → ${clean(e.to_place)}`, num(e.rent), num(e.received), e.due]);
   const fileBase = `Transport report ${RANGES[range]} ${new Date().toISOString().slice(0, 10)}`;
@@ -262,11 +276,11 @@ function TransportReports() {
           <div className="rp-card rp-wide">
             <div className="rp-card-title">Drivers compared</div>
             <div className="rp-takeaway">{T.work ? `${topDriver.d.name} made the most profit: ${fmtAmt(topDriver.profit)} OMR.` : 'No trips in this period.'}</div>
-            <p className="rp-card-note" style={{ margin: '0 0 8px' }}>Driver allowance is counted per trip (by trip date, paid or not). Salary shows the fixed part only, so nothing is counted twice.</p>
+            <p className="rp-card-note" style={{ margin: '0 0 8px' }}>Salary = fixed salary + driver allowance of the trips in this period (paid or not), shown under it.</p>
             <div className="table-wrap">
               <table className="rp-block-table">
                 <thead>
-                  <tr><th>Driver</th><th className="num">Trips</th><th className="num">Work</th><th className="num">Diesel</th><th className="num">Diesel / trip</th><th className="num">Toll</th><th className="num">Maint.</th><th className="num">Driver allowance</th><th className="num">Salary</th><th className="num">Other</th><th className="num">Profit</th></tr>
+                  <tr><th>Driver</th><th className="num">Trips</th><th className="num">Work</th><th className="num">Diesel</th><th className="num">Diesel / trip</th><th className="num">Toll</th><th className="num">Maint.</th><th className="num">Salary</th><th className="num">Other</th><th className="num">Profit</th></tr>
                 </thead>
                 <tbody>
                   {r.perDriver.map((x) => (
@@ -278,8 +292,7 @@ function TransportReports() {
                       <td className="num">{fmtAmt(x.dieselPerTrip)}</td>
                       <td className="num">{fmtAmt(x.toll)}</td>
                       <td className="num">{fmtAmt(x.maintenance)}</td>
-                      <td className="num">{fmtAmt(x.allowance)}{x.allowanceOpen > 0 && <><br /><small className="neg">{fmtAmt(x.allowanceOpen)} not paid</small></>}</td>
-                      <td className="num">{fmtAmt(x.salary)}</td>
+                      <td className="num"><SalaryCell salary={x.salary} allowance={x.allowance} open={x.allowanceOpen} /></td>
                       <td className="num">{fmtAmt(x.other)}</td>
                       <td className={`num ${x.profit < 0 ? 'neg' : ''}`}><b>{fmtAmt(x.profit)}</b></td>
                     </tr>
@@ -287,8 +300,7 @@ function TransportReports() {
                   <tr className="sum">
                     <td>Total</td><td className="num">{T.trips}</td><td className="num">{fmtAmt(T.work)}</td><td className="num">{fmtAmt(T.diesel)}</td>
                     <td className="num">{T.trips ? fmtAmt(num(T.diesel / T.trips)) : 0}</td><td className="num">{fmtAmt(T.toll)}</td><td className="num">{fmtAmt(T.maintenance)}</td>
-                    <td className="num">{fmtAmt(T.allowance)}{T.allowanceOpen > 0 && <><br /><small className="neg">{fmtAmt(T.allowanceOpen)} not paid</small></>}</td>
-                    <td className="num">{fmtAmt(T.salary)}</td><td className="num">{fmtAmt(T.other)}</td><td className="num">{fmtAmt(T.profit)}</td>
+                    <td className="num"><SalaryCell salary={T.salary} allowance={T.allowance} open={T.allowanceOpen} /></td><td className="num">{fmtAmt(T.other)}</td><td className="num">{fmtAmt(T.profit)}</td>
                   </tr>
                 </tbody>
               </table>
