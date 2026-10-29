@@ -73,7 +73,6 @@ function Sheet({ title, company, from, to, data }) {
           )}
         </section>
       ))}
-      <footer className="rr-sign"><div><span>Prepared by</span><i /></div><div><span>Checked by</span><i /></div><div><span>Approved by</span><i /></div></footer>
     </div>
   );
 }

@@ -31,7 +31,7 @@ const COMPANY = {
 const short = (k) => monthLabel(k).replace(/^(\w{3})\w*/, '$1');
 
 function SheetPage() {
-  const { isAdmin, name } = useUser();
+  const { isAdmin } = useUser();
   const { label } = useSalaryLabels();
   const [drivers, setDrivers] = useState(null);
   const [salaries, setSalaries] = useState([]);
@@ -297,11 +297,6 @@ view === 'cards' ? (
           </>
         )}
 
-        <footer className="ss-sign">
-          <div><span>Prepared by</span><i />{name ? <small>{name}</small> : null}</div>
-          <div><span>Checked by</span><i /></div>
-          <div><span>Approved by</span><i /></div>
-        </footer>
         <p className="ss-stamp">Printed {new Date().toLocaleDateString('en-GB')} · Tudo Num Office Systems</p>
       </article>
 
