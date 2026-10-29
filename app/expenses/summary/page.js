@@ -8,6 +8,7 @@ import AuthGate, { useUser } from '@/components/AuthGate';
 import Omr from '@/components/Omr';
 import Modal from '@/components/Modal';
 import { useShare } from '@/components/ShareModal';
+import GroupTools, { openTab } from '@/components/GroupTools';
 import { Donut, Bars, PairBars, HBars, SERIES } from '@/components/Charts';
 import { sb } from '@/lib/supabase';
 import { fmtAmt, monthLabel, todayISO, exportStamp, exportExcel } from '@/lib/sheet';
@@ -40,8 +41,8 @@ function SummaryPage() {
   const load = useCallback(async () => {
     const s = sb();
     const [e, te, ts, tx, dr, bu, ve, ma, st, at, docs] = await Promise.all([
-      s.from('exp_entries').select('company, entry_date, bill_no, description, category, head, paid, unpaid, vat, department, source_kind'),
-      s.from('transport_entries').select('entry_date, received_date, driver_id, from_place, to_place, description, rent, received, diesel, toll, maintenance, driver_allowance, vat_included'),
+      s.from('exp_entries').select('id, company, entry_date, bill_no, description, category, head, paid, unpaid, vat, department, source_kind'),
+      s.from('transport_entries').select('id, entry_date, received_date, driver_id, from_place, to_place, description, rent, received, diesel, toll, maintenance, driver_allowance, vat_included'),
       s.from('transport_salaries').select('*'),
       s.from('transport_extras').select('driver_id, month, description, amount'),
       s.from('transport_drivers').select('id, name'),
@@ -78,6 +79,7 @@ function SummaryPage() {
   const lines = useMemo(() => (data ? buildLines(data) : []), [data]);
   const income = useMemo(() => (data ? buildIncome(data) : []), [data]);
   const docSales = useMemo(() => (data ? buildDocSales(data.docs) : []), [data]);
+  const driverName = useCallback((id) => (data?.drivers || []).find((d) => d.id === id)?.name || '', [data]);
   const today = todayISO();
   const thisMonth = today.slice(0, 7);
   const lastMonth = shiftMonth(thisMonth, -1);
@@ -204,13 +206,16 @@ function SummaryPage() {
       <div className="page-tools">
         <Link href="/expenses" className="crumb">← Office Expense</Link>
         <div className="tools">
-          <button type="button" className="btn in" onClick={() => jumpTo('sales-sheet')} title="Go to the Sales sheet">💰 Sales</button>
+          <button type="button" className="btn in" onClick={() => openTab('sales')} title="Sales: everything earned">💰 Sales</button>
           <button type="button" className="btn in" onClick={() => {
             const el = document.getElementById('pl-statement');
             if (!el) return;
             el.scrollIntoView({ behavior: 'smooth', block: 'start' });
             el.classList.remove('pl-flash'); void el.offsetWidth; el.classList.add('pl-flash');
           }} title="Go to the Profit and Loss statement">📑 Profit and Loss</button>
+          <button type="button" className="btn in" onClick={() => openTab('vat')}>🧾 VAT return</button>
+          <button type="button" className="btn in" onClick={() => openTab('cash')}>💵 Cash forecast</button>
+          <button type="button" className="btn in" onClick={() => openTab('checks')}>🔍 Checks</button>
           {isAdmin && <button type="button" className="btn ghost" onClick={() => setBudgetOpen(true)}>🎯 Budgets</button>}
           <button type="button" className="btn ghost" onClick={downloadPdf} disabled={busy}>{busy ? 'Making PDF...' : '⬇ PDF'}</button>
           <button type="button" className="btn ghost" onClick={share}>📤 Share</button>
@@ -271,7 +276,8 @@ function SummaryPage() {
         <div className="panel"><p className="empty">Choose one or more from the list above.</p></div>
       ) : (
         <div className="sum-report">
-          <SalesSheet G={G} periodLabel={periodLabel} />
+          <GroupTools G={G} data={data} pick={pick} today={today} labelOf={labelOf} driverName={driverName} isAdmin={isAdmin}
+            salesSheet={<SalesSheet G={G} periodLabel={periodLabel} />} />
 
           {alerts.length > 0 && (
             <section className="sum-alerts" aria-label="Alerts">
@@ -610,6 +616,7 @@ function SummaryPage() {
       )}
 
       {drill && <DrillModal drill={drill} onClose={() => setDrill(null)} />}
+
       {budgetOpen && <BudgetModal budgets={data.budgets} onClose={() => setBudgetOpen(false)} onSaved={load} />}
       {modal}
     </>
@@ -728,7 +735,7 @@ function SalesSheet({ G, periodLabel }) {
     } catch { /* ignore */ }
   }
   return (
-    <section className="panel pl-panel sales-panel" id="sales-sheet">
+    <section className="sales-panel" id="sales-sheet">
       <div className="pl-top">
         <h2>💰 Sales <span className="pl-period">{periodLabel}</span></h2>
         <button type="button" className="btn small ghost" onClick={excel}>⬇ Excel</button>

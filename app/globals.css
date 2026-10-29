@@ -2696,3 +2696,33 @@ a.tl-what { color: var(--brown); }
 .sales-kpis { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .sales-h3 { margin: 14px 0 6px; font-size: 15px; color: var(--heading, #0f3d33); }
 @media (max-width: 900px) { .sales-kpis { grid-template-columns: 1fr 1fr; } }
+
+/* ---------- Group Summary top tools: tabs, VAT return, Cash forecast, Checks (29 Oct 2026) ---------- */
+.gs-tools { margin-bottom: 14px; scroll-margin-top: 80px; }
+.gs-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line, #dfe8e5); }
+.gs-tab { padding: 7px 14px; border-radius: 999px; border: 1.5px solid var(--pill-line, #b9cfc8); background: transparent; color: var(--heading, #0f3d33); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.gs-tab:hover { border-color: var(--brown); color: var(--brown); }
+.gs-tab.on { background: var(--brown); border-color: var(--brown); color: #fff; }
+.gs-badge { background: #c0392b; color: #fff; border-radius: 999px; font-size: 11px; padding: 0 7px; line-height: 18px; }
+.gs-actions { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.gs-actions select, .gs-open input { padding: 6px 9px; border-radius: 8px; border: 1px solid var(--line, #cfdcd8); background: var(--surface, #fff); color: inherit; font: inherit; }
+.gs-open { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
+.gs-open input { width: 130px; }
+.gs-months { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 12px 0; }
+.gs-months > div { display: flex; flex-direction: column; gap: 2px; padding: 9px 12px; border-radius: 10px; background: var(--tint); font-size: 13px; }
+.gs-weeks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0 0 12px; }
+.gs-week { display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line, #dfe8e5); background: var(--surface, #fff); color: inherit; font: inherit; cursor: pointer; }
+.gs-week.on { border-color: var(--brown); box-shadow: 0 0 0 2px var(--brown) inset; }
+.gs-week small { color: var(--muted, #6b7c77); font-size: 11.5px; }
+.gs-bar { display: block; height: 7px; border-radius: 4px; background: var(--tint); overflow: hidden; }
+.gs-bar i { display: block; height: 100%; border-radius: 4px; }
+.gs-bar i.in { background: #13836b; } .gs-bar i.out { background: #c0392b; }
+.gs-wl { display: flex; justify-content: space-between; font-size: 12px; } .gs-wl em { font-style: normal; }
+.gs-week strong { font-size: 14px; }
+.gs-checks { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.gs-check { border-radius: 10px; border: 1px solid var(--line, #dfe8e5); border-left: 5px solid #e0a100; background: var(--surface, #fff); }
+.gs-check.bad { border-left-color: #c0392b; } .gs-check.info { border-left-color: #2f80b8; }
+.gs-check button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 12px; background: transparent; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.gs-check button b { flex: 1; font-weight: 600; } .gs-check button em { font-style: normal; color: var(--muted, #6b7c77); }
+.gs-check ul { margin: 0; padding: 0 14px 10px 40px; font-size: 13.5px; color: var(--muted, #6b7c77); }
+@media (max-width: 900px) { .gs-weeks { grid-template-columns: 1fr 1fr; } .gs-months { grid-template-columns: 1fr; } }
