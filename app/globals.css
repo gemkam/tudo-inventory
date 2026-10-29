@@ -1637,7 +1637,7 @@ tr.pickable:hover td { background: var(--row-hover); }
 @keyframes noor-glow-red { 0% { box-shadow: 0 0 0 0 rgba(229, 72, 77, .55); } 100% { box-shadow: 0 0 0 10px rgba(229, 72, 77, 0); } }
 @media screen and (max-width: 600px) {
   .noor-orb { right: calc(14px + env(safe-area-inset-right, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
-  .noor-hint { right: auto; left: auto; top: auto; bottom: calc(100% + 10px); transform: translateX(-60%); white-space: normal; width: 200px; }
+  .noor-hint { right: 0; left: auto; top: auto; bottom: calc(100% + 10px); transform: none; white-space: normal; width: min(220px, calc(100vw - 40px)); }
   .noor-talk { padding: 0 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -2744,4 +2744,15 @@ a.tl-what { color: var(--brown); }
   .gs-actions { width: 100%; }
   .gs-open input { width: 110px; }
   .pl-table td:first-child { min-width: 170px; white-space: normal; }
+}
+/* the page and the side-button layout: one column that can never be wider than the screen */
+.page:not(.has-side) { grid-template-columns: minmax(0, 1fr); }
+.side-main { grid-template-columns: minmax(0, 1fr); }
+.side-main > * { min-width: 0; max-width: 100%; }
+.top-user { flex-wrap: wrap; min-width: 0; }
+@media (max-width: 760px) {
+  .page.has-side { grid-template-columns: minmax(0, 1fr); }
+  .co-switch { display: flex; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%; }
+  .co-switch::-webkit-scrollbar { display: none; }
+  .co-switch > * { flex: 0 0 auto; white-space: nowrap; }
 }
