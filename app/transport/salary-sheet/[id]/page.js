@@ -9,6 +9,7 @@ import Modal from '@/components/Modal';
 import EditToggle from '@/components/EditToggle';
 import DriverDesk from '@/components/DriverDesk';
 import Omr from '@/components/Omr';
+import DateInput from '@/components/DateInput';
 import { sb } from '@/lib/supabase';
 import { num, fmtAmt, monthKey, monthStart, monthLabel, todayISO, exportExcel, exportStamp } from '@/lib/sheet';
 import { SALARY_FIELDS, salaryTotal, salaryPayable } from '@/lib/transport';
@@ -41,6 +42,8 @@ function DriverSheet() {
   const [extras, setExtras] = useState([]);
   const [salaries, setSalaries] = useState([]);
   const [entries, setEntries] = useState([]);
+  const [editSal, setEditSal] = useState(null);
+  const [undo, setUndo] = useState({});
   const [editMode, setEditMode] = useState(false);
   const [del, setDel] = useState(null);
   const [toast, setToast] = useState(null);
@@ -99,12 +102,25 @@ function DriverSheet() {
     flash('Deleted');
   }
 
-  async function savePaid(sal, v) {
-    const patch = { paid_amount: v, paid_on: v ? (sal.paid_on || todayISO()) : null };
+  /* Every change on a month card can be undone (↶ Undo, step by step, until the page is reloaded) */
+  async function saveSal(sal, patch, okText = 'Saved', record = true) {
+    const before = Object.fromEntries(Object.keys(patch).map((k) => [k, sal[k] ?? null]));
+    if (Object.keys(patch).every((k) => (patch[k] ?? null) === before[k])) return;
     setSalaries((l) => l.map((x) => (x.id === sal.id ? { ...x, ...patch } : x)));
     const { error } = await sb().from('transport_salaries').update(patch).eq('id', sal.id);
-    if (error) { flash(error.message, 'err'); return; }
-    flash('Payment saved');
+    if (error) { flash(error.message, 'err'); setSalaries((l) => l.map((x) => (x.id === sal.id ? { ...x, ...before } : x))); return; }
+    if (record) setUndo((u) => ({ ...u, [sal.id]: [...(u[sal.id] || []), before] }));
+    flash(okText);
+  }
+  function savePaid(sal, v) {
+    return saveSal(sal, { paid_amount: v, paid_on: v ? (sal.paid_on || todayISO()) : null }, v ? 'Payment saved' : 'Marked not paid');
+  }
+  async function undoSal(sal) {
+    const stack = undo[sal.id] || [];
+    if (!stack.length) return;
+    const prev = stack[stack.length - 1];
+    setUndo((u) => ({ ...u, [sal.id]: stack.slice(0, -1) }));
+    await saveSal(sal, prev, 'Undone', false);
   }
 
   async function doExcel() {
@@ -191,27 +207,50 @@ function DriverSheet() {
               {byMonth.map((s) => {
                 const k = monthKey(s.month);
                 const due = salaryDue(s);
+                const editing = isAdmin && editSal === s.id;
                 return (
-                  <PayCard key={s.id} title={monthLabel(k)} badge={due == null ? null : due > 0.0005 ? <span className="pc-tag due">Not paid {money(due)}</span> : <span className="pc-tag ok">Paid ✓</span>}>
+                  <PayCard key={s.id} title={monthLabel(k)} className={editing ? 'editing' : ''} badge={due == null ? null : due > 0.0005 ? <span className="pc-tag due">Not paid {money(due)}</span> : <span className="pc-tag ok">Paid ✓</span>}>
+                    {isAdmin && (
+                      <div className="pc-act no-print">
+                        <button type="button" className={`btn small ${editing ? 'in' : ''}`} onClick={() => setEditSal(editing ? null : s.id)}>{editing ? '✓ Done' : '✏️ Edit'}</button>
+                        {(undo[s.id] || []).length > 0 && <button type="button" className="btn small ghost" onClick={() => undoSal(s)}>↶ Undo{undo[s.id].length > 1 ? ` (${undo[s.id].length})` : ''}</button>}
+                        {hasPaidCols(s) && due > 0.0005 && <button type="button" className="btn small in" onClick={() => savePaid(s, salaryPayable(s))}>✓ Mark paid</button>}
+                        {hasPaidCols(s) && s.paid_amount != null && <button type="button" className="btn small ghost" onClick={() => savePaid(s, null)}>✗ Not paid</button>}
+                      </div>
+                    )}
                     <PaySection title="Salary">
-                      {cardFields.map(([f]) => <PayRow key={f} label={label(f)} value={n(s[f]) ? s[f] : null} note={f === 'allowance_carried' ? s.allowance_carried_note : undefined} />)}
+                      {cardFields.map(([f]) => {
+                        const auto = f === 'trip_allowance' || f === 'allowance_carried';
+                        return (
+                          <PayRow key={f} label={label(f)} value={n(s[f]) ? s[f] : null}
+                            note={f === 'allowance_carried' ? s.allowance_carried_note : editing && auto ? 'from trips (Mark paid on trip sheet)' : undefined}>
+                            {editing && !auto ? <AmountInput value={s[f]} onSave={(v) => saveSal(s, { [f]: v ?? 0 })} /> : undefined}
+                          </PayRow>
+                        );
+                      })}
                       <div className="pc-notes"><AllowanceNotes story={allowanceStory(entries, salaries, id, k)} month={k} compact /></div>
                       <PayRow label="Total salary" value={salaryTotal(s)} kind="total" />
                     </PaySection>
                     <PaySection title="Deduction and additions">
-                      <PayRow label={label('advance_deduction')} value={s.advance_deduction} kind="minus" />
-                      <PayRow label={label('special_allowance')} value={s.special_allowance} kind="plus" />
+                      <PayRow label={label('advance_deduction')} value={s.advance_deduction} kind="minus">
+                        {editing ? <AmountInput value={s.advance_deduction} onSave={(v) => saveSal(s, { advance_deduction: v ?? 0 })} /> : undefined}
+                      </PayRow>
+                      <PayRow label={label('special_allowance')} value={s.special_allowance} kind="plus">
+                        {editing ? <AmountInput value={s.special_allowance} onSave={(v) => saveSal(s, { special_allowance: v ?? 0 })} /> : undefined}
+                      </PayRow>
                     </PaySection>
                     <PayRow label="Net payable" value={salaryPayable(s)} kind="net" />
                     {hasPaidCols(s) && (
-                      <PayRow label="Paid" kind="paid" note={s.paid_on ? `on ${fmtD(s.paid_on)}` : undefined}>
-                        {isAdmin ? (
-                          <span className="pc-pay">
-                            <AmountInput value={s.paid_amount} onSave={(v) => savePaid(s, v)} />
-                            {n(s.paid_amount) < salaryPayable(s) && <button type="button" className="btn small in no-print" onClick={() => savePaid(s, salaryPayable(s))}>✓ Full</button>}
-                          </span>
-                        ) : (s.paid_amount == null ? '–' : money(s.paid_amount))}
-                      </PayRow>
+                      <>
+                        <PayRow label="Paid" kind="paid" value={s.paid_amount}>
+                          {editing ? <AmountInput value={s.paid_amount} onSave={(v) => savePaid(s, v)} /> : (s.paid_amount == null ? '–' : undefined)}
+                        </PayRow>
+                        {(editing || s.paid_on) && (
+                          <PayRow label="Paid on">
+                            {editing ? <DateInput value={s.paid_on || ''} onChange={(v) => saveSal(s, { paid_on: v || null })} /> : fmtD(s.paid_on)}
+                          </PayRow>
+                        )}
+                      </>
                     )}
                     {due != null && <PayRow label="Not paid" value={Math.max(0, due)} kind={due > 0.0005 ? 'due' : 'total'} />}
                   </PayCard>
