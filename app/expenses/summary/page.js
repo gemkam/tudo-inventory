@@ -41,7 +41,7 @@ function SummaryPage() {
     const s = sb();
     const [e, te, ts, tx, dr, bu, ve, ma, st, at] = await Promise.all([
       s.from('exp_entries').select('company, entry_date, bill_no, description, category, head, paid, unpaid, vat, department, source_kind'),
-      s.from('transport_entries').select('entry_date, received_date, driver_id, from_place, to_place, description, rent, received, diesel, toll, maintenance, driver_allowance'),
+      s.from('transport_entries').select('entry_date, received_date, driver_id, from_place, to_place, description, rent, received, diesel, toll, maintenance, driver_allowance, vat_included'),
       s.from('transport_salaries').select('*'),
       s.from('transport_extras').select('driver_id, month, description, amount'),
       s.from('transport_drivers').select('id, name'),
@@ -280,12 +280,13 @@ function SummaryPage() {
               <div className={`rp-tile-num ${bt.budget && bt.actual > bt.budget ? 'neg' : ''}`}>{bt.budget ? `${pct(bt.actual, bt.budget)}%` : '–'}</div>
               <div className="rp-tile-sub">{bt.budget ? `${fmtO(bt.actual)} of ${fmtO(bt.budget)}` : isAdmin ? 'Press 🎯 Budgets to set' : 'No budgets set yet'}</div></div>
             <div className="rp-tile"><div className="rp-tile-label">⏳ Unpaid</div><div className={`rp-tile-num ${G.grand.unpaid ? 'neg' : ''}`}><Omr v={G.grand.unpaid} /></div><div className="rp-tile-sub">{G.grand.unpaid ? 'Still to pay' : 'All bills paid'}</div></div>
-            <div className="rp-tile"><div className="rp-tile-label">🧾 VAT 5%</div><div className="rp-tile-num"><Omr v={G.grand.vat} /></div><div className="rp-tile-sub">On bills</div></div>
+            <div className="rp-tile"><div className="rp-tile-label">🧾 VAT 5%</div><div className="rp-tile-num"><Omr v={G.grand.vat} /></div><div className="rp-tile-sub">On bills (paid)</div></div>
+            {tRow && <div className="rp-tile"><div className="rp-tile-label">🧾 VAT 5% on transport</div><div className="rp-tile-num"><Omr v={tRow.vatIn} /></div><div className="rp-tile-sub">{tRow.vatIn ? `Inside work amount · without VAT ${fmtO(tRow.workNet)}` : 'No trip with VAT 5% added'}</div></div>}
             <div className="rp-tile"><div className="rp-tile-label">🏢 Spent the most</div><div className="rp-tile-num sm">{topCo?.spent ? topCo.label : '–'}</div><div className="rp-tile-sub">{topCo?.spent ? `${fmtO(topCo.spent)} · ${pct(topCo.spent, G.grand.spent)}%` : 'No spending'}</div></div>
             <div className="rp-tile"><div className="rp-tile-label">🏆 Top expense</div><div className="rp-tile-num sm">{topHead ? topHead.head : '–'}</div><div className="rp-tile-sub">{topHead ? `${fmtO(topHead.total)} · ${pct(topHead.total, G.grand.spent)}%` : 'No spending'}</div></div>
             <div className="rp-tile"><div className="rp-tile-label">💵 Cash in minus out</div><div className={`rp-tile-num ${G.cash.totalNet < 0 ? 'neg' : 'pos'}`}><Omr v={G.cash.totalNet} /></div><div className="rp-tile-sub">In {fmtAmt(G.cash.totalIn)} · Out {fmtAmt(G.cash.totalOut)}</div></div>
             {tRow ? (
-              <div className="rp-tile"><div className="rp-tile-label">🚚 Transport profit</div><div className={`rp-tile-num ${tRow.profit < 0 ? 'neg' : 'pos'}`}><Omr v={tRow.profit} /></div><div className="rp-tile-sub">Work {fmtO(tRow.work)}</div></div>
+              <div className="rp-tile"><div className="rp-tile-label">🚚 Transport profit</div><div className={`rp-tile-num ${tRow.profit < 0 ? 'neg' : 'pos'}`}><Omr v={tRow.profit} /></div><div className="rp-tile-sub">Work {fmtO(tRow.work)}{tRow.vatIn ? ` − VAT ${fmtO(tRow.vatIn)}` : ''}</div></div>
             ) : (
               <div className="rp-tile"><div className="rp-tile-label">📄 Bills</div><div className="rp-tile-num">{G.sel.length}</div><div className="rp-tile-sub">Lines counted</div></div>
             )}
@@ -542,7 +543,7 @@ function SummaryPage() {
             <h2>By company</h2>
             <div className="table-wrap">
               <table className="summary-table">
-                <thead><tr><th>Company</th><th className="num">Spent</th><th className="num">Unpaid</th><th className="num">VAT</th><th className="num">Work amount</th><th className="num">Profit</th></tr></thead>
+                <thead><tr><th>Company</th><th className="num">Spent</th><th className="num">Unpaid</th><th className="num">VAT on bills</th><th className="num">Work amount</th><th className="num">VAT 5% on work</th><th className="num">Profit</th></tr></thead>
                 <tbody>
                   {G.perSource.map((s) => (
                     <tr key={s.key} className="pickable" onClick={() => drillCompany(s.key)}>
@@ -551,10 +552,11 @@ function SummaryPage() {
                       <td className="num">{s.unpaid ? fmtAmt(s.unpaid) : <span className="muted">–</span>}</td>
                       <td className="num">{s.vat ? fmtAmt(s.vat) : <span className="muted">–</span>}</td>
                       <td className="num">{s.kind === 'transport' ? fmtAmt(s.work) : <span className="muted">–</span>}</td>
+                      <td className="num">{s.kind === 'transport' && s.vatIn ? fmtAmt(s.vatIn) : <span className="muted">–</span>}</td>
                       <td className={`num ${s.profit < 0 ? 'neg' : 'pos'}`}>{s.kind === 'transport' ? fmtAmt(s.profit) : <span className="muted">–</span>}</td>
                     </tr>
                   ))}
-                  <tr className="sum"><td>Total</td><td className="num">{fmtAmt(G.grand.spent)}</td><td className="num">{fmtAmt(G.grand.unpaid)}</td><td className="num">{fmtAmt(G.grand.vat)}</td><td /><td /></tr>
+                  <tr className="sum"><td>Total</td><td className="num">{fmtAmt(G.grand.spent)}</td><td className="num">{fmtAmt(G.grand.unpaid)}</td><td className="num">{fmtAmt(G.grand.vat)}</td><td /><td className="num">{G.grand.vatIn ? fmtAmt(G.grand.vatIn) : ''}</td><td /></tr>
                 </tbody>
               </table>
             </div>
