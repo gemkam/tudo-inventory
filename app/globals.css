@@ -2726,3 +2726,22 @@ a.tl-what { color: var(--brown); }
 .gs-check button b { flex: 1; font-weight: 600; } .gs-check button em { font-style: normal; color: var(--muted, #6b7c77); }
 .gs-check ul { margin: 0; padding: 0 14px 10px 40px; font-size: 13.5px; color: var(--muted, #6b7c77); }
 @media (max-width: 900px) { .gs-weeks { grid-template-columns: 1fr 1fr; } .gs-months { grid-template-columns: 1fr; } }
+
+/* ---------- Phone fix (29 Oct 2026): wide tables inside panels must scroll inside, not widen the page ---------- */
+.page > *, .panel > *, .sum-report > *, .gs-tools > *, .gs-body, .sales-panel { min-width: 0; max-width: 100%; }
+@media (max-width: 760px) {
+  /* toolbar: one row you swipe sideways instead of a tall pile of big buttons */
+  .page-tools { flex-wrap: wrap; margin-bottom: 0; }
+  .page-tools .tools { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; width: 100%; padding-bottom: 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .page-tools .tools::-webkit-scrollbar { display: none; }
+  .page-tools .tools > * { flex: 0 0 auto; white-space: nowrap; }
+  .gs-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .gs-tabs::-webkit-scrollbar { display: none; }
+  .gs-tab { flex: 0 0 auto; white-space: nowrap; font-size: 13.5px; padding: 6px 12px; }
+  .pl-kpis, .sales-kpis { grid-template-columns: 1fr 1fr; }
+  .pl-kpis > div { padding: 8px 10px; } .pl-kpis b { font-size: 16px; }
+  .pl-top h2 { font-size: 18px; }
+  .gs-actions { width: 100%; }
+  .gs-open input { width: 110px; }
+  .pl-table td:first-child { min-width: 170px; white-space: normal; }
+}
