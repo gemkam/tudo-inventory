@@ -1,5 +1,7 @@
 'use client';
 
+import RangeReport from '@/components/RangeReport';
+import { maintenanceReport } from '@/lib/rangeReports';
 import { useCallback, useEffect, useState } from 'react';
 import DataGrid from '@/components/DataGrid';
 import Modal from '@/components/Modal';
@@ -94,6 +96,8 @@ export default function MaintenanceSection({ vehicles, isAdmin, flash }) {
     <section className="panel" id="maintenance">
       <div className="section-head">
         <h2>🔧 Maintenance (units and trailers)</h2>
+        <RangeReport title="Vehicle maintenance report" company="Modern City for Express Services LLC · Transport Division" landscape className="btn small"
+          build={(from, to) => maintenanceReport({ rows: rows || [], labelOf, from, to })} label="🖨 Report by dates" />
         <EditToggle show={isAdmin} on={editOn} onClick={() => setEditOn((v) => !v)} />
         <p className="note">
           Total charges <b>{fmtAmt(total)} OMR</b> · {pdcOpen.length} PDC cheque{pdcOpen.length === 1 ? '' : 's'} not paid yet

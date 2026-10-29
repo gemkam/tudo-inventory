@@ -1,5 +1,7 @@
 'use client';
 
+import RangeReport from '@/components/RangeReport';
+import { inventoryReport } from '@/lib/rangeReports';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import AuthGate from '@/components/AuthGate';
@@ -169,6 +171,7 @@ function InventoryReports() {
         {RANGE_KEYS.map((k) => (
           <button key={k} type="button" className={`rp-chip ${range === k ? 'active' : ''}`} onClick={() => setRange(k)} aria-pressed={range === k}>{RANGES[k]}</button>
         ))}
+        <RangeReport title="Inventory report" className="rp-chip rr-chip" build={(from, to) => inventoryReport({ cats: cats || [], moves, bills, from, to })} label="📅 From date to date · Print" />
       </div>
       <p className="rp-range-note">{rangeNote(range)} Stock value and stock health are as of today.</p>
 

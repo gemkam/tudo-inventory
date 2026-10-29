@@ -2,6 +2,7 @@
 
 import TableCards, { ViewSwitch } from '@/components/TableCards';
 import TransportSideNav, { showTransportSide } from '@/components/TransportSideNav';
+import ExpenseSideNav, { showExpenseSide } from '@/components/ExpenseSideNav';
 import PrintColumns from '@/components/PrintColumns';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -126,9 +127,9 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
           </div>
         </div>
       </header>
-      {!blocked && !user.isEntry && showTransportSide(path) ? (
+      {!blocked && !user.isEntry && (showTransportSide(path) || showExpenseSide(path)) ? (
         <main className="page wide has-side">
-          <TransportSideNav />
+          {showTransportSide(path) ? <TransportSideNav /> : <ExpenseSideNav />}
           <div className="side-main">{children}</div>
         </main>
       ) : (

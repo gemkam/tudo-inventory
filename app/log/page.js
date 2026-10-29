@@ -1,5 +1,7 @@
 'use client';
 
+import RangeReport from '@/components/RangeReport';
+import { stockLogReport } from '@/lib/rangeReports';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import AuthGate from '@/components/AuthGate';
@@ -38,6 +40,7 @@ function LogPage() {
           <Link href="/inventory" className="crumb">← Inventory</Link>
           <h1>Stock log</h1>
           <p className="sub">Every stock in and stock out, newest first</p>
+          <div style={{ marginTop: 8 }}><RangeReport title="Stock log report" build={(from, to) => stockLogReport({ moves: moves || [], from, to })} label="🖨 Report by dates" /></div>
         </div>
         <div className="form-row">
           <div className="field narrow" style={{ flex: '0 1 170px' }}>

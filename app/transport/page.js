@@ -1,5 +1,7 @@
 'use client';
 
+import RangeReport from '@/components/RangeReport';
+import { transportReport } from '@/lib/rangeReports';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import AuthGate, { useUser } from '@/components/AuthGate';
@@ -32,7 +34,7 @@ function TransportPage() {
     const s = sb();
     const [d, e, sa, ex] = await Promise.all([
       s.from('transport_drivers').select('*').order('sort').order('name'),
-      s.from('transport_entries').select('id, driver_id, entry_date, rent, received, diesel, toll, maintenance, driver_allowance, allowance_status, allowance_salary_id'),
+      s.from('transport_entries').select('id, driver_id, entry_date, from_place, to_place, description, payment_status, sort, rent, received, diesel, toll, maintenance, driver_allowance, allowance_status, allowance_salary_id'),
       s.from('transport_salaries').select('*'),
       s.from('transport_extras').select('*').order('created_at')
     ]);
@@ -181,6 +183,8 @@ function TransportPage() {
           <Link href="/transport/vehicles" className="btn">🚚 Vehicles</Link>
           <Link href="/transport/invoice" className="btn">🧾 Invoice</Link>
           <Link href="/transport/reports" className="btn report">📊 Reports</Link>
+          <RangeReport title="Transport report (all drivers)" company="Modern City for Express Services LLC · Transport Division" landscape
+            build={(from, to) => transportReport({ entries, drivers: drivers || [], salaries, extras, from, to })} label="🖨 Report by dates" />
           <button type="button" className="btn ghost" onClick={doExcel}>Export Excel</button>
           <button type="button" className="btn ghost" onClick={doPdf}>Export PDF</button>
           {isAdmin && <button type="button" className="btn ghost" onClick={emailReport} disabled={mailing}>{mailing ? 'Sending...' : '✉ Email report'}</button>}

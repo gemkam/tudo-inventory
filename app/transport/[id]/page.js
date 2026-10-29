@@ -1,5 +1,7 @@
 'use client';
 
+import RangeReport from '@/components/RangeReport';
+import { transportReport } from '@/lib/rangeReports';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -499,6 +501,8 @@ function DriverSheet() {
           <button type="button" className="btn ghost" onClick={doExcel}>Export Excel</button>
           <button type="button" className="btn ghost" onClick={doPdf}>Export PDF</button>
           <button type="button" className="btn in" onClick={() => { setSlipEdit(null); setSlipOpen(true); }} title="Salary slip of this month: print, edit, PDF">🧾 Salary slip</button>
+          <RangeReport title={`Trip report · ${driver.name}`} company="Modern City for Express Services LLC · Transport Division" landscape
+            build={(from, to) => transportReport({ entries, drivers: [driver], salaries, from, to, driverId: driver.id })} label="🖨 Report by dates" />
           <button type="button" className="btn" onClick={doDriverCopy} title="PDF for the driver: trips, allowance and diesel only. No rent, received or profit.">🚚 Driver copy</button>
         </div>
       </div>

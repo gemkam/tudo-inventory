@@ -1,5 +1,7 @@
 'use client';
 
+import RangeReport from '@/components/RangeReport';
+import { groupReport } from '@/lib/rangeReports';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import AuthGate, { useUser } from '@/components/AuthGate';
@@ -203,6 +205,8 @@ function SummaryPage() {
           {isAdmin && <button type="button" className="btn ghost" onClick={() => setBudgetOpen(true)}>🎯 Budgets</button>}
           <button type="button" className="btn ghost" onClick={downloadPdf} disabled={busy}>{busy ? 'Making PDF...' : '⬇ PDF'}</button>
           <button type="button" className="btn ghost" onClick={share}>📤 Share</button>
+          <RangeReport title="Group expense report" company="Tudo Num Group" landscape
+            build={(from, to) => groupReport({ lines, pick, labelOf, from, to })} label="🖨 Report by dates" />
           <button type="button" className="btn ghost" onClick={() => window.print()}>🖨 Print</button>
         </div>
       </div>

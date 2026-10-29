@@ -1,5 +1,7 @@
 'use client';
 
+import RangeReport from '@/components/RangeReport';
+import { attendanceReport } from '@/lib/rangeReports';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import AuthGate, { useUser } from '@/components/AuthGate';
@@ -216,6 +218,15 @@ function AttendancePage() {
             <input type="month" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} aria-label="Month" />
             <button type="button" className="btn ghost sm" onClick={() => setMonth(shiftM(month, 1))} aria-label="Next month">›</button>
           </div>
+          <RangeReport title={`Attendance report · ${COMPANIES.find((c) => c.key === co)?.short || ''}`} company={COMPANIES.find((c) => c.key === co)?.name}
+            build={async (from, to) => {
+              let q = sb().from('exp_attendance').select('staff_id, day, mark, note').eq('company', co);
+              if (from) q = q.gte('day', from);
+              if (to) q = q.lte('day', to);
+              const { data, error } = await q;
+              if (error) throw new Error(error.message);
+              return attendanceReport({ staff: staff || [], att: data || [], from, to });
+            }} label="🖨 Report by dates" />
           <button type="button" className="btn ghost" onClick={doExcel} disabled={!staff.length}>Export Excel</button>
           <button type="button" className="btn ghost" onClick={() => window.print()}>🖨 Print</button>
         </div>

@@ -1,5 +1,7 @@
 'use client';
 
+import RangeReport from '@/components/RangeReport';
+import { billsReport } from '@/lib/rangeReports';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import AuthGate, { useUser } from '@/components/AuthGate';
@@ -82,6 +84,7 @@ function BillsPage() {
           <h1>Bills</h1>
           <p className="sub">Electricity, water, dispenser and internet payments</p>
         </div>
+        <RangeReport title="Bills report" build={(from, to) => billsReport({ payments, from, to })} label="🖨 Report by dates" />
       </div>
 
       {error && <div className="error">{error}</div>}

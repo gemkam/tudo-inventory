@@ -2561,3 +2561,44 @@ a.sm-name { color: var(--brown); } a.sm-name:hover { text-decoration: underline;
 .rp-sal { display: inline-grid; justify-items: end; gap: 1px; }
 .rp-sal small { font-size: 11.5px; color: var(--muted); font-weight: 500; }
 .rp-sal small.pos { color: #13836b; } .rp-sal small.neg { color: #c0392b; }
+
+/* ===== Report for any dates (components/RangeReport.js) ===== */
+.rr-sheet { display: none; }
+.rr-box { display: grid; gap: 12px; }
+.rr-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.rr-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.rr-dates label { display: grid; gap: 4px; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.rr-preview { padding: 10px 12px; border-radius: 10px; background: var(--tint); font-size: 13.5px; }
+.rr-err { margin: 0; color: #c0392b; font-weight: 600; }
+.rr-land { display: flex; gap: 8px; align-items: center; font-size: 13.5px; }
+@media (max-width: 520px) { .rr-dates { grid-template-columns: 1fr; } }
+@media print {
+  body.rr-printing > *:not(.rr-sheet) { display: none !important; }
+  body.rr-printing .rr-sheet { display: block !important; color: #000; background: #fff; font: 11px/1.4 var(--body, system-ui), sans-serif; }
+  .rr-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; border-bottom: 2.5px solid #13836b; padding-bottom: 8px; margin-bottom: 10px; }
+  .rr-head b { font-size: 12px; letter-spacing: .04em; color: #0f3d33; }
+  .rr-head h1 { margin: 2px 0; font-size: 20px; color: #0f3d33; }
+  .rr-head span { font-size: 12px; font-weight: 600; }
+  .rr-head small { color: #555; }
+  .rr-sum { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
+  .rr-sum div { border: 1px solid #c9d6d2; border-radius: 6px; padding: 5px 8px; display: grid; }
+  .rr-sum span { font-size: 9.5px; text-transform: uppercase; letter-spacing: .05em; color: #555; }
+  .rr-sum b { font-size: 13px; }
+  .rr-sec { margin-top: 10px; break-inside: auto; }
+  .rr-sec h2 { font-size: 13px; margin: 0 0 4px; color: #0f3d33; }
+  .rr-note { margin: 0 0 4px; color: #555; }
+  .rr-t { width: 100%; border-collapse: collapse; }
+  .rr-t th, .rr-t td { border: 1px solid #c9d6d2; padding: 3px 5px; text-align: left; vertical-align: top; }
+  .rr-t th { background: #13836b; color: #fff; font-size: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .rr-t .n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .rr-t tfoot td { font-weight: 700; background: #e3f0ec; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .rr-t tr { break-inside: avoid; }
+  .rr-sign { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; margin-top: 30px; }
+  .rr-sign div { display: grid; gap: 4px; font-size: 11px; }
+  .rr-sign i { border-bottom: 1px solid #000; height: 22px; }
+}
+.tsn-btn.tsn-head.here { color: var(--brown); border-color: var(--pill-line, var(--line)); }
+/* side buttons follow you while you scroll (sticky under the top of the window) */
+.page.has-side > .tsn { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); align-self: start; }
+@media (max-width: 980px) { .page.has-side > .tsn { position: static; } }
+.rr-chip { border-style: dashed; }

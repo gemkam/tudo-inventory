@@ -1,5 +1,7 @@
 'use client';
 
+import RangeReport from '@/components/RangeReport';
+import { transportReport } from '@/lib/rangeReports';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import AuthGate from '@/components/AuthGate';
@@ -209,6 +211,8 @@ function TransportReports() {
         {RANGE_KEYS.map((k) => (
           <button key={k} type="button" className={`rp-chip ${range === k ? 'active' : ''}`} onClick={() => setRange(k)} aria-pressed={range === k}>{RANGES[k]}</button>
         ))}
+        <RangeReport title="Transport report" company="Modern City for Express Services LLC · Transport Division" landscape className="rp-chip rr-chip"
+          build={(from, to) => transportReport({ entries, drivers: drivers || [], salaries, extras, from, to })} label="📅 From date to date · Print" />
       </div>
       <p className="rp-range-note">
         {rangeNote(range)} {r.wholeMonths ? 'Salaries and monthly expenses are included for each month in the period.' : 'Salaries and monthly expenses count for whole months only, so they are left out of a 7-day view.'}

@@ -1,5 +1,7 @@
 'use client';
 
+import RangeReport from '@/components/RangeReport';
+import { expenseReport, groupReport } from '@/lib/rangeReports';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import AuthGate, { useUser } from '@/components/AuthGate';
@@ -302,6 +304,8 @@ function ExpensesPage() {
           <button type="button" className="btn ghost" onClick={doExcel}>Export Excel</button>
           <button type="button" className="btn ghost" onClick={doPdf}>Export PDF</button>
           <button type="button" className="btn ghost" onClick={shareIt}>📤 Share</button>
+          <RangeReport title={`Office expense report · ${companyOf(co).short || ''}`} company={EXP_COMPANY} landscape
+            build={(from, to) => expenseReport({ rows: rows || [], from, to })} label="🖨 Report by dates" />
           <button type="button" className="btn ghost" onClick={() => window.print()}>🖨 Print</button>
         </div>
       </div>
