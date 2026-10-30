@@ -17,7 +17,8 @@ import { MARKS, MARK, WD_SHORT, LEAVE_REASONS, STAFF_TYPES, daysOfMonth, personM
   (exp_staff.staff_type, tap the Office / Site tag in Edit). All leave is paid; reason (Sick, Marketing,
   Outside meeting, Personal) saved in note. No leave on a weekend day.
   Edit: choose a mark (Present, Absent, Leave, Half day, Clear), then tap a day. Tap a day number
-  in the header to give the whole column that mark. "All present today" / "Fill unmarked days".
+  in the header to give the whole column that mark. Every working day is Present by default (not stored);
+  only changes (Absent, Leave, Half day) are saved. "Back to Present" removes a change.
   Every change also writes the person's Working days on the salary sheet (exp_staff.working_days,
   attendance_month): 30 - absent - half of the half days.
 */
@@ -156,6 +157,7 @@ function AttendancePage() {
     const curNote = notes[p.id]?.[day.iso] || null;
     if (brush === 'X') return cur ? { staff_id: p.id, day: day.iso, mark: null } : null;
     if (brush === 'L' && isOff(p, day)) return 'weekend';
+    if (brush === 'P' && !cur && !isOff(p, day)) return null; // already Present by default
     if (cur === brush && (brush !== 'L' || curNote === reason)) return { staff_id: p.id, day: day.iso, mark: null };
     return { staff_id: p.id, day: day.iso, mark: brush, note: brush === 'L' ? reason : null };
   }
@@ -171,24 +173,12 @@ function AttendancePage() {
       const cur = marks[p.id]?.[day.iso] || null;
       if (brush === 'X') return cur ? { staff_id: p.id, day: day.iso, mark: null } : null;
       if (brush === 'L' && isOff(p, day)) return null;
+      if (brush === 'P' && !cur && !isOff(p, day)) return null; // already Present by default
       if (cur === brush && (brush !== 'L' || notes[p.id]?.[day.iso] === reason)) return null;
       return { staff_id: p.id, day: day.iso, mark: brush, note: brush === 'L' ? reason : null };
     }).filter(Boolean);
     if (!list.length) { flash(brush === 'L' ? 'No leave on the weekend.' : 'Nothing to change on this day.'); return; }
     apply(list);
-  }
-  function allPresentToday() {
-    const d = days.find((x) => x.iso === today);
-    if (!d) { flash('Today is not in this month.', 'err'); return; }
-    const list = staff.filter((p) => !marks[p.id]?.[today] && !isOff(p, d)).map((p) => ({ staff_id: p.id, day: today, mark: 'P' }));
-    if (!list.length) { flash('Everyone working today is already marked.'); return; }
-    apply(list);
-  }
-  function fillUnmarked() {
-    const ch = [];
-    for (const p of staff) for (const d of days) if (!isOff(p, d) && d.iso <= today && !marks[p.id]?.[d.iso]) ch.push({ staff_id: p.id, day: d.iso, mark: 'P' });
-    if (!ch.length) { flash('Nothing to fill: every working day is marked.'); return; }
-    apply(ch);
   }
   async function toggleType(p) {
     if (!canChange || !hasType) return;
@@ -205,7 +195,7 @@ function AttendancePage() {
     const head = ['Staff', ...days.map((d) => `${d.d} ${WD_SHORT[d.wd]}`), 'Present', 'Absent', 'Leave', 'Half day', 'Off', 'Working days (salary)'];
     const rows = staff.map((p) => {
       const st = stats[p.id];
-      return [`${p.name} (${typeOf(p)})`, ...days.map((d) => { const m = marks[p.id]?.[d.iso]; const nt = notes[p.id]?.[d.iso]; return m ? (m === 'H' ? '½' : m === 'L' && nt ? `L ${nt}` : m) : isOff(p, d) ? 'Off' : ''; }), st.present, st.absent, st.leave, st.half, st.off, st.payDays];
+      return [`${p.name} (${typeOf(p)})`, ...days.map((d) => { const m = marks[p.id]?.[d.iso]; const nt = notes[p.id]?.[d.iso]; return m ? (m === 'H' ? '½' : m === 'L' && nt ? `L ${nt}` : m) : isOff(p, d) ? 'Off' : 'P'; }), st.present, st.absent, st.leave, st.half, st.off, st.payDays];
     });
     const n = days.length;
     await exportExcel(`Attendance ${companyOf(co).short} ${monthLabel(month)}.xlsx`, [{
@@ -233,7 +223,8 @@ function AttendancePage() {
   const why = {};
   att.forEach((r) => { if (r.mark === 'L') why[r.note || 'Not given'] = (why[r.note || 'Not given'] || 0) + 1; });
   const leaveText = Object.entries(why).map(([k, v]) => `${k} ${v}`).join(' · ');
-  const todayMarked = todayIn ? staff.filter((p) => marks[p.id]?.[today]).length : 0;
+  const todayD = days.find((x) => x.iso === today);
+  const todayMarked = todayIn ? staff.filter((p) => { const m = marks[p.id]?.[today] || (isOff(p, todayD) ? '' : 'P'); return m === 'P' || m === 'H'; }).length : 0;
   const todayAbsent = todayIn ? staff.filter((p) => marks[p.id]?.[today] === 'A').length : 0;
 
   return (
@@ -283,9 +274,9 @@ function AttendancePage() {
 
       <div className="kpi-row">
         <div className="kpi hero"><span>Staff</span><strong>{staff.length}</strong><small>{C.short}</small></div>
-        <div className="kpi"><span>Today</span><strong>{todayIn ? `${todayMarked}/${staff.length}` : '–'}</strong><small>{todayIn ? (todayAbsent ? `${todayAbsent} absent` : 'marked') : 'not this month'}</small></div>
+        <div className="kpi"><span>Today</span><strong>{todayIn ? `${todayMarked}/${staff.length}` : '–'}</strong><small>{todayIn ? (todayAbsent ? `present · ${todayAbsent} absent` : 'present') : 'not this month'}</small></div>
         <div className={`kpi ${tot.absent ? 'kpi-bad' : ''}`}><span>Absent days</span><strong>{tot.absent}</strong><small>{tot.half ? `+ ${tot.half} half days` : 'this month'}</small></div>
-        <div className="kpi"><span>Leave days (paid)</span><strong>{tot.leave}</strong><small>{leaveText || (tot.unmarked ? `${tot.unmarked} days not marked` : 'all marked')}</small></div>
+        <div className="kpi"><span>Leave days (paid)</span><strong>{tot.leave}</strong><small>{leaveText || 'everyone else Present'}</small></div>
       </div>
 
       <section className={`sheet ${canChange ? 'is-editing' : ''}`}>
@@ -296,7 +287,7 @@ function AttendancePage() {
 
         {canChange && (
           <div className="at-bar no-print">
-            <span className="muted">Choose, then tap a day:</span>
+            <span className="muted">Everyone is Present by default. Choose a change, then tap a day:</span>
             {MARKS.map((m) => (
               <button key={m.key} type="button" className={`at-brush at-${m.key} ${brush === m.key ? 'on' : ''}`} onClick={() => setBrush(m.key)}>{m.short} {m.label}</button>
             ))}
@@ -305,10 +296,7 @@ function AttendancePage() {
                 {LEAVE_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
               </select>
             )}
-            <button type="button" className={`at-brush at-X ${brush === 'X' ? 'on' : ''}`} onClick={() => setBrush('X')}>✕ Clear</button>
-            <span className="at-sep" />
-            {todayIn && <button type="button" className="btn in sm" onClick={allPresentToday}>✓ All present today</button>}
-            <button type="button" className="btn ghost sm" onClick={fillUnmarked}>Fill unmarked days as Present</button>
+            <button type="button" className={`at-brush at-X ${brush === 'X' ? 'on' : ''}`} onClick={() => setBrush('X')}>↺ Back to Present</button>
             <span className="at-sep" />
             <button type="button" className="btn ghost sm" onClick={undoLast} disabled={!undo.length} title="Go back one step">↶ Undo{undo.length > 1 ? ` (${undo.length})` : ''}</button>
             <button type="button" className="btn danger sm" onClick={() => askDelete(null)}>🗑 Delete {monthLabel(month)}</button>
@@ -357,12 +345,12 @@ function AttendancePage() {
                         </small>
                       </td>
                       {days.map((d) => {
-                        const m = marks[p.id]?.[d.iso];
+                        const saved = marks[p.id]?.[d.iso];
                         const nt = notes[p.id]?.[d.iso];
                         const off = isOff(p, d);
-                        const future = d.iso > today;
+                        const m = saved || (off ? '' : 'P'); // working day without a mark = Present
                         return (
-                          <td key={d.iso} className={`at-cell ${off ? 'off' : ''} ${d.iso === today ? 'today' : ''} ${m ? `at-${m}` : ''} ${!m && !off && !future ? 'gap' : ''} ${canChange ? 'tap' : ''}`}
+                          <td key={d.iso} className={`at-cell ${off ? 'off' : ''} ${d.iso === today ? 'today' : ''} ${m ? `at-${m}` : ''} ${!saved && m ? 'at-def' : ''} ${canChange ? 'tap' : ''}`}
                             onClick={() => tapCell(p, d)} title={`${p.name} · ${d.d} ${WD_SHORT[d.wd]}${m ? ` · ${MARK[m].label}${nt ? ` (${nt})` : ''}` : off ? ' · Off' : ''}`}>
                             {m ? <>{MARK[m].short}{m === 'L' && nt ? <sup className="at-why">{nt[0]}</sup> : null}</> : off ? <span className="at-off">Off</span> : ''}
                           </td>
@@ -384,6 +372,7 @@ function AttendancePage() {
           P Present · A Absent · L Leave, always paid (S Sick, M Marketing, O Outside meeting, P Personal) · ½ Half day.
           Weekend: Office staff Friday and Saturday, Site staff Friday only. No leave on a weekend day.
           {hasType && canChange ? ' Tap the Office / Site tag under a name to change it.' : ''}
+          Every working day is Present unless you change it.
           Working days for the salary = 30 − absent days − half of the half days. They are written to the salary sheet when you change attendance.
         </p>
       </section>

@@ -2952,3 +2952,6 @@ html, body { max-width: 100%; overflow-x: hidden; }
 }
 .page-tools .tools > .btn:hover, .page-tools .tools > a.btn:hover { background: var(--tint); border-color: var(--brown); color: var(--brown-deep); }
 .page-tools .tools > .btn[aria-pressed="true"] { background: var(--brown); color: #fff; border-color: var(--brown); }
+
+/* Attendance: Present by default (not saved) is lighter; saved changes stand out */
+.at-cell.at-P.at-def { background: rgba(16, 150, 96, .06); color: rgba(15, 122, 79, .6); font-weight: 600; }
