@@ -172,6 +172,7 @@ function DocsPage() {
         <button key={c.key} type="button" role="tab" aria-selected={co === c.key} className={co === c.key ? 'on' : ''}
           onClick={() => { if (doc) closeDoc(); setCo(c.key); }}>{c.short}</button>
       ))}
+      <Link href="/transport" className="co-tab co-tr">🚚 Transport</Link>
     </div>
   );
 

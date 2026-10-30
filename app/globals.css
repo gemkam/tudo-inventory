@@ -2940,3 +2940,7 @@ html, body { max-width: 100%; overflow-x: hidden; }
 }
 @media (max-width: 360px) { .page-tools .tools > .btn, .page-tools .tools > a.btn { font-size: 11.5px !important; } }
 [data-theme="dark"] .page-tools .tools > .btn, [data-theme="dark"] .page-tools .tools > a.btn { background: rgba(255,255,255,.04); }
+
+/* Transport tab inside Office Expense */
+.co-switch .co-tr { border: 1px solid var(--pill-line); }
+.office-tabs { margin-bottom: 4px; }

@@ -11,6 +11,7 @@ import { sb } from '@/lib/supabase';
 import RaufAssistant from '@/components/NoorAssistant';
 import { RaufCtx, defaultGreeting } from '@/components/RaufContext';
 import ThemeMenu from '@/components/ThemeMenu';
+import OfficeTabs from '@/components/OfficeTabs';
 import { startActivity, logPage, endActivity } from '@/lib/activity';
 
 /*
@@ -106,7 +107,8 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
 
   const nav = user.isEntry ? [['/entry', 'Data entry', 'entry']] : [['/', 'Home', 'home'], ['/sitemap', 'Sitemap', 'map'], ['/timeline', 'Timeline', 'clock']];
   // Phone / tablet: quick buttons next to Home (on Home the alerts list pushes the tiles far down)
-  const quick = user.canRead ? [['/transport', 'Transport', 'truck'], ['/inventory', 'Inventory', 'box'], ['/expenses', 'Office Expense', 'receipt']] : [];
+  // Transport lives inside Office Expense (4th tab), so it has no top bar button of its own
+  const quick = user.canRead ? [['/inventory', 'Inventory', 'box'], ['/expenses', 'Office Expense', 'receipt']] : [];
 
   let blocked = '';
   if (ownerOnly && !user.isOwner) blocked = 'Only Administrator can open this page.';
@@ -139,7 +141,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
             ))}
             {quick.length > 0 && <i className="tbx-sep" aria-hidden="true" />}
             {quick.map(([href, label, ico]) => (
-              <Link key={href} href={href} className={path === href || path.startsWith(`${href}/`) ? 'active' : ''}>
+              <Link key={href} href={href} className={path === href || path.startsWith(`${href}/`) || (href === '/expenses' && path.startsWith('/transport')) ? 'active' : ''}>
                 <Ico name={ico} /><span>{label}</span>
               </Link>
             ))}
@@ -149,7 +151,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
       {!blocked && !user.isEntry && (showTransportSide(path) || showExpenseSide(path)) ? (
         <main className="page wide has-side">
           {showTransportSide(path) ? <TransportSideNav /> : <ExpenseSideNav />}
-          <div className="side-main">{children}</div>
+          <div className="side-main">{showTransportSide(path) && <OfficeTabs />}{children}</div>
         </main>
       ) : (
         <main className={`page${wide ? ' wide' : ''}`}>

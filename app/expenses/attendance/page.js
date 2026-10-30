@@ -221,6 +221,7 @@ function AttendancePage() {
       {COMPANIES.map((c) => (
         <button key={c.key} type="button" role="tab" aria-selected={co === c.key} className={co === c.key ? 'on' : ''} onClick={() => { setCo(c.key); setEdit(false); }}>{c.short}</button>
       ))}
+      <Link href="/transport" className="co-tab co-tr">🚚 Transport</Link>
       <Link href="/expenses/summary" className="co-tab co-sum">📊 Group Summary</Link>
     </div>
   );

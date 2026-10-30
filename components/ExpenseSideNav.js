@@ -69,8 +69,8 @@ export default function ExpenseSideNav() {
             )}
           </div>
         ))}
+        <Btn href="/transport" icon="🚚">Transport</Btn>
         <div className="tsn-sep" />
-        <Btn href="/transport" icon="🚚">Transport Expense</Btn>
         <Btn href="/docs" icon="📋">Documents Checklist</Btn>
       </nav>
     </aside>

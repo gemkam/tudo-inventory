@@ -227,6 +227,7 @@ function SummaryPage() {
 
       <div className="co-switch no-print" role="tablist" aria-label="Company">
         {COMPANIES.map((c) => <Link key={c.key} href={`/expenses?co=${c.key}`} role="tab" className="co-tab">{c.short}</Link>)}
+        <Link href="/transport" className="co-tab co-tr">🚚 Transport</Link>
         <span className="co-tab on" role="tab" aria-selected="true">📊 Group Summary</span>
       </div>
 
