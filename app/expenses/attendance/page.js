@@ -254,7 +254,7 @@ function AttendancePage() {
               if (error) throw new Error(error.message);
               return attendanceReport({ staff: staff || [], att: data || [], from, to });
             }} label="🖨 Report by dates" />
-          <button type="button" className="btn ghost" onClick={doExcel} disabled={!staff.length}>Export Excel</button>
+          <button type="button" className="btn ghost" onClick={doExcel} disabled={!staff.length}>📗 Excel</button>
           <button type="button" className="btn ghost" onClick={() => window.print()}>🖨 Print</button>
         </div>
       </div>

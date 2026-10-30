@@ -2902,3 +2902,41 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .tl-live { display: inline-block; margin-left: 6px; font-size: 12.5px; font-weight: 600; color: var(--brown); }
 .tl-badge { font-style: normal; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: var(--tint); color: var(--brown-deep); border: 1px solid var(--line); }
 .tl-badge.today { background: var(--brown); color: #fff; border-color: var(--brown); }
+
+/* ================= Page toolbar v2 (30 Oct 2026): one tidy panel, equal buttons ================= */
+.page-tools { margin-bottom: 0; gap: 10px; }
+.page-tools .crumb { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px 0 10px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); color: var(--muted); font-size: 13px; font-weight: 600; }
+.page-tools .crumb:hover { border-color: var(--brown); color: var(--brown); }
+.page-tools .tools {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 8px;
+  box-shadow: 0 6px 20px -14px rgba(var(--shadow-rgb), .5); gap: 6px; flex: 0 1 auto;
+}
+.page-tools .tools > .btn, .page-tools .tools > a.btn {
+  height: 38px; padding: 0 13px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  font-size: 13.5px; font-weight: 600; white-space: nowrap; line-height: 1.15;
+  background: var(--bg); border: 1px solid transparent; color: var(--ink); box-shadow: none;
+}
+.page-tools .tools > .btn:hover, .page-tools .tools > a.btn:hover { background: var(--tint); border-color: var(--line-strong); color: var(--brown-deep); }
+.page-tools .tools > .btn.in { background: var(--brown); color: #fff; border-color: var(--brown); }
+.page-tools .tools > .btn.in:hover { background: var(--brown-deep); color: #fff; }
+.page-tools .month-select { height: 38px; padding: 0 4px 0 12px; border-radius: 10px; background: var(--tint); gap: 8px; }
+.page-tools .month-select label { font-size: 10.5px; letter-spacing: .12em; color: var(--brown-deep); }
+.page-tools .month-select select { height: 30px; min-width: 150px; border: 0; border-radius: 8px; background-color: var(--surface); font-weight: 600; font-size: 14px; padding: 0 30px 0 10px; box-shadow: 0 1px 2px rgba(var(--shadow-rgb), .12); }
+
+@media (max-width: 760px) {
+  .page-tools { display: grid !important; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .page-tools .crumb { justify-self: start; }
+  .page-tools .tools {
+    display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px !important;
+    width: 100%; padding: 8px; overflow: visible !important;
+  }
+  .page-tools .tools > .month-select { grid-column: 1 / -1; display: flex !important; flex-wrap: nowrap !important; align-items: center; height: 48px; padding: 0 6px 0 14px; }
+  .page-tools .tools > .month-select label { flex: none; }
+  .page-tools .tools > .month-select select { flex: 1 1 auto; min-width: 0; width: 100%; height: 36px; font-size: 15px; }
+  .page-tools .tools > .btn, .page-tools .tools > a.btn {
+    height: 50px !important; padding: 4px 6px !important; font-size: 12.5px !important; white-space: normal; text-align: center;
+    flex: none !important; min-width: 0; overflow: hidden; border-color: var(--line);
+  }
+}
+@media (max-width: 360px) { .page-tools .tools > .btn, .page-tools .tools > a.btn { font-size: 11.5px !important; } }
+[data-theme="dark"] .page-tools .tools > .btn, [data-theme="dark"] .page-tools .tools > a.btn { background: rgba(255,255,255,.04); }

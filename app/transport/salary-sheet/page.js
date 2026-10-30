@@ -154,7 +154,7 @@ function SheetPage() {
             <button type="button" className="btn in" onClick={createMissing} disabled={busy}>{busy ? 'Creating...' : `＋ Create salary for ${missing.length} driver${missing.length > 1 ? 's' : ''}`}</button>
           )}
           <button type="button" className="btn ghost" onClick={() => window.print()} disabled={!withSal.length}>🖨 Print</button>
-          <button type="button" className="btn ghost" onClick={doExcel} disabled={!withSal.length}>Export Excel</button>
+          <button type="button" className="btn ghost" onClick={doExcel} disabled={!withSal.length}>📗 Excel</button>
         </div>
       </div>
 

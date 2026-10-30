@@ -701,8 +701,8 @@ function SheetPage() {
             </button>
           )}
           {isAdmin && <button type="button" className="btn ghost" onClick={newItem}>+ New item</button>}
-          <button type="button" className="btn ghost" onClick={exportExcel}>Export Excel</button>
-          <button type="button" className="btn ghost" onClick={exportPdf}>Export PDF</button>
+          <button type="button" className="btn ghost" onClick={exportExcel}>📗 Excel</button>
+          <button type="button" className="btn ghost" onClick={exportPdf}>📕 PDF</button>
         </div>
       </div>
 

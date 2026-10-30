@@ -168,7 +168,7 @@ function DriverSheet() {
           <Link href="/transport/salary-sheet" className="btn ghost">📑 All drivers (one month)</Link>
           {isAdmin && <button type="button" className="btn ghost" onClick={() => setNames(Object.fromEntries([...SALARY_FIELDS, ...SALARY_EXTRA_LABELS].map(([k]) => [k, label(k)])))}>✏️ Row names</button>}
           <button type="button" className="btn ghost" onClick={() => window.print()}>🖨 Print</button>
-          <button type="button" className="btn ghost" onClick={doExcel}>Export Excel</button>
+          <button type="button" className="btn ghost" onClick={doExcel}>📗 Excel</button>
         </div>
       </div>
 

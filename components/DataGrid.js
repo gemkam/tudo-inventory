@@ -71,7 +71,10 @@ export default function DataGrid({ columns, rows, canEdit, onSave, onAdd, addLab
   }, [rows.length, columns.length]);
 
   useEffect(() => {
-    const el = wrapRef.current?.querySelector(`[data-cell="${sel.r}-${sel.c}"]`);
+    // Only follow the selected cell while the person is using the grid; never when the page opens or data loads
+    const wrap = wrapRef.current;
+    if (!wrap || !wrap.contains(document.activeElement)) return;
+    const el = wrap.querySelector(`[data-cell="${sel.r}-${sel.c}"]`);
     el?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }, [sel]);
 

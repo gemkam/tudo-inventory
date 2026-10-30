@@ -86,6 +86,16 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
     if (user && path) logPage(path);
   }, [user, path]);
 
+  // Every page opens at the top (no jumping to the middle)
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
+    if (window.location.hash) return undefined;
+    window.scrollTo(0, 0);
+    const t = setTimeout(() => window.scrollTo(0, 0), 60);
+    return () => clearTimeout(t);
+  }, [path]);
+
   async function switchUser() {
     await endActivity('logout');
     await sb().auth.signOut();

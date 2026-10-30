@@ -187,8 +187,8 @@ function TransportPage() {
           <Link href="/transport/reports" className="btn report">📊 Reports</Link>
           <RangeReport title="Transport report (all drivers)" company="Modern City for Express Services LLC · Transport Division" landscape
             build={(from, to) => transportReport({ entries, drivers: drivers || [], salaries, extras, from, to })} label="🖨 Report by dates" />
-          <button type="button" className="btn ghost" onClick={doExcel}>Export Excel</button>
-          <button type="button" className="btn ghost" onClick={doPdf}>Export PDF</button>
+          <button type="button" className="btn ghost" onClick={doExcel}>📗 Excel</button>
+          <button type="button" className="btn ghost" onClick={doPdf}>📕 PDF</button>
           {isAdmin && <button type="button" className="btn ghost" onClick={emailReport} disabled={mailing}>{mailing ? 'Sending...' : '✉ Email report'}</button>}
         </div>
       </div>

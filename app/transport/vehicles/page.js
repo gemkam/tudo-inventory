@@ -134,7 +134,7 @@ function VehiclesPage() {
         <div className="tools">
           <a href="#maintenance" className="btn">🔧 Maintenance</a>
           <Link href="/transport/drivers" className="btn">👤 Drivers</Link>
-          <button type="button" className="btn ghost" onClick={doExcel}>Export Excel</button>
+          <button type="button" className="btn ghost" onClick={doExcel}>📗 Excel</button>
         </div>
       </div>
       <div>

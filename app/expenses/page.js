@@ -301,8 +301,8 @@ function ExpensesPage() {
           </div>
           <Link href={`/expenses/attendance?co=${co}`} className="btn">🗓 Attendance</Link>
           <Link href={`/expenses/docs?co=${co}`} className="btn">🧾 Invoice / Receipt</Link>
-          <button type="button" className="btn ghost" onClick={doExcel}>Export Excel</button>
-          <button type="button" className="btn ghost" onClick={doPdf}>Export PDF</button>
+          <button type="button" className="btn ghost" onClick={doExcel}>📗 Excel</button>
+          <button type="button" className="btn ghost" onClick={doPdf}>📕 PDF</button>
           <button type="button" className="btn ghost" onClick={shareIt}>📤 Share</button>
           <RangeReport title={`Office expense report · ${companyOf(co).short || ''}`} company={EXP_COMPANY} landscape
             build={(from, to) => expenseReport({ rows: rows || [], from, to })} label="🖨 Report by dates" />

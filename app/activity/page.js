@@ -340,8 +340,8 @@ function ActivityPage() {
         <label className="check"><input type="checkbox" checked={hideMe} onChange={(e) => setHideMe(e.target.checked)} /> Hide my own activity</label>
         <div className="toolbar-actions">
           <button type="button" className="btn small" onClick={() => { load(); loadOnline(); }}>↻ Refresh</button>
-          <button type="button" className="btn small" onClick={doExcel}>Export Excel</button>
-          <button type="button" className="btn small" onClick={doPdf}>Export PDF</button>
+          <button type="button" className="btn small" onClick={doExcel}>📗 Excel</button>
+          <button type="button" className="btn small" onClick={doPdf}>📕 PDF</button>
         </div>
       </section>
 
