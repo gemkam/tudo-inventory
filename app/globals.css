@@ -2897,3 +2897,8 @@ html, body { max-width: 100%; overflow-x: hidden; }
   .tbx-inner { column-gap: 16px; }
 }
 @media (max-width: 760px) { .topbar.tbx { position: relative; } }
+
+/* Timeline: live updates */
+.tl-live { display: inline-block; margin-left: 6px; font-size: 12.5px; font-weight: 600; color: var(--brown); }
+.tl-badge { font-style: normal; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: var(--tint); color: var(--brown-deep); border: 1px solid var(--line); }
+.tl-badge.today { background: var(--brown); color: #fff; border-color: var(--brown); }
