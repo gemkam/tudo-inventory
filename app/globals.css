@@ -2944,3 +2944,11 @@ html, body { max-width: 100%; overflow-x: hidden; }
 /* Transport tab inside Office Expense */
 .co-switch .co-tr { border: 1px solid var(--pill-line); }
 .office-tabs { margin-bottom: 4px; }
+
+/* Toolbar: every button the same style (only an "on" toggle like Edit mode is green) */
+.page-tools .tools { justify-content: flex-start; }
+.page-tools .tools > .btn, .page-tools .tools > a.btn, .page-tools .tools > .btn.in, .page-tools .tools > .btn.ghost, .page-tools .tools > .btn.report {
+  background: var(--bg); color: var(--ink); border: 1px solid var(--line);
+}
+.page-tools .tools > .btn:hover, .page-tools .tools > a.btn:hover { background: var(--tint); border-color: var(--brown); color: var(--brown-deep); }
+.page-tools .tools > .btn[aria-pressed="true"] { background: var(--brown); color: #fff; border-color: var(--brown); }

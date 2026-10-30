@@ -206,22 +206,22 @@ function SummaryPage() {
       <div className="page-tools">
         <Link href="/expenses" className="crumb">← Office Expense</Link>
         <div className="tools">
-          <button type="button" className="btn in" onClick={() => openTab('sales')} title="Sales: everything earned">💰 Sales</button>
-          <button type="button" className="btn in" onClick={() => {
+          <button type="button" className="btn" onClick={() => openTab('sales')} title="Sales: everything earned">💰 Sales</button>
+          <button type="button" className="btn" onClick={() => {
             const el = document.getElementById('pl-statement');
             if (!el) return;
             el.scrollIntoView({ behavior: 'smooth', block: 'start' });
             el.classList.remove('pl-flash'); void el.offsetWidth; el.classList.add('pl-flash');
           }} title="Go to the Profit and Loss statement">📑 Profit and Loss</button>
-          <button type="button" className="btn in" onClick={() => openTab('vat')}>🧾 VAT return</button>
-          <button type="button" className="btn in" onClick={() => openTab('cash')}>💵 Cash forecast</button>
-          <button type="button" className="btn in" onClick={() => openTab('checks')}>🔍 Checks</button>
-          {isAdmin && <button type="button" className="btn ghost" onClick={() => setBudgetOpen(true)}>🎯 Budgets</button>}
-          <button type="button" className="btn ghost" onClick={downloadPdf} disabled={busy}>{busy ? 'Making PDF...' : '⬇ PDF'}</button>
-          <button type="button" className="btn ghost" onClick={share}>📤 Share</button>
+          <button type="button" className="btn" onClick={() => openTab('vat')}>🧾 VAT return</button>
+          <button type="button" className="btn" onClick={() => openTab('cash')}>💵 Cash forecast</button>
+          <button type="button" className="btn" onClick={() => openTab('checks')}>🔍 Checks</button>
+          {isAdmin && <button type="button" className="btn" onClick={() => setBudgetOpen(true)}>🎯 Budgets</button>}
+          <button type="button" className="btn" onClick={downloadPdf} disabled={busy}>{busy ? 'Making PDF...' : '📕 PDF'}</button>
+          <button type="button" className="btn" onClick={share}>📤 Share</button>
           <RangeReport title="Group expense report" company="Tudo Num Group" landscape
             build={(from, to) => groupReport({ lines, pick, labelOf, from, to })} label="🖨 Report by dates" />
-          <button type="button" className="btn ghost" onClick={() => window.print()}>🖨 Print</button>
+          <button type="button" className="btn" onClick={() => window.print()}>🖨 Print</button>
         </div>
       </div>
 
