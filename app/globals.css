@@ -2955,3 +2955,35 @@ html, body { max-width: 100%; overflow-x: hidden; }
 
 /* Attendance: Present by default (not saved) is lighter; saved changes stand out */
 .at-cell.at-P.at-def { background: rgba(16, 150, 96, .06); color: rgba(15, 122, 79, .6); font-weight: 600; }
+
+/* ===== Attendance print: A4 landscape, all days of the month fit across the page ===== */
+@media print {
+  body.at-print-page .tsn, body.at-print-page .kpi-row, body.at-print-page .at-bar, body.at-print-page .co-switch { display: none !important; }
+  body.at-print-page .page, body.at-print-page .side-main { display: block !important; padding: 0 !important; margin: 0 !important; max-width: none !important; width: 100% !important; }
+  body.at-print-page .sheet { box-shadow: none !important; border: 0 !important; padding: 0 !important; margin: 0 !important; }
+  body.at-print-page .company-head { padding: 0 0 6px !important; margin: 0 0 6px !important; }
+  body.at-print-page .company-head h1 { font-size: 18px !important; margin: 2px 0 !important; }
+  body.at-print-page .company-head .sub, body.at-print-page .sheet-title h2 { font-size: 11px !important; margin: 0 0 4px !important; }
+  body.at-print-page .at-wrap { overflow: visible !important; max-height: none !important; }
+  body.at-print-page .at-table { width: 100% !important; min-width: 0 !important; table-layout: fixed; font-size: 8px; }
+  body.at-print-page .at-table th, body.at-print-page .at-table td { border-color: #9aa8a2 !important; }
+  body.at-print-page .at-name { position: static !important; width: 30mm; min-width: 0 !important; padding: 2px 4px !important; font-size: 8.5px; }
+  body.at-print-page .at-name small { font-size: 7px; }
+  body.at-print-page .at-name .at-del { display: none !important; }
+  body.at-print-page .at-type { border: 0 !important; padding: 0 !important; background: none !important; font-size: 7px !important; color: #555 !important; }
+  body.at-print-page .at-day, body.at-print-page .at-cell { width: auto !important; min-width: 0 !important; height: 17px !important; padding: 1px 0 !important; }
+  body.at-print-page .at-day b { font-size: 8px; } body.at-print-page .at-day small { font-size: 6.5px; }
+  body.at-print-page .at-off { font-size: 6px; }
+  body.at-print-page .at-sum { width: 7mm; min-width: 0 !important; padding: 1px 2px !important; font-size: 8px; }
+  body.at-print-page .at-pay { width: 12mm; }
+  body.at-print-page .at-table tr { break-inside: avoid; }
+  body.at-print-page .at-table thead { display: table-header-group; }
+  body.at-print-page .at-table, body.at-print-page .at-table * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body.at-print-page .at-table .today { box-shadow: none !important; }
+  body.at-print-page .note { font-size: 8px !important; margin-top: 4px !important; }
+}
+@media print {
+  body.at-print-page .at-table th { white-space: normal !important; line-height: 1.1; }
+  body.at-print-page .at-pay { width: 13mm; }
+  body.at-print-page .at-cell { height: 20px !important; font-size: 9px; }
+}

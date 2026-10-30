@@ -85,6 +85,15 @@ function AttendancePage() {
   }, [co, month, flash]);
   useEffect(() => { setStaff(null); load(); }, [load]);
 
+  // Printing this page (Print button or Ctrl+P): A4 landscape, the whole month from day 1 to the last day on one page width
+  useEffect(() => {
+    const st = document.createElement('style');
+    st.textContent = '@media print { @page { size: A4 landscape; margin: 7mm; } }';
+    document.head.appendChild(st);
+    document.body.classList.add('at-print-page');
+    return () => { st.remove(); document.body.classList.remove('at-print-page'); };
+  }, []);
+
   const marks = useMemo(() => marksByStaff(att), [att]);
   const notes = useMemo(() => notesByStaff(att), [att]);
   const hasType = useMemo(() => (staff || []).some((x) => Object.prototype.hasOwnProperty.call(x, 'staff_type')), [staff]);
