@@ -177,6 +177,13 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
           </nav>
         </div>
       </header>
+      {/* Driver login: who is logged in + Logout, always visible (so the office can leave a driver login while testing) */}
+      {user.isEntry && (
+        <div className="drv-who no-print">
+          <span>👤 Logged in as <b>{user.name}</b> (Driver)</span>
+          <button type="button" onClick={switchUser}>Logout</button>
+        </div>
+      )}
       {!blocked && !user.isEntry && (showTransportSide(path) || showExpenseSide(path)) ? (
         <main className="page wide has-side">
           {showTransportSide(path) ? <TransportSideNav isAdmin={user.isAdmin} /> : <ExpenseSideNav isAdmin={user.isAdmin} />}
