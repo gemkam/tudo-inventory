@@ -1858,21 +1858,35 @@ tr.pickable:hover td { background: var(--row-hover); }
   .alerts-col { position: static; max-height: none; order: -1; }
 }
 .al-chev { display: none; }
-/* Phones (31 Oct 2026): Inventory, Office Expense and Checklist right under AI search;
-   alerts folded to one tappable bar under them, tap to open the whole list */
+/* Phones (31 Oct 2026): Inventory, Office Expense and Checklist right under AI search.
+   Alerts list is hidden; a floating, draggable alarm clock opens it as a sheet. */
 @media screen and (max-width: 760px) {
   .home-main { display: contents; }
   .home-grid .hub { order: 1; }
   .home-grid .dc-home { order: 2; }
-  .home-grid .alerts-col { order: 3; padding: 10px 12px; }
   .home-grid .hub-links { order: 4; margin-top: 4px; }
-  .alerts-col .al-head { cursor: pointer; padding-bottom: 0; border-bottom: 0; user-select: none; }
-  .alerts-col.mob-open .al-head { padding-bottom: 10px; border-bottom: 1px solid var(--line); }
-  .al-chev { display: inline-block; margin-left: auto; font-size: 12.5px; font-weight: 700; color: var(--brown); white-space: nowrap; }
-  .alerts-col:not(.mob-open) .al-list,
-  .alerts-col:not(.mob-open) .al-empty,
-  .alerts-col:not(.mob-open) .al-closed { display: none; }
+  .home-grid .alerts-col { display: none; }
+  .home-grid .alerts-col.mob-open {
+    display: block; position: fixed; left: 10px; right: 10px; top: 70px; bottom: 16px; z-index: 1001;
+    max-height: none; overflow: auto; order: 0; animation: al-pop .2s ease-out;
+  }
+  .al-chev { display: inline-flex; align-items: center; justify-content: center; margin-left: auto; width: 34px; height: 34px;
+    border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--ink); font-size: 16px; cursor: pointer; }
+  .al-sheet-back { position: fixed; inset: 0; z-index: 1000; background: rgba(0, 0, 0, .35); }
 }
+.al-float {
+  position: absolute; z-index: 900; width: 54px; height: 54px; padding: 0; display: flex; align-items: center; justify-content: center;
+  background: transparent; border: 0; color: inherit; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.al-float:active { cursor: grabbing; }
+.al-float .alarm { width: 44px; height: 44px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .18)); }
+.al-float-n {
+  position: absolute; top: 0; right: -2px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px;
+  background: #d9443a; color: #fff; font-size: 11px; font-weight: 700; line-height: 20px; text-align: center; box-shadow: 0 0 0 2px var(--surface);
+}
+@media print { .al-float { display: none !important; } }
+
 
 /* Trip sheet: choose columns to print (28 Oct 2026) */
 .trip-print { display: none; }

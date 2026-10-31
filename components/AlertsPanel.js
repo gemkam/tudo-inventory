@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { createPortal } from 'react-dom';
 import { sb } from '@/lib/supabase';
@@ -73,13 +73,75 @@ function AlarmClock({ ringing }) {
   );
 }
 
+/* Phones (31 Oct 2026): only a ringing alarm clock, floating at the left above AI Search.
+   Drag it anywhere (place saved per device). Tap it to open the whole alerts list. */
+const FLOAT_KEY = 'tudo-alarm-pos';
+function FloatingClock({ count, ringing, onOpen }) {
+  const [pos, setPos] = useState(null);
+  const drag = useRef(null);
+
+  useEffect(() => {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(FLOAT_KEY) || 'null'); } catch { saved = null; }
+    if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) { setPos(clamp(saved)); return; }
+    const place = () => {
+      const hs = document.querySelector('.hs');
+      if (!hs) return setPos({ x: 10, y: 160 });
+      const r = hs.getBoundingClientRect();
+      setPos(clamp({ x: r.left + window.scrollX, y: r.top + window.scrollY - 62 }));
+    };
+    place();
+    const t = setTimeout(place, 600); /* after fonts / search box settle */
+    return () => clearTimeout(t);
+  }, []);
+
+  function clamp(p) {
+    const w = (typeof window !== 'undefined' ? document.documentElement.clientWidth : 400) - 58;
+    return { x: Math.max(4, Math.min(w, p.x)), y: Math.max(4, p.y) };
+  }
+  function down(e) {
+    drag.current = { sx: e.clientX, sy: e.clientY, x: pos.x, y: pos.y, moved: false };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  }
+  function move(e) {
+    const d = drag.current; if (!d) return;
+    const dx = e.clientX - d.sx, dy = e.clientY - d.sy;
+    if (!d.moved && Math.hypot(dx, dy) < 8) return;
+    d.moved = true;
+    setPos(clamp({ x: d.x + dx, y: d.y + dy }));
+  }
+  function up() {
+    const d = drag.current; drag.current = null; if (!d) return;
+    if (d.moved) { try { localStorage.setItem(FLOAT_KEY, JSON.stringify(pos)); } catch { /* ignore */ } }
+    else onOpen();
+  }
+
+  if (!pos || typeof document === 'undefined') return null;
+  return createPortal(
+    <button type="button" className={`al-float ${ringing ? 'ringing' : ''}`} style={{ left: pos.x, top: pos.y }}
+      onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={() => { drag.current = null; }}
+      aria-label={`Alerts: ${count}. Tap to open, drag to move`} title="Tap to open alerts, drag to move">
+      <AlarmClock ringing={ringing} />
+      {count > 0 && <span className="al-float-n">{count}</span>}
+    </button>,
+    document.body,
+  );
+}
+
 export default function AlertsPanel() {
   const [all, setAll] = useState(null);
   const [closed, setClosed] = useState(new Set());
   const [useLocal, setUseLocal] = useState(false);
   const [showClosed, setShowClosed] = useState(false);
   const [popup, setPopup] = useState(false);
-  const [mobOpen, setMobOpen] = useState(false); /* phones: alerts folded to one bar until tapped */
+  const [mobOpen, setMobOpen] = useState(false); /* phones: alerts hidden until the clock is tapped */
+  const [phone, setPhone] = useState(false);
+  useEffect(() => {
+    let mq; try { mq = window.matchMedia('(max-width: 760px)'); } catch { return undefined; }
+    const f = () => setPhone(mq.matches); f();
+    mq.addEventListener?.('change', f);
+    return () => mq.removeEventListener?.('change', f);
+  }, []);
 
   const load = useCallback(async () => {
     const s = sb();
@@ -170,9 +232,11 @@ export default function AlertsPanel() {
   const when = (a) => (a.left === null || a.left === undefined ? (a.date ? `entered ${fmtD(a.date)}` : '') : whenText(a.left));
 
   return (
+    <>
+    {phone && <FloatingClock count={open.length} ringing={urgent.length > 0} onOpen={() => setMobOpen(true)} />}
+    {phone && mobOpen && <div className="al-sheet-back" onClick={() => setMobOpen(false)} aria-hidden="true" />}
     <aside className={`alerts-col ${urgent.length ? 'has-urgent' : ''} ${mobOpen ? 'mob-open' : ''}`} aria-label="Alerts">
-      <div className="al-head" onClick={() => { if (isPhone()) setMobOpen((v) => !v); }}
-        role={undefined} aria-expanded={mobOpen}>
+      <div className="al-head">
         <button type="button" className="al-clock-btn" onClick={(e) => { if (isPhone()) return; e.stopPropagation(); if (urgent.length) setPopup(true); }}
           title={urgent.length ? 'Show urgent alerts' : 'No urgent alerts'} aria-label="Show urgent alerts"
           style={{ background: 'none', border: 0, padding: 0, color: 'inherit', cursor: urgent.length ? 'pointer' : 'default' }}>
@@ -182,7 +246,7 @@ export default function AlertsPanel() {
           <h2>Alerts {all && <span className="al-count">{open.length}</span>}</h2>
           <p>{all === null ? 'Checking...' : urgent.length ? `${urgent.length} need attention now` : open.length ? 'Tap × to close one' : 'Nothing needs attention'}</p>
         </div>
-        <span className="al-chev" aria-hidden="true">{mobOpen ? 'Hide ▴' : 'Show all ▾'}</span>
+        <button type="button" className="al-chev" onClick={() => setMobOpen(false)} aria-label="Close alerts">✕</button>
       </div>
 
       <ol className="al-list">
@@ -243,5 +307,6 @@ export default function AlertsPanel() {
         document.body
       )}
     </aside>
+    </>
   );
 }
