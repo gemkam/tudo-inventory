@@ -3052,3 +3052,20 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .home-quick .dc-home { margin-top: 0; }
 @media (max-width: 640px) { .home-quick { grid-template-columns: 1fr; } }
 @media screen and (max-width: 760px) { .home-grid .home-quick { order: 2; margin-top: 0; } }
+
+/* Back to top button, right side above Rauf (31 Oct 2026) */
+.btt {
+  position: fixed; right: calc(22px + env(safe-area-inset-right, 0px)); bottom: calc(108px + env(safe-area-inset-bottom, 0px)); z-index: 69;
+  display: inline-flex; align-items: center; gap: 7px; padding: 10px 16px; border-radius: 999px;
+  border: 1.5px solid var(--brown); background: var(--surface, #fff); color: var(--brown);
+  font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer;
+  box-shadow: 0 6px 18px rgba(var(--shadow-rgb, 0,0,0), .16);
+  opacity: 0; transform: translateY(12px); pointer-events: none; transition: opacity .25s, transform .25s, background .2s, color .2s;
+}
+.btt.show { opacity: 1; transform: none; pointer-events: auto; }
+.btt:hover, .btt:focus-visible { background: var(--brown); color: #fff; outline: none; }
+@media (max-width: 760px) {
+  .btt { right: calc(14px + env(safe-area-inset-right, 0px)); bottom: calc(100px + env(safe-area-inset-bottom, 0px)); padding: 10px 12px; }
+  .btt span { display: none; }
+}
+@media print { .btt { display: none !important; } }

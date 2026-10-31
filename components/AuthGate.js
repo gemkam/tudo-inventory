@@ -11,6 +11,7 @@ import RaufAssistant from '@/components/NoorAssistant';
 import { RaufCtx, defaultGreeting } from '@/components/RaufContext';
 import ThemeMenu from '@/components/ThemeMenu';
 import OfficeTabs from '@/components/OfficeTabs';
+import BackToTop from '@/components/BackToTop';
 import { startActivity, logPage, endActivity } from '@/lib/activity';
 
 /*
@@ -161,6 +162,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
         </main>
       )}
       {/* Floating 🖨 Print button removed from every page (user, 31 Oct 2026). Pages keep their own Print buttons. */}
+      <BackToTop />
       {user.canRead && !blocked && <TableCards />}
       {user.canRead && (
         <RaufAssistant
