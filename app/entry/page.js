@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import AuthGate, { useUser } from '@/components/AuthGate';
 import { sb } from '@/lib/supabase';
 import Modal from '@/components/Modal';
-import EntryForm from '@/components/EntryForm';
+import DriverTripForm from '@/components/DriverTripForm';
+import { useEntryLabels } from '@/lib/entryLabels';
 import { useShare } from '@/components/ShareModal';
 
 function fmtWhen(d) {
@@ -133,21 +134,48 @@ function ShareLinks({ drivers }) {
   );
 }
 
+/*
+  Driver trip form (31 Oct 2026). Big name buttons for every active driver (Saif Altaf, Aman Ullah, new drivers appear by themselves).
+  Tap a name: his open trips + "＋ New trip". Tap a trip: components/DriverTripForm.js (driver part, greyed office part,
+  papers with ⋯ More, ✅ Trip complete). Data entry users (drivers) see only open trips and trips completed in the last 3 days.
+  A Data entry user linked to a driver (transport_drivers.user_id) opens on his own name.
+  Administrator: ✏️ Rename boxes, sees deleted papers, and the share links section below.
+*/
 function EntryPage() {
   const me = useUser();
+  const isOffice = !!me.isAdmin;
+  const { label, rename } = useEntryLabels();
   const [drivers, setDrivers] = useState([]);
-  const [selectId, setSelectId] = useState('');
+  const [driverId, setDriverId] = useState('');
+  const [trips, setTrips] = useState(null);
+  const [tripId, setTripId] = useState(null); // null = list, 'new' = new trip, id = that trip
+  const [renaming, setRenaming] = useState(false);
   const [addDrv, setAddDrv] = useState(null);
   const [error, setError] = useState('');
-  const myDriver = drivers.find((d) => d.user_id && d.user_id === me.id);
+  const [toast, setToast] = useState(null);
+  const timer = useRef(null);
+  const flash = useCallback((text, kind = 'ok') => {
+    setToast({ text, kind }); clearTimeout(timer.current); timer.current = setTimeout(() => setToast(null), 2600);
+  }, []);
 
   async function loadDrivers(newId) {
-    const { data } = await sb().from('transport_drivers').select('id, name, vehicle_no, user_id, sort').order('sort').order('name');
-    setDrivers(data || []);
-    if (newId) setSelectId(newId);
+    const { data } = await sb().from('transport_drivers').select('id, name, vehicle_no, user_id, status, sort').order('sort').order('name');
+    const list = (data || []).filter((d) => d.status !== 'Inactive');
+    setDrivers(list);
+    const mine = list.find((d) => d.user_id && d.user_id === me.id);
+    if (newId) setDriverId(newId); else if (mine) setDriverId((v) => v || mine.id);
   }
   useEffect(() => { loadDrivers(); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const loadTrips = useCallback(async () => {
+    if (!driverId) { setTrips(null); return; }
+    const { data, error: err } = await sb().from('transport_entries').select('*').eq('driver_id', driverId)
+      .order('trip_completed').order('entry_date', { ascending: false }).order('created_at', { ascending: false }).limit(isOffice ? 40 : 30);
+    if (err) { setError(err.message); setTrips([]); return; }
+    setTrips(data || []);
+  }, [driverId, isOffice]);
+  useEffect(() => { setTripId(null); loadTrips(); }, [loadTrips]);
 
   async function saveDriver(e) {
     e.preventDefault();
@@ -159,23 +187,62 @@ function EntryPage() {
     loadDrivers(data.id);
   }
 
-  async function submit(row) {
-    const { error: err } = await sb().from('transport_entries').insert(row);
-    return err ? err.message : null;
-  }
+  const driver = drivers.find((d) => d.id === driverId);
+  const trip = trips && tripId && tripId !== 'new' ? trips.find((t) => t.id === tripId) : null;
+  const papers = (t) => Object.values(t.attachments || {}).flat().filter((x) => !x.deleted_at).length;
+  const deleted = (t) => Object.values(t.attachments || {}).flat().filter((x) => x.deleted_at).length;
+  const dmy = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
 
   return (
     <>
-      {me.isAdmin && <ShareLinks drivers={drivers} />}
+      <div className="page-tools">
+        <h1 style={{ margin: 0 }}>🚚 Driver trip form</h1>
+        <div className="tools">
+          {isOffice && <button type="button" className={`btn${renaming ? ' in' : ''}`} aria-pressed={renaming} onClick={() => setRenaming((v) => !v)}>{renaming ? '✓ Done renaming' : '✏️ Rename boxes'}</button>}
+          {isOffice && <button type="button" className="btn" onClick={() => setAddDrv({ name: '', vehicle: '' })}>➕ Add driver</button>}
+        </div>
+      </div>
       {error && <div className="error">{error}</div>}
-      <EntryForm
-        key={selectId || 'form'}
-        drivers={drivers}
-        defaultDriverId={selectId || myDriver?.id || ''}
-        enteredBy={me.name}
-        onSubmit={submit}
-        driverExtra={me.isAdmin ? <button type="button" className="link-add" onClick={() => setAddDrv({ name: '', vehicle: '' })}>+ Add a new driver</button> : null}
-      />
+
+      <div className="ent-drivers" role="group" aria-label="Choose driver">
+        {drivers.map((d) => (
+          <button key={d.id} type="button" className={`ent-driver${driverId === d.id ? ' on' : ''}`} onClick={() => setDriverId(d.id)}>
+            <span className="ent-av" aria-hidden="true">{String(d.name || '?').trim()[0]}</span>
+            <span><b>{d.name}</b>{d.vehicle_no ? <small>{d.vehicle_no}</small> : null}</span>
+          </button>
+        ))}
+        {!drivers.length && <p className="muted">No drivers yet.</p>}
+      </div>
+
+      {driver && tripId === null && (
+        <section className="panel">
+          <div className="section-head">
+            <h2>{driver.name}: trips</h2>
+            <button type="button" className="btn in" onClick={() => setTripId('new')}>＋ New trip</button>
+          </div>
+          {trips === null && <p className="muted">Loading...</p>}
+          {trips && !trips.length && <p className="muted" style={{ margin: 0 }}>No open trips. Press ＋ New trip.</p>}
+          <div className="ent-trips">
+            {(trips || []).map((t) => (
+              <button key={t.id} type="button" className={`ent-trip${t.trip_completed ? ' done' : ''}`} onClick={() => setTripId(t.id)}>
+                <span className="ent-trip-date">{dmy(t.entry_date)}</span>
+                <b>{[t.from_place, t.to_place].filter(Boolean).join(' → ') || 'No route yet'}</b>
+                <small>{papers(t)} paper{papers(t) === 1 ? '' : 's'}{isOffice && deleted(t) ? ` · 🗑 ${deleted(t)} deleted` : ''}</small>
+                <span className={`tag ${t.trip_completed ? 'ok' : 'warn'}`}>{t.trip_completed ? '✅ Completed' : 'Open'}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {driver && tripId !== null && (tripId === 'new' || trip) && (
+        <section className="panel">
+          <DriverTripForm key={tripId} driver={driver} trip={trip} isOffice={isOffice} label={label} rename={rename} renaming={renaming}
+            flash={flash} onSaved={loadTrips} onClose={() => { setTripId(null); loadTrips(); }} />
+        </section>
+      )}
+
+      {isOffice && <ShareLinks drivers={drivers} />}
 
       {addDrv && (
         <Modal title="Add a new driver" onClose={() => setAddDrv(null)}>
@@ -189,12 +256,11 @@ function EntryPage() {
           </form>
         </Modal>
       )}
-
-      {me.isEntry && <p className="note" style={{ textAlign: 'center' }}>For privacy, saved entries are not shown here. The Administrator can see them in Transport.</p>}
+      {toast && <div className={`toast ${toast.kind}`} role="status">{toast.text}</div>}
     </>
   );
 }
 
 export default function Page() {
-  return <AuthGate entryPage><EntryPage /></AuthGate>;
+  return <AuthGate entryPage wide><EntryPage /></AuthGate>;
 }

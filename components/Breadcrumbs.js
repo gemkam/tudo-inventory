@@ -59,7 +59,7 @@ function trail(path, q, names) {
   if (seg[0] === 'users') return [HOME, ADMIN, ['Users', path]];
   if (seg[0] === 'activity') return [HOME, ADMIN, ['User activity', path]];
   if (seg[0] === 'settings') return [HOME, ADMIN, ['Settings', path]];
-  if (seg[0] === 'entry') return [HOME, ['Data entry', path]];
+  if (seg[0] === 'entry') return [HOME, ['Driver trip form', path]];
   if (seg[0] === 'sitemap') return [HOME, ['Sitemap', path]];
   if (seg[0] === 'timeline') return [HOME, ['Timeline', path]];
   return null;
