@@ -210,8 +210,8 @@ function EntryPage() {
   const dmy = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
 
   return (
-    <>
-      <div className="page-tools">
+    <div className={`ent-page${isOffice ? ' office' : ' driver'}`}>
+      <div className="page-tools ent-head">
         <h1 style={{ margin: 0 }}>🚚 Driver trip form</h1>
         <div className="tools">
           <InstallApp isOffice={isOffice} />
@@ -235,7 +235,7 @@ function EntryPage() {
         <section className="panel">
           <div className="section-head">
             <h2>{driver.name}: trips</h2>
-            <button type="button" className="btn in" onClick={() => openTrip(null)}>＋ New trip</button>
+            <button type="button" className="ent-new" onClick={() => openTrip(null)}><span aria-hidden="true">＋</span> New trip</button>
           </div>
           <div className="ent-count">
             <div><span>Open trips</span><b>{trips ? trips.length : '…'}</b></div>
@@ -290,7 +290,7 @@ function EntryPage() {
         </Modal>
       )}
       {toast && <div className={`toast ${toast.kind}`} role="status">{toast.text}</div>}
-    </>
+    </div>
   );
 }
 

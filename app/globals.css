@@ -3263,3 +3263,61 @@ body.dfv-open { overflow: hidden; }
 .ef-details-locked .field:not(.ef-keep) input { background: repeating-linear-gradient(135deg, rgba(0,0,0,.03) 0 8px, transparent 8px 16px); cursor: not-allowed; }
 .ef-details-locked .ef-keep select { border-color: var(--brown); }
 .ia-steps { margin: 0; padding-left: 20px; display: grid; gap: 8px; font-size: 15px; } .ia-btn { white-space: nowrap; }
+
+/* ===== Driver trip form: big and simple (31 Oct 2026). Desktop keeps its layout; phones get a one-column,
+   big-button form made for drivers. ===== */
+.ent-new { font: inherit; font-size: 18px; font-weight: 800; display: inline-flex; align-items: center; gap: 10px; padding: 14px 26px; border-radius: 999px; border: 0; background: #13836b; color: #fff; cursor: pointer; box-shadow: 0 10px 22px -10px rgba(19, 131, 107, .75); }
+.ent-new span { font-size: 26px; line-height: 1; }
+.ent-new:hover { filter: brightness(1.08); }
+.ent-page .ia-btn.in { font-size: 15px; padding: 10px 18px; }
+.ent-page .dtf-actions .btn.in { font-size: 16px; padding: 11px 26px; }
+.ent-page .dfl-more { font-size: 14px; padding: 7px 16px; }
+
+@media (max-width: 760px) {
+  .ent-page { display: grid; gap: 14px; }
+  .ent-page h1 { font-size: 26px; }
+  .ent-page .ent-head { flex-direction: column; align-items: stretch; gap: 10px; }
+  .ent-page .ent-head .tools { display: grid !important; grid-template-columns: 1fr; gap: 8px; }
+  .ent-page .ent-head .tools > * { width: 100%; justify-content: center; text-align: center; font-size: 16px; padding: 13px 16px; }
+  .ent-page .ia-btn.in { font-size: 18px; padding: 15px 18px; }
+  /* driver names: big tap cards */
+  .ent-page .ent-drivers { grid-template-columns: 1fr; }
+  .ent-page .ent-driver { padding: 18px; }
+  .ent-page .ent-driver b { font-size: 21px; }
+  .ent-page .ent-av { width: 56px; height: 56px; font-size: 26px; }
+  /* list */
+  .ent-page .section-head { flex-direction: column; align-items: stretch; gap: 10px; }
+  .ent-page .section-head h2 { font-size: 21px; }
+  .ent-new { width: 100%; justify-content: center; font-size: 22px; padding: 18px 20px; }
+  .ent-new span { font-size: 30px; }
+  .ent-page .ent-count { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .ent-page .ent-count > div { padding: 8px 8px; text-align: center; }
+  .ent-page .ent-count span { font-size: 10.5px; }
+  .ent-page .ent-count b { font-size: 26px; }
+  .ent-page .ent-tabs .rp-chip { flex: 1; font-size: 15px; padding: 10px 8px; text-align: center; }
+  .ent-page .ent-trip { grid-template-columns: 1fr auto; padding: 16px; font-size: 16px; gap: 6px 10px; }
+  .ent-page .ent-trip b { font-size: 17px; }
+  /* the form: one column, big boxes (16px+ stops phones zooming in) */
+  .ent-page .panel { padding: 14px 12px; }
+  .ent-page .dtf-top h2 { font-size: 21px; }
+  .ent-page .dtf-top .btn { font-size: 15px; padding: 10px 14px; }
+  .ent-page .dtf-grid, .ent-page .dtf-grid.costs { grid-template-columns: 1fr; gap: 12px; }
+  .ent-page .dtf-part { padding: 10px 10px 14px; }
+  .ent-page .dtf-part legend { font-size: 16px; }
+  .ent-page .dtf-field > label { font-size: 14px; }
+  .ent-page .dtf-field input, .ent-page .dtf-field select, .ent-page .dtf-field textarea { font-size: 18px; padding: 13px 14px; border-radius: 12px; }
+  .ent-page .dtf-field.cost { padding: 10px; }
+  .ent-page .dtf-row { gap: 8px; }
+  .ent-page .dfl-more { font-size: 16px; padding: 12px 16px; border-radius: 12px; min-width: 104px; }
+  .ent-page .dtf-do-note { font-size: 15px; }
+  .ent-page .dtf-sum { font-size: 17px; text-align: center; }
+  .ent-page .dtf-actions { bottom: 8px; padding: 8px; }
+  .ent-page .dtf-actions .btn.in { flex: 1; font-size: 19px; padding: 15px; }
+  .ent-page .dtf-state { font-size: 14px; }
+  .ent-page .dtf-big { width: 100%; font-size: 22px; padding: 20px; }
+  .ent-page .dtf-hint { font-size: 16px; }
+  /* papers box and viewer buttons */
+  .dfm-big { font-size: 17px; padding: 14px 16px; }
+  .dfm-btns .dfl-btn { font-size: 15px; padding: 9px 14px; }
+  .dfv-tools .btn { font-size: 15px; padding: 10px 14px; }
+}
