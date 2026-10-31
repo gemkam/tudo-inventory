@@ -1,5 +1,11 @@
 {
   "crons": [
-    { "path": "/api/transport-report", "schedule": "0 5 1 * *" }
+    {
+      "path": "/api/transport-report",
+      "schedule": "0 5 1 * *"
+    }
+  ],
+  "regions": [
+    "icn1"
   ]
 }
