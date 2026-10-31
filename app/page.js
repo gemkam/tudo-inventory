@@ -95,11 +95,31 @@ function Home() {
         </Link>
       </div>
       {isAdmin && (
+        <div className="home-quick">
+          <Link href="/entry" className="dc-home" aria-label="Data entry">
+            <span className="dc-home-ico" aria-hidden="true">✍️</span>
+            <span className="dc-home-text">
+              <b>Data entry</b>
+              <small>Trip entry form and driver share links</small>
+            </span>
+            <span className="adm-go" aria-hidden="true">›</span>
+          </Link>
+          <Link href="/expenses/docs" className="dc-home" aria-label="Invoices and Receipts">
+            <span className="dc-home-ico" aria-hidden="true">🧾</span>
+            <span className="dc-home-text">
+              <b>Invoices &amp; Receipts</b>
+              <small>Modern City · Abu Wasif · Sumptuosity</small>
+            </span>
+            <span className="adm-go" aria-hidden="true">›</span>
+          </Link>
+        </div>
+      )}
+      {isAdmin && (
         <Link href="/admin" className="dc-home adm-home" aria-label="Admin">
           <span className="dc-home-ico" aria-hidden="true">🛡</span>
           <span className="dc-home-text">
             <b>Admin</b>
-            <small>{isOwner ? 'Users · User activity · Settings · Data entry · Invoices' : 'Settings · Data entry · Invoices'}</small>
+            <small>{isOwner ? 'Users · User activity · Settings · Timeline · Sitemap' : 'Settings · Timeline · Sitemap'}</small>
           </span>
           <span className="adm-go" aria-hidden="true">›</span>
         </Link>

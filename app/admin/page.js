@@ -7,14 +7,12 @@ import RaufPicturePanel from '@/components/RaufPicturePanel';
 /*
   Admin hub (31 Oct 2026): one place for the admin tools.
   Opened from the "Admin" button on Home and in the top bar.
-  Full access sees Invoices, Data entry, Settings. Administrator also sees Users, User activity, Rauf picture.
+  Data entry and Invoices moved back to Home (31 Oct 2026). Full access sees Settings, Timeline, Sitemap. Administrator also sees Users, User activity, Rauf picture.
 */
 const TOOLS = [
   ['/users', '👥', 'Users', 'Create users, 4 access levels, online now / last seen', 'owner'],
   ['/activity', '👁', 'User activity', 'Logins, pages opened, buttons pressed, every change (old → new)', 'owner'],
   ['/settings', '⚙️', 'Settings', 'Inventory categories, bills and app settings', 'admin'],
-  ['/entry', '✍️', 'Data entry', 'Simple trip entry form and no-login share links for drivers', 'admin'],
-  ['/expenses/docs', '🧾', 'Invoices & Receipts', 'Company invoices and payment receipts (Modern City, Abu Wasif, Sumptuosity)', 'admin'],
   ['/timeline', '🕒', 'Timeline', 'Everything built and changed in the app, day by day', 'admin'],
   ['/sitemap', '🗺', 'Sitemap', 'Every page of the app as a searchable tree', 'admin'],
 ];
