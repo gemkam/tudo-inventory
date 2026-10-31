@@ -165,9 +165,10 @@ function EntryPage() {
 
   async function loadDrivers(newId) {
     const { data } = await sb().from('transport_drivers').select('id, name, vehicle_no, user_id, status, sort').order('sort').order('name');
-    const list = (data || []).filter((d) => d.status !== 'Inactive');
-    setDrivers(list);
+    let list = (data || []).filter((d) => d.status !== 'Inactive');
     const mine = list.find((d) => d.user_id && d.user_id === me.id);
+    if (!isOffice && mine) list = [mine]; // a driver's login shows only his own name
+    setDrivers(list);
     if (newId) setDriverId(newId); else if (mine) setDriverId((v) => v || mine.id);
   }
   useEffect(() => { loadDrivers(); // eslint-disable-next-line react-hooks/exhaustive-deps

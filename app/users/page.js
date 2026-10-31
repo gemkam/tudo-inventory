@@ -15,7 +15,7 @@ const ROLE_HELP = {
   entry: 'Only the Transport data entry form. Cannot see saved data.'
 };
 const ROLE_ORDER = ['admin', 'editor', 'viewer', 'entry'];
-const EMPTY = { username: '', display: '', password: '', role: 'viewer', asDriver: true, vehicle: '' };
+const EMPTY = { username: '', display: '', password: '', role: 'viewer', asDriver: true, vehicle: '', driverPick: '' }; // driverPick: existing driver id | 'new' | 'none'
 
 function fmtWhen(d) {
   if (!d) return 'Never';
@@ -87,9 +87,14 @@ function UsersPage() {
     const { data: newId, error: err } = await sb().rpc('admin_create_user', {
       p_username: form.username.trim(), p_password: form.password, p_display: form.display.trim(), p_role: form.role
     });
-    if (err) { setBusy(false); setError(err.message); return; }
+    if (err) { setBusy(false); setError(err.message); return; } // shown at the top AND right above the Create button
     let extra = '';
-    if (form.role === 'entry' && form.asDriver) {
+    const pickD = form.driverPick || (drivers.some((d) => !d.user_id) ? '' : 'new');
+    if (form.role === 'entry' && pickD && pickD !== 'none' && pickD !== 'new') {
+      // an existing driver (e.g. Saif Altaf): link this login to him, so the form opens on his name only
+      const { error: dErr } = await sb().from('transport_drivers').update({ user_id: newId }).eq('id', pickD);
+      extra = dErr ? ` (Could not link to the driver: ${dErr.message})` : ` Linked to driver ${drivers.find((d) => d.id === pickD)?.name || ''}.`;
+    } else if (form.role === 'entry' && pickD === 'new') {
       const sort = drivers.reduce((m, x) => Math.max(m, x.sort || 0), 0) + 1;
       const { error: dErr } = await sb().from('transport_drivers').insert({ name: form.display.trim() || form.username.trim(), vehicle_no: form.vehicle.trim() || null, user_id: newId, sort });
       extra = dErr ? ` (Could not add to the driver list: ${dErr.message})` : ' Added to the driver list.';
@@ -190,11 +195,17 @@ function UsersPage() {
           </div>
           {form.role === 'entry' && (
             <div className="driver-link">
-              <label className="check">
-                <input type="checkbox" checked={form.asDriver} onChange={(e) => setForm({ ...form, asDriver: e.target.checked })} />
-                This person is a driver. Add them to the driver list (they will be picked automatically on the entry form).
-              </label>
-              {form.asDriver && (
+              <div className="field" style={{ maxWidth: 360 }}>
+                <label htmlFor="nu-driver">Which driver is this login for?</label>
+                <select id="nu-driver" value={form.driverPick} onChange={(e) => setForm({ ...form, driverPick: e.target.value })} required>
+                  <option value="">Choose the driver</option>
+                  {drivers.filter((d) => !d.user_id).map((d) => <option key={d.id} value={d.id}>{d.name}{d.vehicle_no ? ` (${d.vehicle_no})` : ''}</option>)}
+                  <option value="new">➕ A new driver (add to the driver list)</option>
+                  <option value="none">Not a driver</option>
+                </select>
+                <small className="muted">The driver will see only his own name and trips on the Driver trip form.</small>
+              </div>
+              {form.driverPick === 'new' && (
                 <div className="field narrow" style={{ maxWidth: 260 }}>
                   <label htmlFor="nu-veh">Vehicle number</label>
                   <input id="nu-veh" value={form.vehicle} onChange={(e) => setForm({ ...form, vehicle: e.target.value })} placeholder="e.g. 899 YR" />
@@ -202,6 +213,8 @@ function UsersPage() {
               )}
             </div>
           )}
+          {error && <div className="error" role="alert">❌ Not created: {error}</div>}
+          {msg && <div className="ok-msg" role="status">{msg}</div>}
           <div><button type="submit" className="btn in" disabled={busy}>{busy ? 'Creating...' : 'Create user'}</button></div>
         </form>
       </section>
