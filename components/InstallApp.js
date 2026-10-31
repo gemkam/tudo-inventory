@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Modal from '@/components/Modal';
+import { useLang } from '@/lib/i18n';
 
 /*
   "📲 Add to my phone" on the Driver trip form (/entry). Puts a "Tudo Trips" icon on the phone's home screen
@@ -12,6 +13,7 @@ import Modal from '@/components/Modal';
 
 export default function InstallApp({ isOffice, driverLinks = [] }) {
   const [sendOpen, setSendOpen] = useState(false);
+  const { t } = useLang();
   const [prompt, setPrompt] = useState(null);
   const [installed, setInstalled] = useState(false);
   const [help, setHelp] = useState(false);
@@ -41,7 +43,7 @@ export default function InstallApp({ isOffice, driverLinks = [] }) {
 
   return (
     <>
-      {!installed && <button type="button" className="btn in ia-btn" onClick={install}>📲 Add to my phone</button>}
+      {!installed && <button type="button" className="btn in ia-btn" onClick={install}>{t('📲 Add to my phone')}</button>}
       {isOffice && <button type="button" className="btn ia-btn" onClick={() => setSendOpen(true)}>📤 Send link to drivers</button>}
       {sendOpen && (
         <Modal title="Send each driver his own link" onClose={() => setSendOpen(false)}>

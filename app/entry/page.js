@@ -7,6 +7,7 @@ import Modal from '@/components/Modal';
 import DriverTripForm from '@/components/DriverTripForm';
 import { useEntryLabels } from '@/lib/entryLabels';
 import InstallApp from '@/components/InstallApp';
+import { useLang, LangSwitch } from '@/lib/i18n';
 import { useShare } from '@/components/ShareModal';
 
 function fmtWhen(d) {
@@ -147,6 +148,8 @@ function EntryPage() {
   const me = useUser();
   const isOffice = !!me.isAdmin;
   const { label, rename } = useEntryLabels();
+  const { t, ur } = useLang();
+  const tr = t;
   const [drivers, setDrivers] = useState([]);
   const [driverId, setDriverId] = useState('');
   const [trips, setTrips] = useState(null); // open trips
@@ -227,15 +230,16 @@ function EntryPage() {
     <button key={t.id} type="button" className={`ent-trip${t.trip_completed ? ' done' : ''}`} onClick={() => openTrip(t)}>
       <span className="ent-trip-date">{dmy(t.entry_date)}</span>
       <b>{[t.from_place, t.to_place].filter(Boolean).join(' → ') || t.description || 'No route yet'}</b>
-      <small>{papers(t)} paper{papers(t) === 1 ? '' : 's'}{isOffice && deleted(t) ? ` · 🗑 ${deleted(t)} deleted` : ''}{t.trip_completed ? ` · closed by ${whoClosed(t)}` : ''}</small>
-      <span className={`tag ${t.trip_completed ? 'ok' : 'warn'}`}>{t.trip_completed ? `✅ ${dmy(t.completed_at)}` : 'Open'}</span>
+      <small>{papers(t)} {papers(t) === 1 ? tr('paper') : tr('papers')}{isOffice && deleted(t) ? ` · 🗑 ${deleted(t)} deleted` : ''}{t.trip_completed ? ` · closed by ${whoClosed(t)}` : ''}</small>
+      <span className={`tag ${t.trip_completed ? 'ok' : 'warn'}`}>{t.trip_completed ? `✅ ${dmy(t.completed_at)}` : tr('Open')}</span>
     </button>
   );
 
   return (
-    <div className={`ent-page${isOffice ? ' office' : ' driver'}${tripId !== null ? ' in-trip' : ''}`}>
+    <div className={`ent-page${isOffice ? ' office' : ' driver'}${tripId !== null ? ' in-trip' : ''}${ur ? ' ur' : ''}`} dir={ur ? 'rtl' : 'ltr'}>
       <div className="page-tools ent-head">
-        <h1 style={{ margin: 0 }}>🚚 Driver trip form</h1>
+        <h1 style={{ margin: 0 }}>🚚 {t('Driver trip form')}</h1>
+        <LangSwitch />
         <div className="tools">
           <InstallApp isOffice={isOffice} driverLinks={driverLinks} />
           {isOffice && <button type="button" className={`btn${renaming ? ' in' : ''}`} aria-pressed={renaming} onClick={() => setRenaming((v) => !v)}>{renaming ? '✓ Done renaming' : '✏️ Rename boxes'}</button>}
@@ -257,20 +261,20 @@ function EntryPage() {
       {driver && tripId === null && (
         <section className="panel">
           <div className="section-head">
-            <h2>{driver.name}: trips</h2>
-            <button type="button" className="ent-new" onClick={() => openTrip(null)}><span aria-hidden="true">＋</span> New trip</button>
+            <h2>{driver.name}: {t('trips')}</h2>
+            <button type="button" className="ent-new" onClick={() => openTrip(null)}><span aria-hidden="true">＋</span> {t('New trip')}</button>
           </div>
           <div className="ent-count">
-            <div><span>Open trips</span><b>{trips ? trips.length : '…'}</b></div>
-            <div className="ok"><span>✅ Trips completed</span><b>{counts ? counts.completed : '…'}</b></div>
-            <div><span>Completed this month</span><b>{counts ? counts.this_month : '…'}</b></div>
+            <div><span>{t('Open trips')}</span><b>{trips ? trips.length : '…'}</b></div>
+            <div className="ok"><span>✅ {t('Trips completed')}</span><b>{counts ? counts.completed : '…'}</b></div>
+            <div><span>{t('Completed this month')}</span><b>{counts ? counts.this_month : '…'}</b></div>
           </div>
           {(() => {
             if (trips === null) return <p className="muted">Loading...</p>;
             return (
               <>
-                <h3 className="ent-sub">🟡 Open trips ({trips.length})</h3>
-                {!trips.length && <p className="muted" style={{ margin: '4px 0 0' }}>No open trips. Press ＋ New trip.</p>}
+                <h3 className="ent-sub">🟡 {t('Open trips')} ({trips.length})</h3>
+                {!trips.length && <p className="muted" style={{ margin: '4px 0 0' }}>{t('No open trips. Press ＋ New trip.')}</p>}
                 <div className="ent-trips">{trips.map(tripRow)}</div>
               </>
             );

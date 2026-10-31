@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Modal from '@/components/Modal';
 import { sb } from '@/lib/supabase';
+import { useLang } from '@/lib/i18n';
 
 /*
   "⋯ More" papers box for one box of the driver trip form (Diesel, Toll / others, Gate pass, Exit fee, Empty container fee,
@@ -58,6 +59,7 @@ function printUrl(url, f) {
 }
 
 function Viewer({ file, onClose }) {
+  const { t } = useLang();
   const [url, setUrl] = useState('');
   const [err, setErr] = useState('');
   const frameRef = useRef(null);
@@ -77,18 +79,18 @@ function Viewer({ file, onClose }) {
           <div className="dfv-bar">
             <b className="dfv-title">{iconOf(file)} {file.name}</b>
             <span className="dfv-tools">
-              <button type="button" className="btn small" onClick={download} disabled={!url}>⬇ Download</button>
+              <button type="button" className="btn small" onClick={download} disabled={!url}>{t('⬇ Download')}</button>
               {(isPdf(file) || isImg(file)) && <button type="button" className="btn small" disabled={!url}
-                onClick={() => (isPdf(file) ? frameRef.current?.contentWindow?.print() : printUrl(url, file))}>🖨 Print</button>}
-              <button type="button" className="btn small in dfv-close" onClick={onClose}>✕ Close</button>
+                onClick={() => (isPdf(file) ? frameRef.current?.contentWindow?.print() : printUrl(url, file))}>{t('🖨 Print')}</button>}
+              <button type="button" className="btn small in dfv-close" onClick={onClose}>{t('✕ Close')}</button>
             </span>
           </div>
           <div className="dfv-body">
             {err && <p className="dfv-msg">Could not open the file: {err}</p>}
-            {!err && !url && <p className="dfv-msg">Opening...</p>}
+            {!err && !url && <p className="dfv-msg">{t('Opening...')}</p>}
             {url && isPdf(file) && <iframe ref={frameRef} src={url} title={file.name} className="dfv-frame" />}
             {url && isImg(file) && <img src={url} alt={file.name} className="dfv-img" />}
-            {url && !isPdf(file) && !isImg(file) && <p className="dfv-msg">This file cannot be shown here. Press ⬇ Download.</p>}
+            {url && !isPdf(file) && !isImg(file) && <p className="dfv-msg">{t('This file cannot be shown here. Press ⬇ Download.')}</p>}
           </div>
         </div>
       </div>
@@ -98,6 +100,7 @@ function Viewer({ file, onClose }) {
 
 /* tripId may be empty for a new trip: ensureTrip() saves the trip first and returns its id */
 export default function TripFiles({ kind, label, tripId, files = [], locked, isOffice, ensureTrip, onChange, flash, userName }) {
+  const { t, ur } = useLang();
   const oneRef = useRef(null);
   const manyRef = useRef(null);
   const [open, setOpen] = useState(false);
@@ -127,7 +130,7 @@ export default function TripFiles({ kind, label, tripId, files = [], locked, isO
         if (error) { flash(error.message, 'err'); continue; }
         att = data;
       }
-      if (att) { onChange(id, att); flash(`${label}: paper uploaded`); }
+      if (att) { onChange(id, att); flash(`${label}: ${t('paper uploaded')}`); }
     } catch (err) { flash(err.message || 'Upload failed', 'err'); }
     setBusy(false);
   }
@@ -137,7 +140,7 @@ export default function TripFiles({ kind, label, tripId, files = [], locked, isO
     if (error) { flash(error.message, 'err'); return false; }
     if (act === 'purge') await sb().storage.from(BUCKET).remove([f.path]);
     onChange(tripId, data);
-    flash({ delete: 'Paper deleted (the office can still see it)', restore: 'Paper brought back', rename: 'Name changed', purge: 'Removed for good' }[act] || 'Done');
+    flash({ delete: t('Paper deleted (the office can still see it)'), restore: 'Paper brought back', rename: t('Name changed'), purge: 'Removed for good' }[act] || 'Done');
     return true;
   }
 
@@ -154,7 +157,7 @@ export default function TripFiles({ kind, label, tripId, files = [], locked, isO
   return (
     <div className="tf">
       <button type="button" className={`dfl-more${live.length ? ' has' : ''}`} onClick={() => setOpen(true)} disabled={busy}>
-        {busy ? 'Uploading...' : `⋯ More${live.length ? ` (${live.length})` : ''}`}
+        {busy ? t('Uploading...') : `${t('⋯ More')}${live.length ? ` (${live.length})` : ''}`}
       </button>
       {isOffice && gone.length > 0 && <span className="tf-gone" title="Papers the driver deleted">🗑 {gone.length} deleted</span>}
       <input ref={oneRef} type="file" accept={ACCEPT} hidden onChange={pick} />
@@ -162,24 +165,24 @@ export default function TripFiles({ kind, label, tripId, files = [], locked, isO
 
       {open && (
         <Portal>
-          <Modal title={`${label}: papers`} onClose={() => setOpen(false)}>
+          <Modal title={`${label}: ${t('papers title')}`} onClose={() => setOpen(false)}>
             {canChange ? (
               <div className="dfm-imports">
-                <button type="button" className="dfm-big" onClick={act(() => oneRef.current?.click())}>📎 Import document<small>one paper or photo</small></button>
-                <button type="button" className="dfm-big" onClick={act(() => manyRef.current?.click())}>🗂 Import documents<small>more than one at once</small></button>
+                <button type="button" className="dfm-big" onClick={act(() => oneRef.current?.click())}>{t('📎 Import document')}<small>{t('one paper or photo')}</small></button>
+                <button type="button" className="dfm-big" onClick={act(() => manyRef.current?.click())}>{t('🗂 Import documents')}<small>{t('more than one at once')}</small></button>
               </div>
-            ) : <p className="muted" style={{ marginTop: 0 }}>This trip is completed. Ask the office to add or change papers.</p>}
-            {!live.length && <p className="muted" style={{ margin: '4px 0 0' }}>No paper yet.</p>}
+            ) : <p className="muted" style={{ marginTop: 0 }}>{t('This trip is completed. Ask the office to add or change papers.')}</p>}
+            {!live.length && <p className="muted" style={{ margin: '4px 0 0' }}>{t('No paper yet.')}</p>}
             <div className="dfm-list">
               {live.map((f) => (
                 <div key={f.path} className="dfm-file">
                   <div className="dfm-name">{iconOf(f)} <b>{f.name}</b><small>{[f.size ? sizeText(f.size) : '', f.by ? `by ${f.by}` : '', when(f.at)].filter(Boolean).join(' · ')}</small></div>
                   <div className="dfm-btns">
-                    <button type="button" className="dfl-btn" onClick={act(() => setViewing(f))}>👁 View</button>
-                    <button type="button" className="dfl-btn" onClick={act(() => download(f))}>⬇ Download</button>
-                    <button type="button" className="dfl-btn" onClick={act(() => print(f))}>🖨 Print</button>
-                    {canChange && <button type="button" className="dfl-btn" onClick={act(() => setEdit({ f, name: f.name }))}>✏️ Edit</button>}
-                    {canChange && <button type="button" className="dfl-btn danger" onClick={act(() => setDel(f))}>🗑 Delete</button>}
+                    <button type="button" className="dfl-btn" onClick={act(() => setViewing(f))}>{t('👁 View')}</button>
+                    <button type="button" className="dfl-btn" onClick={act(() => download(f))}>{t('⬇ Download')}</button>
+                    <button type="button" className="dfl-btn" onClick={act(() => print(f))}>{t('🖨 Print')}</button>
+                    {canChange && <button type="button" className="dfl-btn" onClick={act(() => setEdit({ f, name: f.name }))}>{t('✏️ Edit')}</button>}
+                    {canChange && <button type="button" className="dfl-btn danger" onClick={act(() => setDel(f))}>{t('🗑 Delete')}</button>}
                   </div>
                 </div>
               ))}
@@ -201,32 +204,32 @@ export default function TripFiles({ kind, label, tripId, files = [], locked, isO
                 </div>
               </>
             )}
-            <div className="modal-actions"><button type="button" className="btn ghost" onClick={() => setOpen(false)}>✕ Close</button></div>
+            <div className="modal-actions"><button type="button" className="btn ghost" onClick={() => setOpen(false)}>{t('✕ Close')}</button></div>
           </Modal>
         </Portal>
       )}
       {viewing && <Viewer file={viewing} onClose={() => setViewing(null)} />}
       {edit && (
         <Portal>
-          <Modal title="Edit paper name" onClose={() => setEdit(null)}>
-            <label className="dfl-label">Name
+          <Modal title={t('Edit paper name')} onClose={() => setEdit(null)}>
+            <label className="dfl-label">{t('Name')}
               <input className="drv-input" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
             </label>
-            <p className="muted" style={{ margin: '10px 0 0' }}>Wrong paper? Delete it and import the right one.</p>
+            <p className="muted" style={{ margin: '10px 0 0' }}>{t('Wrong paper? Delete it and import the right one.')}</p>
             <div className="modal-actions">
-              <button type="button" className="btn ghost" onClick={() => setEdit(null)}>Cancel</button>
-              <button type="button" className="btn in" onClick={async () => { if (await action(edit.f, 'rename', edit.name)) setEdit(null); }}>Save</button>
+              <button type="button" className="btn ghost" onClick={() => setEdit(null)}>{t('Cancel')}</button>
+              <button type="button" className="btn in" onClick={async () => { if (await action(edit.f, 'rename', edit.name)) setEdit(null); }}>{t('Save')}</button>
             </div>
           </Modal>
         </Portal>
       )}
       {del && (
         <Portal>
-          <Modal title="Delete this paper?" onClose={() => setDel(null)}>
-            <p style={{ margin: 0 }}>Delete <b>{del.name}</b>?{isOffice ? '' : ' The office will still see that it was deleted.'}</p>
+          <Modal title={t('Delete this paper?')} onClose={() => setDel(null)}>
+            <p style={{ margin: 0 }}>Delete <b>{del.name}</b>?{isOffice ? '' : ` ${t('The office will still see that it was deleted.')}`}</p>
             <div className="modal-actions">
-              <button type="button" className="btn ghost" onClick={() => setDel(null)}>Cancel</button>
-              <button type="button" className="btn danger" onClick={async () => { const f = del; setDel(null); await action(f, 'delete'); }}>Delete</button>
+              <button type="button" className="btn ghost" onClick={() => setDel(null)}>{t('Cancel')}</button>
+              <button type="button" className="btn danger" onClick={async () => { const f = del; setDel(null); await action(f, 'delete'); }}>{t('Delete')}</button>
             </div>
           </Modal>
         </Portal>

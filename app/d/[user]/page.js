@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { sb } from '@/lib/supabase';
+import { useLang, LangSwitch } from '@/lib/i18n';
 
 /*
   Personal driver link, e.g. https://tudo-inventory.vercel.app/d/saif (sent by WhatsApp from the Driver trip form).
@@ -22,6 +23,7 @@ export default function DriverLink() {
   const { user } = useParams();
   const router = useRouter();
   const u = nice(user);
+  const { t, ur } = useLang();
   const [state, setState] = useState('loading'); // loading | login | other
   const [other, setOther] = useState('');
   const [password, setPassword] = useState('');
@@ -75,7 +77,7 @@ export default function DriverLink() {
     setBusy(true);
     const { error: err } = await sb().auth.signInWithPassword({ email: u + DOMAIN, password });
     setBusy(false);
-    if (err) { setError('Password is wrong. Please try again or ask the office.'); return; }
+    if (err) { setError(t('Password is wrong. Please try again or ask the office.')); return; }
     router.replace('/entry');
   }
 
@@ -85,35 +87,36 @@ export default function DriverLink() {
   }
 
   return (
-    <div className="dl-page">
+    <div className={`dl-page${ur ? ' ur' : ''}`} dir={ur ? 'rtl' : 'ltr'}>
       <div className="dl-card">
         <img src="/icons/trips-192.png" alt="" className="dl-logo" />
         <h1>{cap(u)} Trips</h1>
-        <p className="dl-sub">Tudo Num · Driver trip form</p>
+        <p className="dl-sub">{ur ? t('Driver trip form sub') : 'Tudo Num · Driver trip form'}</p>
+        <LangSwitch className="big" />
 
         {env.inApp && !standalone && (
           <div className="dl-warn">
-            <b>Open in {env.ios ? 'Safari' : 'Chrome'} first</b>
-            <span>Tap the <b>⋮</b> menu (top right) and choose <b>Open in {env.ios ? 'Safari' : 'Chrome'}</b>{env.ios ? ' (or Open in browser)' : ''}.</span>
+            <b>{t(env.ios ? 'Open in Safari first' : 'Open in Chrome first')}</b>
+            <span>{t(env.ios ? 'Tap the ⋮ menu (top right) and choose Open in Safari.' : 'Tap the ⋮ menu (top right) and choose Open in Chrome.')}</span>
           </div>
         )}
 
         {!standalone && (
           <button type="button" className="dl-install" onClick={install}>
-            <span aria-hidden="true">📲</span> Install {cap(u)} Trips
-            <small>puts the icon on your phone</small>
+            <span aria-hidden="true">📲</span> {ur ? `${t('Install')} · ${cap(u)} Trips` : `Install ${cap(u)} Trips`}
+            <small>{t('puts the icon on your phone')}</small>
           </button>
         )}
 
-        {state === 'loading' && <p className="dl-sub">Please wait...</p>}
+        {state === 'loading' && <p className="dl-sub">{t('Please wait...')}</p>}
 
         {state === 'login' && (
           <form className="dl-login" onSubmit={login}>
             <div className="dl-user">👤 {u}</div>
-            <label htmlFor="dl-pass">Your password</label>
-            <input id="dl-pass" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
+            <label htmlFor="dl-pass">{t('Your password')}</label>
+            <input id="dl-pass" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t('Password')} dir="ltr" />
             {error && <div className="dl-err">{error}</div>}
-            <button type="submit" className="dl-go" disabled={busy}>{busy ? 'Opening...' : 'Open my trips ➜'}</button>
+            <button type="submit" className="dl-go" disabled={busy}>{busy ? t('Opening trips...') : t('Open my trips ➜')}</button>
             <input type="hidden" autoComplete="username" value={u} readOnly />
           </form>
         )}
@@ -130,21 +133,21 @@ export default function DriverLink() {
       {ask && !standalone && !done && (
         <button type="button" className="dl-ask" onClick={install}>
           <img src="/icons/trips-192.png" alt="" />
-          <b>Tap here to install<br />{cap(u)} Trips</b>
-          <span>Then press <b>Install</b> on the box that opens</span>
+          <b>{t('Tap here to install')}<br />{cap(u)} Trips</b>
+          <span>{t('Then press Install on the box that opens')}</span>
         </button>
       )}
-      {done && <div className="dl-done">✅ {cap(u)} Trips is on your phone. Use the icon from now on.</div>}
+      {done && <div className="dl-done">✅ {cap(u)} Trips {ur ? t('is on your phone. Use the icon from now on.') : 'is on your phone. Use the icon from now on.'}</div>}
       {help && (
         <div className="dl-help" role="dialog" aria-modal="true" onMouseDown={(e) => { if (e.target === e.currentTarget) setHelp(false); }}>
           <div className="dl-help-box">
-            <h2>Add {cap(u)} Trips to your phone</h2>
-            {env.ios ? (
+            <h2>{ur ? t('Add to your phone') : `Add ${cap(u)} Trips to your phone`}</h2>
+            {ur ? <p className="dl-steps-ur">{t(env.ios ? 'ios steps' : 'android steps')}</p> : env.ios ? (
               <ol><li>Open this link in <b>Safari</b>.</li><li>Tap <b>Share ⬆️</b> at the bottom.</li><li>Tap <b>Add to Home Screen</b>, then <b>Add</b>.</li></ol>
             ) : (
               <ol><li>Open this link in <b>Chrome</b>.</li><li>Tap <b>⋮</b> (top right).</li><li>Tap <b>Add to Home screen</b> or <b>Install app</b>, then <b>Install</b>.</li></ol>
             )}
-            <button type="button" className="dl-go" onClick={() => setHelp(false)}>OK</button>
+            <button type="button" className="dl-go" onClick={() => setHelp(false)}>{t('OK')}</button>
           </div>
         </div>
       )}

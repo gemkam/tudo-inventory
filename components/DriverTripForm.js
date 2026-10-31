@@ -5,6 +5,8 @@ import DateInput from '@/components/DateInput';
 import TripFiles from '@/components/TripFiles';
 import { sb } from '@/lib/supabase';
 import { fmtAmt } from '@/lib/sheet';
+import { useLang, UR_LABELS } from '@/lib/i18n';
+import { ENTRY_LABELS } from '@/lib/entryLabels';
 
 /*
   One trip on the driver form (/entry).
@@ -34,10 +36,10 @@ function fromTrip(t, driverId) {
   return f;
 }
 
-function Label({ k, label, renaming, rename, flash }) {
+function Label({ k, label, renaming, rename, flash, ur }) {
   const [t, setT] = useState(label(k));
   useEffect(() => { setT(label(k)); }, [label, k]);
-  if (!renaming) return <>{label(k)}</>;
+  if (!renaming) return <>{ur && UR_LABELS[k] && label(k) === ENTRY_LABELS[k] ? UR_LABELS[k] : label(k)}</>;
   return (
     <input className="dtf-rename" value={t} onChange={(e) => setT(e.target.value)} aria-label={`Rename ${label(k)}`}
       onBlur={async () => { const err = await rename(k, t); if (err) flash(err, 'err'); }} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} />
@@ -51,6 +53,7 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
   const [done, setDone] = useState({ on: !!trip?.trip_completed, at: trip?.completed_at, by: trip?.completed_by, role: trip?.completed_role });
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const { t, ur } = useLang();
   // phones: the form in 3 short steps (Trip · Costs · Finish) instead of one long page; computers see everything at once
   const [phone, setPhone] = useState(false);
   const [step, setStep] = useState(1);
@@ -67,7 +70,8 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
   fRef.current = f;
   const idRef = useRef(id);
   idRef.current = id;
-  const L = (k) => <Label k={k} label={label} renaming={renaming} rename={rename} flash={flash} />;
+  const L = (k) => <Label k={k} label={label} renaming={renaming} rename={rename} flash={flash} ur={ur} />;
+  const tl = (k) => (ur && UR_LABELS[k] && label(k) === ENTRY_LABELS[k] ? UR_LABELS[k] : label(k));
   const set = (k, v) => { setF((x) => ({ ...x, [k]: v })); setDirty(true); };
   const costs = COSTS.reduce((t, k) => t + (Number(f[k]) || 0), 0);
   const hasDO = (att.delivery_order || []).some((x) => !x.deleted_at);
@@ -101,20 +105,20 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
     let ok = !!tid;
     if (tid && isOffice) ok = await saveOfficePart(tid);
     setBusy(false);
-    if (ok) { setDirty(false); if (!quiet) flash('Trip saved'); onSaved?.(); }
+    if (ok) { setDirty(false); if (!quiet) flash(t('Trip saved')); onSaved?.(); }
     return ok ? tid : null;
   }
   // a paper needs a saved trip: save first (keeps what is typed)
   const ensureTrip = async () => { if (idRef.current && !dirty) return idRef.current; return save(true); };
 
   async function complete(on) {
-    if (on && !(f.from_place || f.to_place)) { flash('Write From and To first', 'err'); return; }
+    if (on && !(f.from_place || f.to_place)) { flash(t('Write From and To first'), 'err'); return; }
     const tid = locked ? idRef.current : await save(true);
     if (!tid) return;
     const { error } = await sb().rpc('trip_complete', { p_id: tid, p_done: on });
     if (error) { flash(error.message, 'err'); return; }
     setDone(on ? { on: true, at: new Date().toISOString(), by: 'you', role: isOffice ? 'office' : 'driver' } : { on: false });
-    flash(on ? '✅ Trip completed' : 'Trip opened again');
+    flash(on ? t('✅ Trip completed') : 'Trip opened again');
     onSaved?.();
   }
 
@@ -122,8 +126,8 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
     <div className="dtf-field cost do" key="do">
       <label>{L('delivery_order')}</label>
       <div className="dtf-row">
-        <span className="dtf-do-note">{hasDO ? '📄 Uploaded' : 'Upload the delivery order receipt'}</span>
-        <TripFiles kind="delivery_order" label={label('delivery_order')} tripId={id} files={att.delivery_order || []} locked={done.on} isOffice={isOffice}
+        <span className="dtf-do-note">{hasDO ? t('📄 Uploaded') : t('Upload the delivery order receipt')}</span>
+        <TripFiles kind="delivery_order" label={tl('delivery_order')} tripId={id} files={att.delivery_order || []} locked={done.on} isOffice={isOffice}
           ensureTrip={ensureTrip} onChange={(tid, a) => { if (!id) setId(tid); setAtt(a || {}); }} flash={flash} />
       </div>
     </div>
@@ -132,15 +136,15 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
     <div className={`dtf-field${extra ? ' cost' : ''}`} key={k}>
       <label>{L(k)}</label>
       <div className="dtf-row">
-        <input inputMode="decimal" value={f[k]} disabled={locked} placeholder="0.000" onChange={(e) => set(k, e.target.value.replace(/[^\d.]/g, ''))} />
-        {extra && <TripFiles kind={kindOf(k)} label={label(k)} tripId={id} files={att[kindOf(k)] || []} locked={done.on} isOffice={isOffice}
+        <input dir="ltr" inputMode="decimal" value={f[k]} disabled={locked} placeholder="0.000" onChange={(e) => set(k, e.target.value.replace(/[^\d.]/g, ''))} />
+        {extra && <TripFiles kind={kindOf(k)} label={tl(k)} tripId={id} files={att[kindOf(k)] || []} locked={done.on} isOffice={isOffice}
           ensureTrip={ensureTrip} onChange={(tid, a) => { if (!id) setId(tid); setAtt(a || {}); }} flash={flash} />}
       </div>
     </div>
   );
 
   const show = (n) => !phone || step === n;
-  const STEPS = [[1, '🚚', 'Trip'], [2, '⛽', 'Costs'], [3, '✅', 'Finish']];
+  const STEPS = [[1, '🚚', t('Trip')], [2, '⛽', t('Costs')], [3, '✅', t('Finish')]];
   const goStep = async (n) => {
     if (n === step) return;
     if (!locked && dirty) { const ok = await save(true); if (!ok) return; }
@@ -165,15 +169,15 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
   );
 
   return (
-    <div className={`dtf${phone ? ' phone' : ''}`}>
+    <div className={`dtf${phone ? ' phone' : ''}${ur ? ' ur' : ''}`} dir={ur ? 'rtl' : 'ltr'}>
       <div className="dtf-top">
         <h2>🚚 {driver.name}{driver.vehicle_no ? <small> · {driver.vehicle_no}</small> : null}</h2>
-        <span className={`tag ${done.on ? 'ok' : 'warn'}`}>{done.on ? '✅ Completed' : id ? 'Open trip' : 'New trip'}</span>
-        {onClose && <button type="button" className="btn small ghost" onClick={onClose}>← Trips</button>}
+        <span className={`tag ${done.on ? 'ok' : 'warn'}`}>{done.on ? `✅ ${t('Completed')}` : id ? t('Open trip') : t('New trip tag')}</span>
+        {onClose && <button type="button" className="btn small ghost" onClick={onClose}>{t('← Trips')}</button>}
       </div>
 
       {done.on && (
-        <div className="dtf-closed-banner">✅ This trip is completed{done.by ? ` · closed by ${done.by}${done.role === 'driver' ? ' (driver)' : done.role === 'office' ? ' (office)' : ''}` : ''}{done.at ? ` · ${new Date(done.at).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}` : ''}</div>
+        <div className="dtf-closed-banner">✅ {t('This trip is completed')}{done.by ? ` · ${t('closed by')} ${done.by}${done.role === 'driver' ? ' (driver)' : done.role === 'office' ? ' (office)' : ''}` : ''}{done.at ? ` · ${new Date(done.at).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}` : ''}</div>
       )}
 
       {phone && (
@@ -188,10 +192,10 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
 
       {(show(1) || show(2) || (show(3) && !phone)) && (
         <fieldset className={`dtf-part${locked ? ' locked' : ''}`}>
-          <legend>{phone ? (step === 1 ? '🚚 Trip details' : '⛽ Trip costs') : L('_driver_part')}</legend>
+          <legend>{phone ? (step === 1 ? `🚚 ${t('Trip details')}` : `⛽ ${t('Trip costs')}`) : L('_driver_part')}</legend>
           {show(1) && (
             <div className="dtf-grid">
-              <div className="dtf-field"><label>{L('entry_date')}</label><span className={locked ? 'dtf-off' : ''}><DateInput value={f.entry_date} onChange={(iso) => set('entry_date', iso)} /></span></div>
+              <div className="dtf-field"><label>{L('entry_date')}</label><span dir="ltr" className={locked ? 'dtf-off' : ''}><DateInput value={f.entry_date} onChange={(iso) => set('entry_date', iso)} /></span></div>
               <div className="dtf-field"><label>{L('from_place')}</label><input value={f.from_place} disabled={locked} onChange={(e) => set('from_place', e.target.value)} placeholder="e.g. Sohar" /></div>
               <div className="dtf-field"><label>{L('to_place')}</label><input value={f.to_place} disabled={locked} onChange={(e) => set('to_place', e.target.value)} placeholder="e.g. Jabal Ali" /></div>
               {money('rent')}
@@ -200,23 +204,23 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
           )}
           {show(2) && (
             <div className="dtf-grid costs">
-              {phone && <p className="dtf-tip">Type the amount. Tap <b>⋯ More</b> to add the bill photo.</p>}
+              {phone && <p className="dtf-tip">{t('Type the amount. Tap ⋯ More to add the bill photo.')}</p>}
               {COSTS.map((k) => money(k, true))}
               {!phone && doField()}
             </div>
           )}
-          {show(2) && <p className="dtf-sum">Costs total: <b>{fmtAmt(costs)}</b> OMR</p>}
+          {show(2) && <p className="dtf-sum">{t('Costs total')}: <b dir="ltr">{fmtAmt(costs)}</b> OMR</p>}
         </fieldset>
       )}
 
       {phone && show(3) && (
         <fieldset className="dtf-part">
-          <legend>✅ Finish the trip</legend>
+          <legend>✅ {t('Finish the trip')}</legend>
           <div className="dtf-grid">{doField()}</div>
           <div className="dtf-review">
-            <div><span>Route</span><b>{[f.from_place, f.to_place].filter(Boolean).join(' → ') || '–'}</b></div>
-            <div><span>{label('rent')}</span><b>{fmtAmt(Number(f.rent) || 0)}</b></div>
-            <div><span>Costs total</span><b>{fmtAmt(costs)}</b></div>
+            <div><span>{t('Route')}</span><b>{[f.from_place, f.to_place].filter(Boolean).join(' → ') || '–'}</b></div>
+            <div><span>{tl('rent')}</span><b dir="ltr">{fmtAmt(Number(f.rent) || 0)}</b></div>
+            <div><span>{t('Costs total')}</span><b dir="ltr">{fmtAmt(costs)}</b></div>
           </div>
         </fieldset>
       )}
@@ -227,7 +231,7 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
           {officeFields}
         </fieldset>
       ) : phone ? (
-        <p className="dtf-office-line">🔒 Office part: the office fills it.</p>
+        <p className="dtf-office-line">🔒 {t('Office part: the office fills it.')}</p>
       ) : (
         <fieldset className="dtf-part office grey" disabled>
           <legend>🔒 {L('_office_part')}</legend>
@@ -237,22 +241,22 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
       ))}
 
       <div className="dtf-actions">
-        {phone && step > 1 && <button type="button" className="btn dtf-nav" onClick={() => goStep(step - 1)}>‹ Back</button>}
-        {!locked && <span className={`dtf-state${dirty ? ' dirty' : ''}`}>{dirty ? '● Not saved' : id ? '✓ Saved' : ''}</span>}
-        {!locked && (!phone || step === 3) && <button type="button" className="btn in" onClick={() => save(false)} disabled={busy}>{busy ? 'Saving...' : '💾 Save'}</button>}
-        {phone && step < 3 && <button type="button" className="btn in dtf-nav next" onClick={() => goStep(step + 1)} disabled={busy}>{busy ? 'Saving...' : 'Next ›'}</button>}
+        {phone && step > 1 && <button type="button" className="btn dtf-nav" onClick={() => goStep(step - 1)}>{t('‹ Back')}</button>}
+        {!locked && <span className={`dtf-state${dirty ? ' dirty' : ''}`}>{dirty ? t('● Not saved') : id ? t('✓ Saved') : ''}</span>}
+        {!locked && (!phone || step === 3) && <button type="button" className="btn in" onClick={() => save(false)} disabled={busy}>{busy ? t('Saving...') : t('💾 Save')}</button>}
+        {phone && step < 3 && <button type="button" className="btn in dtf-nav next" onClick={() => goStep(step + 1)} disabled={busy}>{busy ? t('Saving...') : t('Next ›')}</button>}
       </div>
 
-      {show(3) && hasDO && !done.on && <div className="dtf-hint">📄 Delivery order is uploaded. If the trip is finished, press <b>Trip complete</b>.</div>}
+      {show(3) && hasDO && !done.on && <div className="dtf-hint">📄 {t('Delivery order is uploaded. If the trip is finished, press Trip complete.')}</div>}
       {show(3) && (
         <div className="dtf-complete">
           {done.on ? (
             <>
-              <div className="dtf-done">✅ Trip completed{done.by ? ` by ${done.by}` : ''}{done.at ? ` · ${new Date(done.at).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}</div>
+              <div className="dtf-done">{t('✅ Trip completed')}{done.by ? ` by ${done.by}` : ''}{done.at ? ` · ${new Date(done.at).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}</div>
               {isOffice && <button type="button" className="btn ghost" onClick={() => complete(false)}>↺ Open this trip again</button>}
             </>
           ) : (
-            <button type="button" className="dtf-big" onClick={() => complete(true)} disabled={busy}>✅ Trip complete</button>
+            <button type="button" className="dtf-big" onClick={() => complete(true)} disabled={busy}>{t('✅ Trip complete')}</button>
           )}
         </div>
       )}
