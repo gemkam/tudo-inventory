@@ -21,7 +21,7 @@ import { startActivity, logPage, endActivity } from '@/lib/activity';
   admin  = Administrator: everything, plus managing users
   editor = Full access: see and edit everything
   viewer = View only
-  entry  = Data entry: only the Transport entry form, cannot see saved data
+  entry  = Data entry: only the Driver trip form (his own open trips and papers), no other page, no settings
 */
 export const ROLES = {
   admin: { label: 'Administrator', short: 'Admin' },
@@ -113,7 +113,9 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
   const quick = user.canRead ? [['/inventory', 'Inventory', 'box'], ['/expenses', 'Office Expense', 'receipt']] : [];
   // Buttons that used to sit at the bottom of Home (31 Oct 2026): now in the top bar
   // Settings, Users and Activity live inside Admin (/admin) since 31 Oct 2026
-  if (user.isAdmin) quick.push(['/expenses/docs', 'Invoices', 'invoice'], ['/entry', 'Data entry', 'entry'], ['/admin', 'Admin', 'shield']);
+  // Full access (editor): everything except the Admin panel; only the Administrator gets the Admin button (31 Oct 2026)
+  if (user.isAdmin) quick.push(['/expenses/docs', 'Invoices', 'invoice'], ['/entry', 'Data entry', 'entry']);
+  if (user.isOwner) quick.push(['/admin', 'Admin', 'shield']);
 
   let blocked = '';
   if (ownerOnly && !user.isOwner) blocked = 'Only Administrator can open this page.';

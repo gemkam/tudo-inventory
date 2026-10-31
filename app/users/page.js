@@ -9,10 +9,10 @@ import { sb } from '@/lib/supabase';
 import { logAction } from '@/lib/activity';
 
 const ROLE_HELP = {
-  admin: 'Everything, plus managing users',
-  editor: 'See and edit everything',
+  admin: 'Everything, plus the Admin panel (users, settings, activity)',
+  editor: 'See and edit all data. No Admin panel (users, settings, activity)',
   viewer: 'See everything, change nothing',
-  entry: 'Only the Transport data entry form. Cannot see saved data.'
+  entry: 'Only the Driver trip form: his own open trips and papers. No other pages, no settings.'
 };
 const ROLE_ORDER = ['admin', 'editor', 'viewer', 'entry'];
 const EMPTY = { username: '', display: '', password: '', role: 'viewer', asDriver: true, vehicle: '', driverPick: '' }; // driverPick: existing driver id | 'new' | 'none'

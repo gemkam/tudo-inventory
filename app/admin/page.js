@@ -40,5 +40,5 @@ function AdminPage() {
 }
 
 export default function Page() {
-  return <AuthGate adminOnly><AdminPage /></AuthGate>;
+  return <AuthGate ownerOnly><AdminPage /></AuthGate>;
 }
