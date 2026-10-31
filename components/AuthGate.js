@@ -217,7 +217,7 @@ function Ico({ name }) {
   );
 }
 
-/* Round button with the user's first letter; opens name, role, Switch user, Logout */
+/* Round button with the user's first letter; opens name, role, Logout (Switch user removed 31 Oct 2026: it did the same as Logout) */
 function AccountMenu({ user, onLogout, showView }) {
   const [open, setOpen] = useState(false);
   const boxRef = useRef(null);
@@ -245,7 +245,6 @@ function AccountMenu({ user, onLogout, showView }) {
             <span><b>{display}</b><small>{role}</small></span>
           </div>
           {showView && <div className="tbx-pop-view"><small>View</small><ViewSwitch /></div>}
-          <button type="button" role="menuitem" onClick={onLogout}><Ico name="swap" /> Switch user</button>
           <button type="button" role="menuitem" className="out" onClick={onLogout}><Ico name="logout" /> Logout</button>
         </div>
       )}
