@@ -51,8 +51,19 @@ function fieldsOf(a) {
   return f.length ? ` (${f.slice(0, 4).join(', ')}${f.length > 4 ? '…' : ''})` : '';
 }
 /* -> [{ date, user, items: [[time, what, path]] }], nearby same changes joined ("×3") */
-function buildPeople(audit, sessions) {
+function buildPeople(audit, sessions, events = []) {
   const ev = [];
+  const userOf = Object.fromEntries(sessions.map((x) => [x.id, x.username]));
+  for (const e of events) {
+    const u = userOf[e.session_id];
+    if (!u || !e.label) continue;
+    if (e.kind === 'click' && e.detail?.href) continue; // the page it opened is listed below
+    const m = muscat(e.at);
+    const label = String(e.label).replace(/\s+/g, ' ').slice(0, 70);
+    if (e.kind === 'page') ev.push({ ...m, user: u, key: `page|${e.path}`, what: `📄 Opened ${label}`, path: e.path || '' });
+    else if (e.kind === 'click') ev.push({ ...m, user: u, key: `click|${label}`, what: `👆 Pressed ${label}`, path: e.path || '' });
+    else ev.push({ ...m, user: u, key: `${e.kind}|${label}`, what: `• ${label}`, path: e.path || '' });
+  }
   for (const s of sessions) { const m = muscat(s.started_at); ev.push({ ...m, user: s.username || 'user', key: `login`, what: '🔑 Logged in', path: '' }); }
   for (const a of audit) {
     const m = muscat(a.at);
@@ -98,7 +109,9 @@ function mergeTimeline(live, people = []) {
   // what the Administrator users did that day, one group per user, after the build steps
   for (const { date, user, items } of people) {
     if (!map.has(date)) map.set(date, { date, auto: true, title: 'Work in the app', groups: [] });
-    map.get(date).groups.push([`👤 ${user} (Administrator)`, items]);
+    const day = map.get(date);
+    const at = day.groups.findIndex(([m]) => !m.startsWith('👤'));
+    day.groups.splice(at < 0 ? day.groups.length : at, 0, [`👤 ${user} (Administrator)`, items]); // people first
   }
   return [...map.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
@@ -130,14 +143,26 @@ function TimelinePage() {
       const s = sb();
       const [a, se] = await Promise.all([
         s.from('audit_log').select('at, username, role, table_name, action, changed, old_data, new_data').eq('role', 'admin').gte('at', '2026-10-21').order('at').limit(5000),
-        s.from('user_sessions').select('username, role, started_at').eq('role', 'admin').gte('started_at', '2026-10-21').order('started_at').limit(2000)
+        s.from('user_sessions').select('id, username, role, started_at').eq('role', 'admin').gte('started_at', '2026-10-21').order('started_at').limit(2000)
       ]);
-      if (!stop) setPeople(buildPeople(a.data || [], se.data || []));
+      const ids = (se.data || []).map((x) => x.id);
+      const events = [];
+      for (let i = 0; i < ids.length; i += 150) {
+        const { data } = await s.from('user_events').select('session_id, at, kind, path, label, detail').in('session_id', ids.slice(i, i + 150)).order('at').limit(10000);
+        events.push(...(data || []));
+      }
+      if (!stop) setPeople(buildPeople(a.data || [], se.data || [], events));
     })();
     return () => { stop = true; };
   }, [isOwner]);
 
-  const all = useMemo(() => mergeTimeline(live || [], people), [live, people]);
+  // filter chips: Everything · Build steps · 👤 one person
+  const [who, setWho] = useState('all');
+  const users = useMemo(() => [...new Set(people.map((p) => p.user))].sort((a, b) => (a === 'kamran' ? -1 : b === 'kamran' ? 1 : a.localeCompare(b))), [people]);
+  const all = useMemo(() => {
+    const list = mergeTimeline(who === 'build' ? (live || []) : who === 'all' ? (live || []) : [], who === 'build' ? [] : who === 'all' ? people : people.filter((p) => p.user === who));
+    return who === 'all' || who === 'build' ? list : list.filter((d) => d.groups.some(([m]) => m.startsWith('👤'))).map((d) => ({ ...d, groups: d.groups.filter(([m]) => m.startsWith('👤')) }));
+  }, [live, people, who]);
   const total = useMemo(() => all.reduce((n, d) => n + countItems(d), 0), [all]);
 
   // Day number counted from the first day (21 Oct = Day 1)
@@ -153,8 +178,8 @@ function TimelinePage() {
     return newest ? list.reverse() : list;
   }, [q, newest, all]);
 
-  const first = all[0].date;
-  const last = all[all.length - 1].date;
+  const first = all[0]?.date || today;
+  const last = all[all.length - 1]?.date || today;
   const toggleAll = () => { setAllOpen((v) => !v); setOpenKey((k) => k + 1); };
 
   return (
@@ -169,6 +194,13 @@ function TimelinePage() {
           <button className="btn small" onClick={toggleAll}>{allOpen ? '⊟ Fold all' : '⊞ Open all'}</button>
           <Link href="/sitemap" className="btn small">🗺 Sitemap</Link>
         </div>
+        {users.length > 0 && (
+          <div className="tl-who" role="group" aria-label="Show">
+            <button type="button" className={`rp-chip ${who === 'all' ? 'active' : ''}`} onClick={() => setWho('all')}>Everything</button>
+            <button type="button" className={`rp-chip ${who === 'build' ? 'active' : ''}`} onClick={() => setWho('build')}>🛠 Build steps</button>
+            {users.map((u) => <button key={u} type="button" className={`rp-chip ${who === u ? 'active' : ''}`} onClick={() => setWho(u)}>👤 {u}</button>)}
+          </div>
+        )}
       </div>
 
       {days.length ? (

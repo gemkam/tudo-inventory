@@ -3246,3 +3246,4 @@ body.dfv-open { overflow: hidden; }
 .dfm-file.tf-deleted { border-color: rgba(179, 38, 30, .45); background: rgba(179, 38, 30, .05); }
 .dtf-part[disabled] .dfl-more { pointer-events: auto; }
 .dtf-off { pointer-events: none; opacity: .6; }
+.tl-who { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
