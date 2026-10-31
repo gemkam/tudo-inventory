@@ -220,7 +220,7 @@ function EntryPage() {
   const dmy = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
 
   return (
-    <div className={`ent-page${isOffice ? ' office' : ' driver'}`}>
+    <div className={`ent-page${isOffice ? ' office' : ' driver'}${tripId !== null ? ' in-trip' : ''}`}>
       <div className="page-tools ent-head">
         <h1 style={{ margin: 0 }}>🚚 Driver trip form</h1>
         <div className="tools">

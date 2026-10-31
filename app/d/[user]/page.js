@@ -8,7 +8,8 @@ import { sb } from '@/lib/supabase';
   Personal driver link, e.g. https://tudo-inventory.vercel.app/d/saif (sent by WhatsApp from the Driver trip form).
   1. Opened inside WhatsApp: tells the driver to open it in Chrome / Safari (apps cannot be added from inside WhatsApp).
   2. One big "📲 Install Saif Trips" button: puts the icon on the phone (Android: one tap + Install; iPhone: 3 steps shown).
-     Phones always ask the person to confirm; no website can add an icon silently.
+     As soon as the phone allows it, a full-screen "Tap here to install" appears; iPhone shows its 3 steps by itself.
+     Phones always ask the person to confirm (one tap); no website can add an icon silently.
   3. Log in once: username is already filled in, only the password is typed. He stays logged in.
   4. The icon opens this page, which goes straight to his own Driver trip form (/entry shows only his name).
   Someone logged in as another user (e.g. the office testing) sees who is logged in and can switch.
@@ -30,13 +31,16 @@ export default function DriverLink() {
   const [standalone, setStandalone] = useState(false);
   const [env, setEnv] = useState({ ios: false, inApp: false });
   const [help, setHelp] = useState(false);
+  const [ask, setAsk] = useState(false); // full-screen "tap to install" as soon as the phone allows it
+  const [done, setDone] = useState(false);
 
   useEffect(() => {
     try { navigator.serviceWorker?.register('/sw.js'); } catch { /* ignore */ }
     const ua = navigator.userAgent || '';
     setEnv({ ios: /iphone|ipad|ipod/i.test(ua), inApp: /WhatsApp|FBAN|FBAV|Instagram|; wv\)/i.test(ua) });
     setStandalone(!!(window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone));
-    const onPrompt = (e) => { e.preventDefault(); setPrompt(e); };
+    // no preventDefault: Chrome may also show its own "Add to Home screen" bar by itself
+    const onPrompt = (e) => { setPrompt(e); setAsk(true); };
     window.addEventListener('beforeinstallprompt', onPrompt);
     sb().auth.getSession().then(({ data }) => {
       const email = data.session?.user?.email || '';
@@ -48,9 +52,21 @@ export default function DriverLink() {
   }, [u, router]);
 
   async function install() {
-    if (prompt) { prompt.prompt(); await prompt.userChoice.catch(() => null); setPrompt(null); }
-    else setHelp(true);
+    setAsk(false);
+    if (prompt) {
+      try { prompt.prompt(); const r = await prompt.userChoice; if (r?.outcome === 'accepted') setDone(true); } catch { setHelp(true); }
+      setPrompt(null);
+    } else setHelp(true);
   }
+  useEffect(() => {
+    const onDone = () => setDone(true);
+    window.addEventListener('appinstalled', onDone);
+    // iPhone has no install box: show the 3 steps by itself the first time
+    if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !window.navigator.standalone) {
+      try { if (!localStorage.getItem('tudo-ios-help')) { setHelp(true); localStorage.setItem('tudo-ios-help', '1'); } } catch { /* ignore */ }
+    }
+    return () => window.removeEventListener('appinstalled', onDone);
+  }, []);
 
   async function login(e) {
     e.preventDefault();
@@ -111,6 +127,14 @@ export default function DriverLink() {
         )}
       </div>
 
+      {ask && !standalone && !done && (
+        <button type="button" className="dl-ask" onClick={install}>
+          <img src="/icons/trips-192.png" alt="" />
+          <b>Tap here to install<br />{cap(u)} Trips</b>
+          <span>Then press <b>Install</b> on the box that opens</span>
+        </button>
+      )}
+      {done && <div className="dl-done">✅ {cap(u)} Trips is on your phone. Use the icon from now on.</div>}
       {help && (
         <div className="dl-help" role="dialog" aria-modal="true" onMouseDown={(e) => { if (e.target === e.currentTarget) setHelp(false); }}>
           <div className="dl-help-box">

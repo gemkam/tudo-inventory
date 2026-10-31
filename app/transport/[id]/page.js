@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import AuthGate, { useUser } from '@/components/AuthGate';
 import TripCards, { VatButton } from '@/components/TripCards';
+import TripFiles from '@/components/TripFiles';
 import DateInput from '@/components/DateInput';
 import DataGrid from '@/components/DataGrid';
 import { useViewMode } from '@/lib/viewMode';
@@ -19,7 +20,7 @@ import EditToggle from '@/components/EditToggle';
 import SalarySlipPaper from '@/components/SalarySlip';
 import { SALARY_FIELDS, salaryTotal, salaryPayable, allowancePlan, vatOf, driverProfit, TAX_RATE } from '@/lib/transport';
 
-const NUM_KEYS = ['rent', 'received', 'driver_allowance', 'diesel', 'toll', 'maintenance'];
+const NUM_KEYS = ['rent', 'received', 'driver_allowance', 'diesel', 'toll', 'maintenance', 'gate_pass', 'exit_fee', 'empty_border_fee', 'container_wash', 'vehicle_wash'];
 
 /* Print / export: pick the columns (indexes into tableData().head). Saved on this device. */
 const COLS_KEY = 'tudo-trip-print-cols-v2';
@@ -286,6 +287,37 @@ function DriverSheet() {
     { key: 'diesel', label: 'Diesel', type: 'number', min: 0, width: 92, render: amt('diesel') },
     { key: 'toll', label: 'Toll / other', type: 'number', min: 0, width: 100, render: amt('toll') },
     { key: 'maintenance', label: 'Maintenance', type: 'number', min: 0, width: 112, render: amt('maintenance') },
+    // from the Driver trip form (31 Oct 2026): extra trip costs, papers and Trip complete
+    { key: 'gate_pass', label: 'Gate pass', type: 'number', min: 0, width: 96, render: amt('gate_pass') },
+    { key: 'exit_fee', label: 'Exit fee', type: 'number', min: 0, width: 92, render: amt('exit_fee') },
+    { key: 'empty_border_fee', label: 'Empty container fee', type: 'number', min: 0, width: 140, render: amt('empty_border_fee') },
+    { key: 'container_wash', label: 'Container wash', type: 'number', min: 0, width: 120, render: amt('container_wash') },
+    { key: 'vehicle_wash', label: 'Vehicle wash', type: 'number', min: 0, width: 108, render: amt('vehicle_wash') },
+    {
+      key: 'papers', label: 'Papers', type: 'calc', align: 'left', width: 230,
+      render: (r) => {
+        const att = r.attachments || {};
+        const kinds = Object.keys(att).filter((k) => (att[k] || []).length);
+        if (!kinds.length) return <span className="muted">–</span>;
+        const name = { diesel: 'Diesel', toll: 'Toll', gate_pass: 'Gate pass', exit_fee: 'Exit fee', empty_border: 'Empty cont.', container_wash: 'Cont. wash', vehicle_wash: 'Veh. wash', delivery_order: 'Delivery order' };
+        return (
+          <span className="ts-papers" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+            {kinds.map((k) => (
+              <span key={k} className="ts-paper"><small>{name[k] || k}</small>
+                <TripFiles kind={k} label={name[k] || k} tripId={r.id} files={att[k]} locked={!!r.trip_completed} isOffice={isAdmin}
+                  ensureTrip={async () => r.id} onChange={(tid, a) => setEntries((list) => list.map((e) => (e.id === tid ? { ...e, attachments: a || {} } : e)))} flash={flash} />
+              </span>
+            ))}
+          </span>
+        );
+      }
+    },
+    {
+      key: 'trip_completed', label: 'Trip complete', type: 'calc', width: 150,
+      render: (r) => (r.trip_completed
+        ? <span className="tag ok" title={r.completed_at ? new Date(r.completed_at).toLocaleString('en-GB') : ''}>✅ {r.completed_by && r.completed_by !== 'Old trip sheet' ? r.completed_by : 'Completed'}</span>
+        : <span className="tag warn">Open</span>)
+    },
     { key: 'description', label: 'Description', type: 'text', width: 200 },
     { key: 'remarks', label: 'Status', type: 'select', options: ['Completed', 'Loading', 'On the way', 'Done', 'Cancelled'], width: 116 },
     { key: 'credit_in', label: 'Payment credit in', type: 'text', width: 140 },

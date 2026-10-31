@@ -13,6 +13,7 @@ import { fmtAmt } from '@/lib/sheet';
      Saved through database function driver_save_trip (drivers cannot touch the office fields).
   Part 2 "Office (Administrator only)": greyed out and locked for drivers; full control for Administrator / Full access
      (Received, Received on, Payment, Driver allowance status, VAT 5% added, Maintenance, Description, Trip status, Payment credit in).
+  On a phone the form is 3 steps (🚚 Trip · ⛽ Costs · ✅ Finish) with Back / Next (Next saves); a computer shows it all.
   ✅ Trip complete (middle, bottom): driver or office. Uploading a Delivery order shows a reminder to press it.
   After complete the driver cannot change the trip; the office can (and can Open it again).
   Box names: label(key) from lib/entryLabels.js; the Administrator renames them with ✏️ Rename boxes (renaming = true).
@@ -50,6 +51,16 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
   const [done, setDone] = useState({ on: !!trip?.trip_completed, at: trip?.completed_at, by: trip?.completed_by });
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState(false);
+  // phones: the form in 3 short steps (Trip · Costs · Finish) instead of one long page; computers see everything at once
+  const [phone, setPhone] = useState(false);
+  const [step, setStep] = useState(1);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 760px), (max-device-width: 820px)');
+    const on = () => setPhone(mq.matches);
+    on();
+    mq.addEventListener?.('change', on);
+    return () => mq.removeEventListener?.('change', on);
+  }, []);
   const locked = done.on && !isOffice;
   // always save what is on the screen now (a box that was just being typed in is included)
   const fRef = useRef(f);
@@ -107,6 +118,16 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
     onSaved?.();
   }
 
+  const doField = () => (
+    <div className="dtf-field cost do" key="do">
+      <label>{L('delivery_order')}</label>
+      <div className="dtf-row">
+        <span className="dtf-do-note">{hasDO ? '📄 Uploaded' : 'Upload the delivery order receipt'}</span>
+        <TripFiles kind="delivery_order" label={label('delivery_order')} tripId={id} files={att.delivery_order || []} locked={done.on} isOffice={isOffice}
+          ensureTrip={ensureTrip} onChange={(tid, a) => { if (!id) setId(tid); setAtt(a || {}); }} flash={flash} />
+      </div>
+    </div>
+  );
   const money = (k, extra) => (
     <div className={`dtf-field${extra ? ' cost' : ''}`} key={k}>
       <label>{L(k)}</label>
@@ -118,72 +139,119 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
     </div>
   );
 
+  const show = (n) => !phone || step === n;
+  const STEPS = [[1, '🚚', 'Trip'], [2, '⛽', 'Costs'], [3, '✅', 'Finish']];
+  const goStep = async (n) => {
+    if (n === step) return;
+    if (!locked && dirty) { const ok = await save(true); if (!ok) return; }
+    setStep(n);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  const officeFields = (
+    <div className="dtf-grid">
+      <div className="dtf-field"><label>{L('received')}</label><input inputMode="decimal" value={f.received} onChange={(e) => set('received', e.target.value.replace(/[^\d.]/g, ''))} placeholder="0.000" /></div>
+      <div className="dtf-field"><label>{L('received_date')}</label><DateInput value={f.received_date} onChange={(iso) => set('received_date', iso)} /></div>
+      <div className="dtf-field"><label>{L('payment_status')}</label>
+        <select value={f.payment_status} onChange={(e) => set('payment_status', e.target.value)}><option value="">–</option><option>Received</option><option>Not Received</option><option>Partly received</option></select></div>
+      <div className="dtf-field"><label>{L('allowance_status')}</label>
+        <select value={f.allowance_status} onChange={(e) => set('allowance_status', e.target.value)}><option value="">–</option><option>Paid</option><option>Not paid</option></select></div>
+      <div className="dtf-field"><label>{L('maintenance')}</label><input inputMode="decimal" value={f.maintenance} onChange={(e) => set('maintenance', e.target.value.replace(/[^\d.]/g, ''))} placeholder="0.000" /></div>
+      <div className="dtf-field"><label>{L('remarks')}</label>
+        <select value={f.remarks} onChange={(e) => set('remarks', e.target.value)}><option value="">–</option><option>Loading</option><option>On the way</option><option>Completed</option><option>Done</option><option>Cancelled</option></select></div>
+      <div className="dtf-field"><label>{L('credit_in')}</label><input value={f.credit_in} onChange={(e) => set('credit_in', e.target.value)} /></div>
+      <div className="dtf-field check"><label><input type="checkbox" checked={!!f.vat_included} onChange={(e) => set('vat_included', e.target.checked)} /> {L('vat_included')}</label></div>
+      <div className="dtf-field wide"><label>{L('description')}</label><textarea rows={2} value={f.description} onChange={(e) => set('description', e.target.value)} /></div>
+    </div>
+  );
+
   return (
-    <div className="dtf">
+    <div className={`dtf${phone ? ' phone' : ''}`}>
       <div className="dtf-top">
         <h2>🚚 {driver.name}{driver.vehicle_no ? <small> · {driver.vehicle_no}</small> : null}</h2>
         <span className={`tag ${done.on ? 'ok' : 'warn'}`}>{done.on ? '✅ Completed' : id ? 'Open trip' : 'New trip'}</span>
         {onClose && <button type="button" className="btn small ghost" onClick={onClose}>← Trips</button>}
       </div>
 
-      <fieldset className={`dtf-part${locked ? ' locked' : ''}`}>
-        <legend>{L('_driver_part')}</legend>
-        <div className="dtf-grid">
-          <div className="dtf-field"><label>{L('entry_date')}</label><span className={locked ? 'dtf-off' : ''}><DateInput value={f.entry_date} onChange={(iso) => set('entry_date', iso)} /></span></div>
-          <div className="dtf-field"><label>{L('from_place')}</label><input value={f.from_place} disabled={locked} onChange={(e) => set('from_place', e.target.value)} placeholder="e.g. Sohar" /></div>
-          <div className="dtf-field"><label>{L('to_place')}</label><input value={f.to_place} disabled={locked} onChange={(e) => set('to_place', e.target.value)} placeholder="e.g. Jabal Ali" /></div>
-          {money('rent')}
-          {money('driver_allowance')}
+      {phone && (
+        <div className="dtf-steps" role="tablist" aria-label="Steps">
+          {STEPS.map(([n, ic, t]) => (
+            <button key={n} type="button" role="tab" aria-selected={step === n} className={`dtf-step${step === n ? ' on' : ''}${step > n ? ' past' : ''}`} onClick={() => goStep(n)}>
+              <span className="dtf-step-no">{step > n ? '✓' : n}</span><span>{ic} {t}</span>
+            </button>
+          ))}
         </div>
-        <div className="dtf-grid costs">
-          {COSTS.map((k) => money(k, true))}
-          <div className="dtf-field cost do">
-            <label>{L('delivery_order')}</label>
-            <div className="dtf-row">
-              <span className="dtf-do-note">{hasDO ? '📄 Uploaded' : 'Upload the delivery order receipt'}</span>
-              <TripFiles kind="delivery_order" label={label('delivery_order')} tripId={id} files={att.delivery_order || []} locked={done.on} isOffice={isOffice}
-                ensureTrip={ensureTrip} onChange={(tid, a) => { if (!id) setId(tid); setAtt(a || {}); }} flash={flash} />
-            </div>
-          </div>
-        </div>
-        <p className="dtf-sum">Costs total: <b>{fmtAmt(costs)}</b> OMR</p>
-      </fieldset>
+      )}
 
-      <fieldset className={`dtf-part office${isOffice ? '' : ' grey'}`} disabled={!isOffice}>
-        <legend>🔒 {L('_office_part')}</legend>
-        {!isOffice && <p className="dtf-lock">Only the office fills this part.</p>}
-        <div className="dtf-grid">
-          <div className="dtf-field"><label>{L('received')}</label><input inputMode="decimal" value={f.received} onChange={(e) => set('received', e.target.value.replace(/[^\d.]/g, ''))} placeholder="0.000" /></div>
-          <div className="dtf-field"><label>{L('received_date')}</label><DateInput value={f.received_date} onChange={(iso) => set('received_date', iso)} /></div>
-          <div className="dtf-field"><label>{L('payment_status')}</label>
-            <select value={f.payment_status} onChange={(e) => set('payment_status', e.target.value)}><option value="">–</option><option>Received</option><option>Not Received</option><option>Partly received</option></select></div>
-          <div className="dtf-field"><label>{L('allowance_status')}</label>
-            <select value={f.allowance_status} onChange={(e) => set('allowance_status', e.target.value)}><option value="">–</option><option>Paid</option><option>Not paid</option></select></div>
-          <div className="dtf-field"><label>{L('maintenance')}</label><input inputMode="decimal" value={f.maintenance} onChange={(e) => set('maintenance', e.target.value.replace(/[^\d.]/g, ''))} placeholder="0.000" /></div>
-          <div className="dtf-field"><label>{L('remarks')}</label>
-            <select value={f.remarks} onChange={(e) => set('remarks', e.target.value)}><option value="">–</option><option>Loading</option><option>On the way</option><option>Completed</option><option>Done</option><option>Cancelled</option></select></div>
-          <div className="dtf-field"><label>{L('credit_in')}</label><input value={f.credit_in} onChange={(e) => set('credit_in', e.target.value)} /></div>
-          <div className="dtf-field check"><label><input type="checkbox" checked={!!f.vat_included} onChange={(e) => set('vat_included', e.target.checked)} /> {L('vat_included')}</label></div>
-          <div className="dtf-field wide"><label>{L('description')}</label><textarea rows={2} value={f.description} onChange={(e) => set('description', e.target.value)} /></div>
-        </div>
-      </fieldset>
+      {(show(1) || show(2) || (show(3) && !phone)) && (
+        <fieldset className={`dtf-part${locked ? ' locked' : ''}`}>
+          <legend>{phone ? (step === 1 ? '🚚 Trip details' : '⛽ Trip costs') : L('_driver_part')}</legend>
+          {show(1) && (
+            <div className="dtf-grid">
+              <div className="dtf-field"><label>{L('entry_date')}</label><span className={locked ? 'dtf-off' : ''}><DateInput value={f.entry_date} onChange={(iso) => set('entry_date', iso)} /></span></div>
+              <div className="dtf-field"><label>{L('from_place')}</label><input value={f.from_place} disabled={locked} onChange={(e) => set('from_place', e.target.value)} placeholder="e.g. Sohar" /></div>
+              <div className="dtf-field"><label>{L('to_place')}</label><input value={f.to_place} disabled={locked} onChange={(e) => set('to_place', e.target.value)} placeholder="e.g. Jabal Ali" /></div>
+              {money('rent')}
+              {money('driver_allowance')}
+            </div>
+          )}
+          {show(2) && (
+            <div className="dtf-grid costs">
+              {phone && <p className="dtf-tip">Type the amount. Tap <b>⋯ More</b> to add the bill photo.</p>}
+              {COSTS.map((k) => money(k, true))}
+              {!phone && doField()}
+            </div>
+          )}
+          {show(2) && <p className="dtf-sum">Costs total: <b>{fmtAmt(costs)}</b> OMR</p>}
+        </fieldset>
+      )}
+
+      {phone && show(3) && (
+        <fieldset className="dtf-part">
+          <legend>✅ Finish the trip</legend>
+          <div className="dtf-grid">{doField()}</div>
+          <div className="dtf-review">
+            <div><span>Route</span><b>{[f.from_place, f.to_place].filter(Boolean).join(' → ') || '–'}</b></div>
+            <div><span>{label('rent')}</span><b>{fmtAmt(Number(f.rent) || 0)}</b></div>
+            <div><span>Costs total</span><b>{fmtAmt(costs)}</b></div>
+          </div>
+        </fieldset>
+      )}
+
+      {show(3) && (isOffice ? (
+        <fieldset className="dtf-part office">
+          <legend>🔒 {L('_office_part')}</legend>
+          {officeFields}
+        </fieldset>
+      ) : phone ? (
+        <p className="dtf-office-line">🔒 Office part: the office fills it.</p>
+      ) : (
+        <fieldset className="dtf-part office grey" disabled>
+          <legend>🔒 {L('_office_part')}</legend>
+          <p className="dtf-lock">Only the office fills this part.</p>
+          {officeFields}
+        </fieldset>
+      ))}
 
       <div className="dtf-actions">
-        {!locked && <span className={`dtf-state${dirty ? ' dirty' : ''}`}>{dirty ? '● Not saved yet' : id ? '✓ Saved' : ''}</span>}
-        {!locked && <button type="button" className="btn in" onClick={() => save(false)} disabled={busy}>{busy ? 'Saving...' : '💾 Save'}</button>}
+        {phone && step > 1 && <button type="button" className="btn dtf-nav" onClick={() => goStep(step - 1)}>‹ Back</button>}
+        {!locked && <span className={`dtf-state${dirty ? ' dirty' : ''}`}>{dirty ? '● Not saved' : id ? '✓ Saved' : ''}</span>}
+        {!locked && (!phone || step === 3) && <button type="button" className="btn in" onClick={() => save(false)} disabled={busy}>{busy ? 'Saving...' : '💾 Save'}</button>}
+        {phone && step < 3 && <button type="button" className="btn in dtf-nav next" onClick={() => goStep(step + 1)} disabled={busy}>{busy ? 'Saving...' : 'Next ›'}</button>}
       </div>
 
-      {hasDO && !done.on && <div className="dtf-hint">📄 Delivery order is uploaded. If the trip is finished, press <b>Trip complete</b>.</div>}
-      <div className="dtf-complete">
-        {done.on ? (
-          <>
-            <div className="dtf-done">✅ Trip completed{done.by ? ` by ${done.by}` : ''}{done.at ? ` · ${new Date(done.at).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}</div>
-            {isOffice && <button type="button" className="btn ghost" onClick={() => complete(false)}>↺ Open this trip again</button>}
-          </>
-        ) : (
-          <button type="button" className="dtf-big" onClick={() => complete(true)} disabled={busy}>✅ Trip complete</button>
-        )}
-      </div>
+      {show(3) && hasDO && !done.on && <div className="dtf-hint">📄 Delivery order is uploaded. If the trip is finished, press <b>Trip complete</b>.</div>}
+      {show(3) && (
+        <div className="dtf-complete">
+          {done.on ? (
+            <>
+              <div className="dtf-done">✅ Trip completed{done.by ? ` by ${done.by}` : ''}{done.at ? ` · ${new Date(done.at).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}</div>
+              {isOffice && <button type="button" className="btn ghost" onClick={() => complete(false)}>↺ Open this trip again</button>}
+            </>
+          ) : (
+            <button type="button" className="dtf-big" onClick={() => complete(true)} disabled={busy}>✅ Trip complete</button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
