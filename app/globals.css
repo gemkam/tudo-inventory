@@ -2649,8 +2649,8 @@ a.sm-name { color: var(--brown); } a.sm-name:hover { text-decoration: underline;
 /* Side buttons hidden to a thin icon strip; they open when the mouse is on them (desktop only) */
 @media (min-width: 981px) and (hover: hover) {
   .page.has-side { grid-template-columns: 54px minmax(0, 1fr); }
-  .page.has-side > .tsn { width: 54px; padding: 8px 6px; overflow: hidden; z-index: 40; transition: width .18s ease, box-shadow .18s ease; }
-  .page.has-side > .tsn:hover, .page.has-side > .tsn:focus-within { width: 270px; overflow-y: auto; box-shadow: 0 18px 40px -12px rgba(0, 0, 0, .35); }
+  .page.has-side > .tsn { width: 54px; max-width: none; padding: 8px 6px; overflow: hidden; z-index: 40; transition: width .18s ease, box-shadow .18s ease; }
+  .page.has-side > .tsn:hover, .page.has-side > .tsn:focus-within { width: 270px; max-width: none; overflow-y: auto; box-shadow: 0 18px 40px -12px rgba(0, 0, 0, .35); }
   .page.has-side > .tsn:not(:hover):not(:focus-within) .tsn-tx,
   .page.has-side > .tsn:not(:hover):not(:focus-within) .tsn-car,
   .page.has-side > .tsn:not(:hover):not(:focus-within) .tsn-kids,
