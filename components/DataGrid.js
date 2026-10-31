@@ -263,7 +263,7 @@ export default function DataGrid({ columns, rows, canEdit, onSave, onAdd, addLab
         <thead>
           <tr className="labels">
             <th className="corner" />
-            {columns.map((c) => <th key={c.key} className={`a-${c.align || (c.type === 'number' || c.type === 'calc' ? 'right' : 'left')}`}>{c.label}</th>)}
+            {columns.map((c) => <th key={c.key} className={`a-${c.align || (c.type === 'number' || c.type === 'calc' ? 'right' : 'left')} col-${c.key}`}>{c.label}</th>)}
             {showDelete && <th />}
           </tr>
         </thead>
@@ -282,7 +282,7 @@ export default function DataGrid({ columns, rows, canEdit, onSave, onAdd, addLab
                   <td
                     key={col.key}
                     data-cell={`${r}-${c}`}
-                    className={`cell a-${align} ${c === 0 ? 'k-first' : ''} ${isSel ? 'selected' : ''} ${editable(r, c) ? 'editable' : ''} ${isEd ? 'editing' : ''}`}
+                    className={`cell a-${align} col-${col.key} ${c === 0 ? 'k-first' : ''} ${isSel ? 'selected' : ''} ${editable(r, c) ? 'editable' : ''} ${isEd ? 'editing' : ''}`}
                     onClick={() => { const same = isSel; setSel({ r, c }); if (same) startEdit(r, c); }}
                     onDoubleClick={() => startEdit(r, c)}
                   >

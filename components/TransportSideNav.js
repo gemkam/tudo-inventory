@@ -62,6 +62,7 @@ export function TransportMenu({ nested = false, isAdmin = false }) {
     <>
       <L href="/transport" icon="📊">Overview</L>
       <Group id="trips" icon="📄" label="Trip sheets">
+        <L href="/transport/trip-sheets" sub>All drivers</L>
         {drivers.length === 0 && <span className="tsn-none">No drivers yet</span>}
         {drivers.map((d) => (
           <L key={d.id} href={`/transport/${d.id}`} sub>{d.name}{d.vehicle_no ? <small>{d.vehicle_no}</small> : null}{d.status === 'Inactive' ? <small>inactive</small> : null}</L>

@@ -117,6 +117,7 @@ function DriversPage() {
         <Link href="/transport" className="crumb">← Transport</Link>
         <div className="tools">
           {isAdmin && <button type="button" className="btn" onClick={addFromTop}>➕ Add driver</button>}
+          <Link href="/transport/trip-sheets" className="btn">📄 All Drivers Trip Sheets</Link>
           <Link href="/transport/salary-sheet" className="btn in">📑 Salary sheet</Link>
           <Link href="/transport/vehicles" className="btn">🚚 Vehicles</Link>
         </div>
@@ -134,6 +135,10 @@ function DriversPage() {
             <option value="expiry">Sort: Resident Card / Visa expiry first</option>
             <option value="added">Sort: Order added</option>
           </select>
+          <div className="drv-sheets">
+            <Link href="/transport/trip-sheets" className="btn small in">📄 All Drivers Trip Sheets</Link>
+            {sorted.map((d) => <Link key={d.id} href={`/transport/${d.id}`} className="btn small">📄 {d.name}</Link>)}
+          </div>
           <EditToggle show={isAdmin} on={editMode} onClick={() => setEditMode((v) => !v)} />
         </div>
 

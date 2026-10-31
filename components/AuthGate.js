@@ -1,6 +1,7 @@
 'use client';
 
 import TableCards, { ViewSwitch } from '@/components/TableCards';
+import Breadcrumbs from '@/components/Breadcrumbs';
 import TransportSideNav, { showTransportSide } from '@/components/TransportSideNav';
 import ExpenseSideNav, { showExpenseSide } from '@/components/ExpenseSideNav';
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -154,11 +155,11 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
       {!blocked && !user.isEntry && (showTransportSide(path) || showExpenseSide(path)) ? (
         <main className="page wide has-side">
           {showTransportSide(path) ? <TransportSideNav isAdmin={user.isAdmin} /> : <ExpenseSideNav isAdmin={user.isAdmin} />}
-          <div className="side-main">{showTransportSide(path) && <OfficeTabs />}{children}</div>
+          <div className="side-main"><Breadcrumbs />{showTransportSide(path) && <OfficeTabs />}{children}</div>
         </main>
       ) : (
         <main className={`page${wide ? ' wide' : ''}`}>
-          {blocked ? <div className="error">{blocked}</div> : children}
+          {blocked ? <div className="error">{blocked}</div> : <><Breadcrumbs />{children}</>}
         </main>
       )}
       {/* Floating 🖨 Print button removed from every page (user, 31 Oct 2026). Pages keep their own Print buttons. */}

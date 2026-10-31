@@ -3085,3 +3085,44 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .mark-all-bar .mab-btns { display: inline-flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
 .mark-all-bar .tag, .prev-allow .tag { white-space: nowrap; }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
+
+/* ===== All Drivers Trip Sheets (/transport/trip-sheets) ===== */
+.ats-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ats-sheet { min-width: 0; }
+.ats-sheet .section-head h2 small { font-size: 13px; font-weight: 500; }
+.ats-table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.ats-table th { background: var(--brown); color: #fff; text-align: left; padding: 8px 10px; white-space: nowrap; font-size: 12px; letter-spacing: .03em; }
+.ats-table td { padding: 7px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: top; }
+.ats-table tbody tr:nth-child(even) { background: var(--row-alt); }
+.ats-table tbody tr:hover { background: var(--row-hover); }
+.ats-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.ats-table tfoot td { font-weight: 700; background: var(--tint); border-top: 2px solid var(--brown); }
+.ats-presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.ats-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px 14px; }
+.ats-col { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+@media print {
+  .ats-sheet { break-inside: auto; box-shadow: none !important; border: 0 !important; padding: 0 !important; margin-top: 10px; }
+  .ats-table { font-size: 9.5px; width: 100%; }
+  .ats-table th { -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 4px 5px; }
+  .ats-table td { padding: 3px 5px; white-space: normal; }
+  .ats-table tr { break-inside: avoid; }
+  body.ats-print-page .kpi-row { display: none; }
+}
+
+/* ===== Breadcrumb map on top of every page (components/Breadcrumbs.js) ===== */
+.bc { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 13.5px; font-weight: 600; color: var(--muted); padding: 2px 2px 0; }
+.bc a { color: var(--brown); text-decoration: none; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--pill-line, var(--line)); background: var(--surface); }
+.bc a:hover { background: var(--brown); color: #fff; border-color: var(--brown); }
+.bc .bc-sep { opacity: .55; font-weight: 700; }
+.bc .bc-here { color: var(--heading, var(--ink)); padding: 3px 4px; }
+@media print { .bc { display: none !important; } }
+.drv-sheets { display: flex; flex-wrap: wrap; gap: 6px; flex: 1 1 260px; }
+
+/* VAT 5% column stands out (trip sheets, All Drivers Trip Sheets): gold header + light gold column */
+.grid thead tr.labels th.col-vat_included, .ats-table th.col-vat {
+  background: linear-gradient(180deg, #f6c445, #e0a100) !important; color: #3d2a00 !important; font-weight: 800; letter-spacing: .06em;
+  box-shadow: inset 0 -3px 0 #b07d00, 0 2px 0 var(--frame);
+}
+.grid thead tr.labels th.col-vat_included::before, .ats-table th.col-vat::before { content: '🧾 '; }
+.grid tbody td.col-vat_included, .ats-table td.col-vat { background-color: rgba(246, 196, 69, .16); box-shadow: inset 2px 0 0 rgba(224, 161, 0, .55), inset -2px 0 0 rgba(224, 161, 0, .55); }
+@media print { .grid thead tr.labels th.col-vat_included, .ats-table th.col-vat { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
