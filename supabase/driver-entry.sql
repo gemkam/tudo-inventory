@@ -163,3 +163,5 @@ grant execute on function public.driver_trip_counts(uuid) to authenticated;
 -- admin_create_user / admin_update_user accept 'driver'; linked driver logins (saif, aman) moved to role 'driver'.
 
 -- 31 Oct 2026 (evening): transport_entries.completed_role (driver | office | old); trip_complete() fills it.
+
+-- 31 Oct 2026: drivers cannot change trips entered more than 4 days ago, nor enter trips dated more than 4 days back (driver_too_old(); checks in driver_save_trip, driver_add_file, driver_file_action, trip_complete).

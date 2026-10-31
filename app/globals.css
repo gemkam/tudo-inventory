@@ -3412,3 +3412,5 @@ body:has(.ent-page.ur) .modal, body:has(.ent-page.ur) .dfv { font-family: 'Noto 
 .ent-head .lang-switch { margin-inline-start: auto; }
 @media (max-width: 760px), (max-device-width: 820px) { .ent-page .ent-head .lang-switch { align-self: center; } .ent-page .lang-switch button { font-size: 17px; padding: 9px 22px; } .ent-page .lang-switch .ur-txt { font-size: 20px; } }
 .logout-note { padding: 12px 14px; border-radius: 12px; background: #e3f4ed; border: 1.5px solid #13836b; color: #0f3d33; font-weight: 700; text-align: center; margin-bottom: 8px; }
+.dtf-old-banner { padding: 12px 14px; border-radius: 12px; background: #fff4e0; border: 1.5px solid #e0a100; color: #5c3b00; font-weight: 700; font-size: 16px; }
+.dtf-datehint { text-transform: none; letter-spacing: 0; font-weight: 600; color: #b07d00; }

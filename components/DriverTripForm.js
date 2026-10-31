@@ -64,7 +64,9 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
     mq.addEventListener?.('change', on);
     return () => mq.removeEventListener?.('change', on);
   }, []);
-  const locked = done.on && !isOffice;
+  // drivers cannot change a trip entered more than 4 days ago (also enforced in the database, 31 Oct 2026)
+  const tooOld = !isOffice && !!trip?.created_at && Date.now() - new Date(trip.created_at).getTime() > 4 * 86400000;
+  const locked = (done.on || tooOld) && !isOffice;
   // always save what is on the screen now (a box that was just being typed in is included)
   const fRef = useRef(f);
   fRef.current = f;
@@ -127,7 +129,7 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
       <label>{L('delivery_order')}</label>
       <div className="dtf-row">
         <span className="dtf-do-note">{hasDO ? t('📄 Uploaded') : t('Upload the delivery order receipt')}</span>
-        <TripFiles kind="delivery_order" label={tl('delivery_order')} tripId={id} files={att.delivery_order || []} locked={done.on} isOffice={isOffice}
+        <TripFiles kind="delivery_order" label={tl('delivery_order')} tripId={id} files={att.delivery_order || []} locked={done.on || tooOld} isOffice={isOffice}
           ensureTrip={ensureTrip} onChange={(tid, a) => { if (!id) setId(tid); setAtt(a || {}); }} flash={flash} />
       </div>
     </div>
@@ -137,7 +139,7 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
       <label>{L(k)}</label>
       <div className="dtf-row">
         <input dir="ltr" inputMode="decimal" value={f[k]} disabled={locked} placeholder="0.000" onChange={(e) => set(k, e.target.value.replace(/[^\d.]/g, ''))} />
-        {extra && <TripFiles kind={kindOf(k)} label={tl(k)} tripId={id} files={att[kindOf(k)] || []} locked={done.on} isOffice={isOffice}
+        {extra && <TripFiles kind={kindOf(k)} label={tl(k)} tripId={id} files={att[kindOf(k)] || []} locked={done.on || tooOld} isOffice={isOffice}
           ensureTrip={ensureTrip} onChange={(tid, a) => { if (!id) setId(tid); setAtt(a || {}); }} flash={flash} />}
       </div>
     </div>
@@ -176,6 +178,7 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
         {onClose && <button type="button" className="btn small ghost" onClick={onClose}>{t('← Trips')}</button>}
       </div>
 
+      {tooOld && !done.on && <div className="dtf-old-banner">🔒 {t('This trip is older than 4 days. Only the office can change it.')}</div>}
       {done.on && (
         <div className="dtf-closed-banner">✅ {t('This trip is completed')}{done.by ? ` · ${t('closed by')} ${done.by}${done.role === 'driver' ? ' (driver)' : done.role === 'office' ? ' (office)' : ''}` : ''}{done.at ? ` · ${new Date(done.at).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}` : ''}</div>
       )}
@@ -195,7 +198,7 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
           <legend>{phone ? (step === 1 ? `🚚 ${t('Trip details')}` : `⛽ ${t('Trip costs')}`) : L('_driver_part')}</legend>
           {show(1) && (
             <div className="dtf-grid">
-              <div className="dtf-field"><label>{L('entry_date')}</label><span dir="ltr" className={locked ? 'dtf-off' : ''}><DateInput value={f.entry_date} onChange={(iso) => set('entry_date', iso)} /></span></div>
+              <div className="dtf-field"><label>{L('entry_date')}{!isOffice && !id ? <small className="dtf-datehint"> · {t('last 4 days only')}</small> : null}</label><span dir="ltr" className={locked ? 'dtf-off' : ''}><DateInput value={f.entry_date} onChange={(iso) => set('entry_date', iso)} /></span></div>
               <div className="dtf-field"><label>{L('from_place')}</label><input value={f.from_place} disabled={locked} onChange={(e) => set('from_place', e.target.value)} placeholder="e.g. Sohar" /></div>
               <div className="dtf-field"><label>{L('to_place')}</label><input value={f.to_place} disabled={locked} onChange={(e) => set('to_place', e.target.value)} placeholder="e.g. Jabal Ali" /></div>
               {money('rent')}
@@ -255,7 +258,7 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
               <div className="dtf-done">{t('✅ Trip completed')}{done.by ? ` by ${done.by}` : ''}{done.at ? ` · ${new Date(done.at).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}</div>
               {isOffice && <button type="button" className="btn ghost" onClick={() => complete(false)}>↺ Open this trip again</button>}
             </>
-          ) : (
+          ) : tooOld ? null : (
             <button type="button" className="dtf-big" onClick={() => complete(true)} disabled={busy}>{t('✅ Trip complete')}</button>
           )}
         </div>
