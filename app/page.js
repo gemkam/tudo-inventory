@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import AuthGate, { useUser } from '@/components/AuthGate';
+import AuthGate from '@/components/AuthGate';
 import TruckAnim from '@/components/TruckAnim';
 import AlertsPanel from '@/components/AlertsPanel';
 import HomeSearch from '@/components/HomeSearch';
@@ -22,8 +22,7 @@ function Letterhead() {
 }
 
 function Home() {
-  const { isAdmin, isOwner } = useUser();
-  const [inv, setInv] = useState(null);
+    const [inv, setInv] = useState(null);
   const [tr, setTr] = useState(null);
   const [ex, setEx] = useState(null);
 
@@ -94,36 +93,6 @@ function Home() {
           </span>
         </Link>
       </div>
-      {isAdmin && (
-        <div className="home-quick">
-          <Link href="/entry" className="dc-home" aria-label="Data entry">
-            <span className="dc-home-ico" aria-hidden="true">✍️</span>
-            <span className="dc-home-text">
-              <b>Data entry</b>
-              <small>Trip entry form and driver share links</small>
-            </span>
-            <span className="adm-go" aria-hidden="true">›</span>
-          </Link>
-          <Link href="/expenses/docs" className="dc-home" aria-label="Invoices and Receipts">
-            <span className="dc-home-ico" aria-hidden="true">🧾</span>
-            <span className="dc-home-text">
-              <b>Invoices &amp; Receipts</b>
-              <small>Modern City · Abu Wasif · Sumptuosity</small>
-            </span>
-            <span className="adm-go" aria-hidden="true">›</span>
-          </Link>
-        </div>
-      )}
-      {isAdmin && (
-        <Link href="/admin" className="dc-home adm-home" aria-label="Admin">
-          <span className="dc-home-ico" aria-hidden="true">🛡</span>
-          <span className="dc-home-text">
-            <b>Admin</b>
-            <small>{isOwner ? 'Users · User activity · Settings · Timeline · Sitemap' : 'Settings · Timeline · Sitemap'}</small>
-          </span>
-          <span className="adm-go" aria-hidden="true">›</span>
-        </Link>
-      )}
       </div>
       <AlertsPanel />
       </div>
