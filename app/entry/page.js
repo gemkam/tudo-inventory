@@ -152,7 +152,8 @@ function EntryPage() {
   const [trips, setTrips] = useState(null); // open trips
   const [doneTrips, setDoneTrips] = useState(null); // completed trips (office only)
   const [counts, setCounts] = useState(null); // { completed, this_month, open }
-  const [listTab, setListTab] = useState('open'); // 'open' | 'done' (done = office only)
+  const [closedOpen, setClosedOpen] = useState(false); // ✅ Closed trips drop-down (office only)
+  const [closedBy, setClosedBy] = useState('all'); // all | driver | office | old
   const [tripId, setTripId] = useState(null); // null = list, 'new' = new trip, id = that trip
   const [current, setCurrent] = useState(null); // the trip open in the form (kept even if it leaves the list)
   const [renaming, setRenaming] = useState(false);
@@ -201,7 +202,7 @@ function EntryPage() {
       setDoneTrips(data || []);
     }
   }, [driverId, isOffice]);
-  useEffect(() => { setTripId(null); setCurrent(null); setListTab('open'); loadTrips(); }, [loadTrips]);
+  useEffect(() => { setTripId(null); setCurrent(null); loadTrips(); }, [loadTrips]);
   const openTrip = (t) => { setCurrent(t); setTripId(t ? t.id : 'new'); };
 
   async function saveDriver(e) {
@@ -218,6 +219,18 @@ function EntryPage() {
   const papers = (t) => Object.values(t.attachments || {}).flat().filter((x) => !x.deleted_at).length;
   const deleted = (t) => Object.values(t.attachments || {}).flat().filter((x) => x.deleted_at).length;
   const dmy = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
+  const roleOf = (t) => t.completed_role || (t.completed_by === 'Old trip sheet' ? 'old' : 'office');
+  const closedCount = (k) => (doneTrips || []).filter((t) => roleOf(t) === k).length;
+  const closedList = (doneTrips || []).filter((t) => closedBy === 'all' || roleOf(t) === closedBy);
+  const whoClosed = (t) => (roleOf(t) === 'old' ? 'old trip sheet' : `${t.completed_by || '?'} (${roleOf(t) === 'driver' ? 'driver' : 'office'})`);
+  const tripRow = (t) => (
+    <button key={t.id} type="button" className={`ent-trip${t.trip_completed ? ' done' : ''}`} onClick={() => openTrip(t)}>
+      <span className="ent-trip-date">{dmy(t.entry_date)}</span>
+      <b>{[t.from_place, t.to_place].filter(Boolean).join(' → ') || t.description || 'No route yet'}</b>
+      <small>{papers(t)} paper{papers(t) === 1 ? '' : 's'}{isOffice && deleted(t) ? ` · 🗑 ${deleted(t)} deleted` : ''}{t.trip_completed ? ` · closed by ${whoClosed(t)}` : ''}</small>
+      <span className={`tag ${t.trip_completed ? 'ok' : 'warn'}`}>{t.trip_completed ? `✅ ${dmy(t.completed_at)}` : 'Open'}</span>
+    </button>
+  );
 
   return (
     <div className={`ent-page${isOffice ? ' office' : ' driver'}${tripId !== null ? ' in-trip' : ''}`}>
@@ -252,29 +265,37 @@ function EntryPage() {
             <div className="ok"><span>✅ Trips completed</span><b>{counts ? counts.completed : '…'}</b></div>
             <div><span>Completed this month</span><b>{counts ? counts.this_month : '…'}</b></div>
           </div>
-          {isOffice && (
-            <div className="ent-tabs" role="tablist">
-              <button type="button" role="tab" aria-selected={listTab === 'open'} className={`rp-chip ${listTab === 'open' ? 'active' : ''}`} onClick={() => setListTab('open')}>🟡 Open trips ({trips ? trips.length : 0})</button>
-              <button type="button" role="tab" aria-selected={listTab === 'done'} className={`rp-chip ${listTab === 'done' ? 'active' : ''}`} onClick={() => setListTab('done')}>✅ Completed trips ({doneTrips ? doneTrips.length : 0})</button>
-            </div>
-          )}
           {(() => {
-            const list = listTab === 'done' && isOffice ? doneTrips : trips;
-            if (list === null) return <p className="muted">Loading...</p>;
-            if (!list.length) return <p className="muted" style={{ margin: '8px 0 0' }}>{listTab === 'done' ? 'No completed trips yet.' : 'No open trips. Press ＋ New trip.'}</p>;
+            if (trips === null) return <p className="muted">Loading...</p>;
             return (
-              <div className="ent-trips">
-                {list.map((t) => (
-                  <button key={t.id} type="button" className={`ent-trip${t.trip_completed ? ' done' : ''}`} onClick={() => openTrip(t)}>
-                    <span className="ent-trip-date">{dmy(t.entry_date)}</span>
-                    <b>{[t.from_place, t.to_place].filter(Boolean).join(' → ') || t.description || 'No route yet'}</b>
-                    <small>{papers(t)} paper{papers(t) === 1 ? '' : 's'}{isOffice && deleted(t) ? ` · 🗑 ${deleted(t)} deleted` : ''}{t.trip_completed && t.completed_by ? ` · by ${t.completed_by}` : ''}</small>
-                    <span className={`tag ${t.trip_completed ? 'ok' : 'warn'}`}>{t.trip_completed ? `✅ ${dmy(t.completed_at)}` : 'Open'}</span>
-                  </button>
-                ))}
-              </div>
+              <>
+                <h3 className="ent-sub">🟡 Open trips ({trips.length})</h3>
+                {!trips.length && <p className="muted" style={{ margin: '4px 0 0' }}>No open trips. Press ＋ New trip.</p>}
+                <div className="ent-trips">{trips.map(tripRow)}</div>
+              </>
             );
           })()}
+
+          {isOffice && (
+            <div className={`ent-closed${closedOpen ? ' open' : ''}`}>
+              <button type="button" className="ent-closed-head" aria-expanded={closedOpen} onClick={() => setClosedOpen((v) => !v)}>
+                <span>✅ Closed trips <b>{doneTrips ? doneTrips.length : '…'}</b></span>
+                <small>{closedCount('driver')} by driver · {closedCount('office')} by office{closedCount('old') ? ` · ${closedCount('old')} old sheet` : ''}</small>
+                <i aria-hidden="true">{closedOpen ? '▴' : '▾'}</i>
+              </button>
+              {closedOpen && (
+                <>
+                  <div className="ent-tabs" role="group" aria-label="Closed by">
+                    {[['all', 'All'], ['driver', '🚚 By driver'], ['office', '🏢 By office'], ['old', '📄 Old sheet']].map(([k, l]) => (
+                      <button key={k} type="button" className={`rp-chip ${closedBy === k ? 'active' : ''}`} onClick={() => setClosedBy(k)}>{l} ({k === 'all' ? (doneTrips || []).length : closedCount(k)})</button>
+                    ))}
+                  </div>
+                  {!closedList.length && <p className="muted" style={{ margin: '6px 0 0' }}>None.</p>}
+                  <div className="ent-trips">{closedList.map(tripRow)}</div>
+                </>
+              )}
+            </div>
+          )}
         </section>
       )}
 

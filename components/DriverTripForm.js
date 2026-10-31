@@ -48,7 +48,7 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
   const [f, setF] = useState(() => fromTrip(trip, driver.id));
   const [id, setId] = useState(trip?.id || null);
   const [att, setAtt] = useState(trip?.attachments || {});
-  const [done, setDone] = useState({ on: !!trip?.trip_completed, at: trip?.completed_at, by: trip?.completed_by });
+  const [done, setDone] = useState({ on: !!trip?.trip_completed, at: trip?.completed_at, by: trip?.completed_by, role: trip?.completed_role });
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState(false);
   // phones: the form in 3 short steps (Trip · Costs · Finish) instead of one long page; computers see everything at once
@@ -113,7 +113,7 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
     if (!tid) return;
     const { error } = await sb().rpc('trip_complete', { p_id: tid, p_done: on });
     if (error) { flash(error.message, 'err'); return; }
-    setDone(on ? { on: true, at: new Date().toISOString(), by: 'you' } : { on: false });
+    setDone(on ? { on: true, at: new Date().toISOString(), by: 'you', role: isOffice ? 'office' : 'driver' } : { on: false });
     flash(on ? '✅ Trip completed' : 'Trip opened again');
     onSaved?.();
   }
@@ -171,6 +171,10 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
         <span className={`tag ${done.on ? 'ok' : 'warn'}`}>{done.on ? '✅ Completed' : id ? 'Open trip' : 'New trip'}</span>
         {onClose && <button type="button" className="btn small ghost" onClick={onClose}>← Trips</button>}
       </div>
+
+      {done.on && (
+        <div className="dtf-closed-banner">✅ This trip is completed{done.by ? ` · closed by ${done.by}${done.role === 'driver' ? ' (driver)' : done.role === 'office' ? ' (office)' : ''}` : ''}{done.at ? ` · ${new Date(done.at).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}` : ''}</div>
+      )}
 
       {phone && (
         <div className="dtf-steps" role="tablist" aria-label="Steps">

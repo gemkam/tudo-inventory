@@ -161,3 +161,5 @@ grant execute on function public.driver_trip_counts(uuid) to authenticated;
 -- Applied via the Supabase connector: can_read() now includes 'entry'; policies "data entry add" / "data entry change"
 -- on every data table; driver-only policies switched to 'driver'; driver_* / trip_complete / driver_trip_counts /
 -- admin_create_user / admin_update_user accept 'driver'; linked driver logins (saif, aman) moved to role 'driver'.
+
+-- 31 Oct 2026 (evening): transport_entries.completed_role (driver | office | old); trip_complete() fills it.

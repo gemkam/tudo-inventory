@@ -3384,3 +3384,11 @@ body.dfv-open { overflow: hidden; }
 .ts-paper { display: inline-flex; align-items: center; gap: 4px; }
 .ts-paper small { color: var(--muted); font-size: 11.5px; }
 .ts-paper .dfl-more { font-size: 11.5px; padding: 2px 8px; }
+.ent-sub { margin: 12px 0 4px; font-size: 16px; color: var(--brown); }
+.ent-closed { margin-top: 16px; border: 1.5px solid #9fd3c4; border-radius: 16px; padding: 4px 10px 10px; background: #f3faf7; }
+.ent-closed-head { font: inherit; width: 100%; display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; text-align: left; padding: 12px 6px; border: 0; background: none; cursor: pointer; color: #0f3d33; }
+.ent-closed-head span { font-size: 18px; font-weight: 800; }
+.ent-closed-head b { display: inline-grid; place-items: center; min-width: 30px; height: 30px; padding: 0 8px; border-radius: 999px; background: #13836b; color: #fff; margin-left: 6px; font-size: 15px; }
+.ent-closed-head small { grid-column: 1; color: #3f6b5f; font-size: 13px; }
+.ent-closed-head i { grid-row: 1 / span 2; grid-column: 2; font-style: normal; font-size: 22px; }
+.dtf-closed-banner { padding: 12px 14px; border-radius: 12px; background: #e3f4ed; border: 1.5px solid #13836b; color: #0f3d33; font-weight: 700; font-size: 16px; }
