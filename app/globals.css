@@ -3273,7 +3273,7 @@ body.dfv-open { overflow: hidden; }
 .ent-page .dtf-actions .btn.in { font-size: 16px; padding: 11px 26px; }
 .ent-page .dfl-more { font-size: 14px; padding: 7px 16px; }
 
-@media (max-width: 760px) {
+@media (max-width: 760px), (max-device-width: 820px) {
   .ent-page { display: grid; gap: 14px; }
   .ent-page h1 { font-size: 26px; }
   .ent-page .ent-head { flex-direction: column; align-items: stretch; gap: 10px; }

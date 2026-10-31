@@ -12,6 +12,9 @@ export function generateMetadata({ params }) {
   };
 }
 
+/* phones: no zooming in and out (drivers tap big boxes; 18px text so the phone never zooms on its own) */
+export const viewport = { width: 'device-width', initialScale: 1, maximumScale: 1, userScalable: false, themeColor: '#13836b' };
+
 export default function DriverLinkLayout({ children }) {
   return children;
 }
