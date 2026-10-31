@@ -3126,3 +3126,8 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .grid thead tr.labels th.col-vat_included::before, .ats-table th.col-vat::before { content: '🧾 '; }
 .grid tbody td.col-vat_included, .ats-table td.col-vat { background-color: rgba(246, 196, 69, .16); box-shadow: inset 2px 0 0 rgba(224, 161, 0, .55), inset -2px 0 0 rgba(224, 161, 0, .55); }
 @media print { .grid thead tr.labels th.col-vat_included, .ats-table th.col-vat { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+
+/* 🧾 VAT return tab next to 📋 Checklist (opens the VAT return tab of the Group Summary) */
+.co-switch button.co-tab { font: inherit; cursor: pointer; background: transparent; color: inherit; }
+.co-switch .co-tab.co-vat { border: 1.5px solid #e0a100; color: #8a5a00; font-weight: 700; }
+.co-switch .co-tab.co-vat:hover { background: #f6c445; color: #3d2a00; }

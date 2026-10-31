@@ -29,7 +29,13 @@ export default function GroupTools({ G, data, pick, today, labelOf, driverName, 
   useEffect(() => {
     const on = (e) => setTab(e.detail);
     window.addEventListener('gs-tab', on);
-    return () => window.removeEventListener('gs-tab', on);
+    // opened from a "🧾 VAT return" tab or side button elsewhere: /expenses/summary?tab=vat
+    let t;
+    try {
+      const want = new URLSearchParams(window.location.search).get('tab');
+      if (want && TABS.some(([k]) => k === want)) { setTab(want); t = setTimeout(() => openTab(want), 450); }
+    } catch { /* ignore */ }
+    return () => { window.removeEventListener('gs-tab', on); clearTimeout(t); };
   }, []);
   const chk = useMemo(() => checks({ data, pick, today, labelOf, driverName }), [data, pick, today, labelOf, driverName]);
   return (

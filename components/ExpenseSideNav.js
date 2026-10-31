@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { COMPANIES } from '@/lib/expenses';
 import { TransportMenu } from '@/components/TransportSideNav';
 
@@ -23,6 +23,7 @@ function readCo() {
 
 export default function ExpenseSideNav({ isAdmin = false }) {
   const path = usePathname();
+  const router = useRouter();
   const [{ co, kind }, setCur] = useState({ co: COMPANIES[0].key, kind: '' });
   const [open, setOpen] = useState({});
   const [phoneOpen, setPhoneOpen] = useState(false);
@@ -46,6 +47,13 @@ export default function ExpenseSideNav({ isAdmin = false }) {
     </Link>
   );
   const here = COMPANIES.find((c) => c.key === co);
+  // VAT return = a tab of the Group Summary: switch to it here, or open the Group Summary on it
+  const openVat = () => {
+    if (onSummary) {
+      window.dispatchEvent(new CustomEvent('gs-tab', { detail: 'vat' }));
+      document.getElementById('gs-tools')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else router.push('/expenses/summary?tab=vat');
+  };
 
   return (
     <aside className={`tsn no-print${phoneOpen ? ' phone-open' : ''}`} aria-label="Office Expense menu">
@@ -56,6 +64,9 @@ export default function ExpenseSideNav({ isAdmin = false }) {
         <div className="tsn-title">🧾 Office Expense</div>
         <Btn href="/expenses/summary" on={onSummary} icon="📊">Group Summary</Btn>
         <Btn href="/docs" on={false} icon="📋">Documents Checklist</Btn>
+        <button type="button" className="tsn-btn" onClick={openVat}>
+          <span className="tsn-ic" aria-hidden="true">🧾</span><span className="tsn-tx">VAT return</span>
+        </button>
         {COMPANIES.map((c) => (
           <div key={c.key} className={`tsn-group${open[c.key] ? ' open' : ''}`}>
             <button type="button" className={`tsn-btn tsn-head${!onSummary && co === c.key ? ' here' : ''}`} aria-expanded={!!open[c.key]} onClick={() => setOpen((o) => ({ ...o, [c.key]: !o[c.key] }))}>

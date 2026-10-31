@@ -176,6 +176,7 @@ function ExpensesPage() {
       <Link href="/transport" className="co-tab co-tr">🚚 Transport</Link>
       <Link href="/expenses/summary" className="co-tab co-sum">📊 Group Summary</Link>
       <Link href="/docs" className="co-tab co-sum">📋 Checklist</Link>
+      <Link href="/expenses/summary?tab=vat" className="co-tab co-sum co-vat">🧾 VAT return</Link>
     </div>
   );
   if (!co || !rows || !month) return <>{co && switcher}<div className="loading">Loading expenses...</div></>;

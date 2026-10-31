@@ -230,6 +230,7 @@ function SummaryPage() {
         <Link href="/transport" className="co-tab co-tr">🚚 Transport</Link>
         <span className="co-tab on" role="tab" aria-selected="true">📊 Group Summary</span>
         <Link href="/docs" className="co-tab co-sum">📋 Checklist</Link>
+        <button type="button" className="co-tab co-sum co-vat" onClick={() => openTab('vat')}>🧾 VAT return</button>
       </div>
 
       <div className="company-head">
