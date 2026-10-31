@@ -155,3 +155,9 @@ language sql stable security definer set search_path = public as $$
 $$;
 revoke all on function public.driver_trip_counts(uuid) from public, anon;
 grant execute on function public.driver_trip_counts(uuid) to authenticated;
+
+-- 31 Oct 2026 (evening): access levels split. 'driver' = only his own trip form (the old locked Data entry).
+-- 'entry' = Data entry: reads everything, adds and edits data on every data table, cannot delete, no Admin.
+-- Applied via the Supabase connector: can_read() now includes 'entry'; policies "data entry add" / "data entry change"
+-- on every data table; driver-only policies switched to 'driver'; driver_* / trip_complete / driver_trip_counts /
+-- admin_create_user / admin_update_user accept 'driver'; linked driver logins (saif, aman) moved to role 'driver'.

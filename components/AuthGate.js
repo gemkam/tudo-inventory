@@ -8,7 +8,7 @@ import PrintColumns from '@/components/PrintColumns';
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { sb } from '@/lib/supabase';
+import { sb, setAppRole } from '@/lib/supabase';
 import RaufAssistant from '@/components/NoorAssistant';
 import { RaufCtx, defaultGreeting } from '@/components/RaufContext';
 import ThemeMenu from '@/components/ThemeMenu';
@@ -21,13 +21,17 @@ import { startActivity, logPage, endActivity } from '@/lib/activity';
   admin  = Administrator: everything, plus managing users
   editor = Full access: see and edit everything
   viewer = View only
-  entry  = Data entry: only the Driver trip form (his own open trips and papers), no other page, no settings
+  entry  = Data entry: sees everything, adds and edits data on every page, cannot delete, no Admin panel
+  driver = Driver: only his own Driver trip form (open trips, amounts, papers, Trip complete), nothing else
+  (31 Oct 2026: the old Data entry level was split into Data entry and Driver. In code, user.isEntry = the Driver level,
+  the one locked to /entry.)
 */
 export const ROLES = {
   admin: { label: 'Administrator', short: 'Admin' },
   editor: { label: 'Full access', short: 'Full access' },
   viewer: { label: 'View only', short: 'View only' },
-  entry: { label: 'Data entry', short: 'Data entry' }
+  entry: { label: 'Data entry', short: 'Data entry' },
+  driver: { label: 'Driver', short: 'Driver' }
 };
 
 const UserCtx = createContext({ isAdmin: false, isOwner: false, role: '', name: '' });
@@ -46,9 +50,11 @@ function readUser(session) {
     name,
     role,
     isOwner: role === 'admin', // can manage users
-    isAdmin: role === 'admin' || role === 'editor', // can edit data (name kept for existing pages)
-    canRead: role === 'admin' || role === 'editor' || role === 'viewer',
-    isEntry: role === 'entry'
+    isAdmin: role === 'admin' || role === 'editor' || role === 'entry', // can add / edit data (name kept for existing pages)
+    canDelete: role === 'admin' || role === 'editor', // Data entry cannot delete
+    canRead: role === 'admin' || role === 'editor' || role === 'viewer' || role === 'entry',
+    isDataEntry: role === 'entry',
+    isEntry: role === 'driver' // the Driver level: only the Driver trip form
   };
 }
 
@@ -70,6 +76,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
     const supabase = sb();
     supabase.auth.getSession().then(({ data }) => {
       const u = readUser(data.session);
+      setAppRole(u?.role || '');
       if (!u) router.replace('/login');
       else if (u.isEntry && !entryPage) router.replace('/entry'); // data entry users only see the entry form
       else setUser(u);

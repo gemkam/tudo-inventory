@@ -12,9 +12,10 @@ const ROLE_HELP = {
   admin: 'Everything, plus the Admin panel (users, settings, activity)',
   editor: 'See and edit all data. No Admin panel (users, settings, activity)',
   viewer: 'See everything, change nothing',
-  entry: 'Only the Driver trip form: his own open trips and papers. No other pages, no settings.'
+  entry: 'See everything, add and edit data on every page. Cannot delete. No Admin panel.',
+  driver: 'Only his own Driver trip form (his trips and papers). Nothing else.'
 };
-const ROLE_ORDER = ['admin', 'editor', 'viewer', 'entry'];
+const ROLE_ORDER = ['admin', 'editor', 'viewer', 'entry', 'driver'];
 const EMPTY = { username: '', display: '', password: '', role: 'viewer', asDriver: true, vehicle: '', driverPick: '' }; // driverPick: existing driver id | 'new' | 'none'
 
 function fmtWhen(d) {
@@ -90,11 +91,11 @@ function UsersPage() {
     if (err) { setBusy(false); setError(err.message); return; } // shown at the top AND right above the Create button
     let extra = '';
     const pickD = form.driverPick || (drivers.some((d) => !d.user_id) ? '' : 'new');
-    if (form.role === 'entry' && pickD && pickD !== 'none' && pickD !== 'new') {
+    if (form.role === 'driver' && pickD && pickD !== 'none' && pickD !== 'new') {
       // an existing driver (e.g. Saif Altaf): link this login to him, so the form opens on his name only
       const { error: dErr } = await sb().from('transport_drivers').update({ user_id: newId }).eq('id', pickD);
       extra = dErr ? ` (Could not link to the driver: ${dErr.message})` : ` Linked to driver ${drivers.find((d) => d.id === pickD)?.name || ''}.`;
-    } else if (form.role === 'entry' && pickD === 'new') {
+    } else if (form.role === 'driver' && pickD === 'new') {
       const sort = drivers.reduce((m, x) => Math.max(m, x.sort || 0), 0) + 1;
       const { error: dErr } = await sb().from('transport_drivers').insert({ name: form.display.trim() || form.username.trim(), vehicle_no: form.vehicle.trim() || null, user_id: newId, sort });
       extra = dErr ? ` (Could not add to the driver list: ${dErr.message})` : ' Added to the driver list.';
@@ -193,7 +194,7 @@ function UsersPage() {
             <label>Access level</label>
             <RolePicker value={form.role} onChange={(r) => setForm({ ...form, role: r })} name="new-role" />
           </div>
-          {form.role === 'entry' && (
+          {form.role === 'driver' && (
             <div className="driver-link">
               <div className="field" style={{ maxWidth: 360 }}>
                 <label htmlFor="nu-driver">Which driver is this login for?</label>
@@ -266,7 +267,7 @@ function UsersPage() {
               <RolePicker value={edit.role} onChange={(r) => setEdit({ ...edit, role: r })} name="edit-role" />
             </div>
             <div className="field">
-              <label htmlFor="eu-driver">Driver in the list (for Data entry)</label>
+              <label htmlFor="eu-driver">Driver in the list (for the Driver level)</label>
               <select id="eu-driver" value={edit.driverId} onChange={(e) => setEdit({ ...edit, driverId: e.target.value })}>
                 <option value="">Not a driver</option>
                 {drivers.filter((d) => !d.user_id || d.user_id === edit.id).map((d) => <option key={d.id} value={d.id}>{d.name}{d.vehicle_no ? ` (${d.vehicle_no})` : ''}</option>)}
