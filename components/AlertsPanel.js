@@ -134,12 +134,7 @@ export default function AlertsPanel() {
       return String(b.date || '').localeCompare(String(a.date || ''));
     });
     setAll(out);
-
-    if (out.some((x) => x.urgent && !shut.includes(x.key))) {
-      let seen = '';
-      try { seen = localStorage.getItem(POP_KEY) || ''; } catch { /* ignore */ }
-      if (seen !== todayISO()) setPopup(true);
-    }
+    /* No automatic pop-up when the app opens (user, 31 Oct 2026). Tap the alarm clock to open it. */
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -172,7 +167,11 @@ export default function AlertsPanel() {
   return (
     <aside className={`alerts-col ${urgent.length ? 'has-urgent' : ''}`} aria-label="Alerts">
       <div className="al-head">
-        <AlarmClock ringing={urgent.length > 0} />
+        <button type="button" className="al-clock-btn" onClick={() => urgent.length && setPopup(true)}
+          title={urgent.length ? 'Show urgent alerts' : 'No urgent alerts'} aria-label="Show urgent alerts"
+          style={{ background: 'none', border: 0, padding: 0, color: 'inherit', cursor: urgent.length ? 'pointer' : 'default' }}>
+          <AlarmClock ringing={urgent.length > 0} />
+        </button>
         <div>
           <h2>Alerts {all && <span className="al-count">{open.length}</span>}</h2>
           <p>{all === null ? 'Checking...' : urgent.length ? `${urgent.length} need attention now` : open.length ? 'Tap × to close one' : 'Nothing needs attention'}</p>
