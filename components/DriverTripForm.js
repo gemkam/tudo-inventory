@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import DateInput from '@/components/DateInput';
 import TripFiles from '@/components/TripFiles';
 import { sb } from '@/lib/supabase';
@@ -51,6 +51,11 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState(false);
   const locked = done.on && !isOffice;
+  // always save what is on the screen now (a box that was just being typed in is included)
+  const fRef = useRef(f);
+  fRef.current = f;
+  const idRef = useRef(id);
+  idRef.current = id;
   const L = (k) => <Label k={k} label={label} renaming={renaming} rename={rename} flash={flash} />;
   const set = (k, v) => { setF((x) => ({ ...x, [k]: v })); setDirty(true); };
   const costs = COSTS.reduce((t, k) => t + (Number(f[k]) || 0), 0);
@@ -58,17 +63,19 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
 
   async function saveDriverPart() {
     const data = {};
-    DRIVER_KEYS.forEach((k) => { data[k] = f[k]; });
+    const cur = fRef.current;
+    DRIVER_KEYS.forEach((k) => { data[k] = cur[k]; });
     data.driver_id = driver.id;
-    const { data: newId, error } = await sb().rpc('driver_save_trip', { p_id: id, p_data: data });
+    const { data: newId, error } = await sb().rpc('driver_save_trip', { p_id: idRef.current, p_data: data });
     if (error) { flash(error.message, 'err'); return null; }
-    if (!id) setId(newId);
+    idRef.current = newId;
+    setId(newId);
     return newId;
   }
   async function saveOfficePart(tid) {
     const patch = {};
     OFFICE_KEYS.forEach((k) => {
-      const v = f[k];
+      const v = fRef.current[k];
       patch[k] = k === 'vat_included' ? !!v : ['received', 'maintenance'].includes(k) ? (Number(v) || 0) : (v === '' ? null : v);
     });
     const { error } = await sb().from('transport_entries').update(patch).eq('id', tid);
@@ -76,6 +83,8 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
     return true;
   }
   async function save(quiet) {
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    await new Promise((r) => setTimeout(r, 30)); // let the last box finish
     setBusy(true);
     const tid = await saveDriverPart();
     let ok = !!tid;
@@ -85,11 +94,11 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
     return ok ? tid : null;
   }
   // a paper needs a saved trip: save first (keeps what is typed)
-  const ensureTrip = async () => { if (id && !dirty) return id; return save(true); };
+  const ensureTrip = async () => { if (idRef.current && !dirty) return idRef.current; return save(true); };
 
   async function complete(on) {
     if (on && !(f.from_place || f.to_place)) { flash('Write From and To first', 'err'); return; }
-    const tid = locked ? id : await save(true);
+    const tid = locked ? idRef.current : await save(true);
     if (!tid) return;
     const { error } = await sb().rpc('trip_complete', { p_id: tid, p_done: on });
     if (error) { flash(error.message, 'err'); return; }
@@ -160,7 +169,8 @@ export default function DriverTripForm({ driver, trip, isOffice, label, rename, 
       </fieldset>
 
       <div className="dtf-actions">
-        {!locked && <button type="button" className="btn" onClick={() => save(false)} disabled={busy}>{busy ? 'Saving...' : '💾 Save'}</button>}
+        {!locked && <span className={`dtf-state${dirty ? ' dirty' : ''}`}>{dirty ? '● Not saved yet' : id ? '✓ Saved' : ''}</span>}
+        {!locked && <button type="button" className="btn in" onClick={() => save(false)} disabled={busy}>{busy ? 'Saving...' : '💾 Save'}</button>}
       </div>
 
       {hasDO && !done.on && <div className="dtf-hint">📄 Delivery order is uploaded. If the trip is finished, press <b>Trip complete</b>.</div>}

@@ -137,7 +137,8 @@ function ShareLinks({ drivers }) {
 /*
   Driver trip form (31 Oct 2026). Big name buttons for every active driver (Saif Altaf, Aman Ullah, new drivers appear by themselves).
   Tap a name: his open trips + "＋ New trip". Tap a trip: components/DriverTripForm.js (driver part, greyed office part,
-  papers with ⋯ More, ✅ Trip complete). Data entry users (drivers) see only open trips and trips completed in the last 3 days.
+  papers with ⋯ More, ✅ Trip complete). Drivers (Data entry users) see only their OPEN trips and the NUMBER of completed trips (no details);
+  the office also has a "✅ Completed trips" list with every detail.
   A Data entry user linked to a driver (transport_drivers.user_id) opens on his own name.
   Administrator: ✏️ Rename boxes, sees deleted papers, and the share links section below.
 */
@@ -147,8 +148,12 @@ function EntryPage() {
   const { label, rename } = useEntryLabels();
   const [drivers, setDrivers] = useState([]);
   const [driverId, setDriverId] = useState('');
-  const [trips, setTrips] = useState(null);
+  const [trips, setTrips] = useState(null); // open trips
+  const [doneTrips, setDoneTrips] = useState(null); // completed trips (office only)
+  const [counts, setCounts] = useState(null); // { completed, this_month, open }
+  const [listTab, setListTab] = useState('open'); // 'open' | 'done' (done = office only)
   const [tripId, setTripId] = useState(null); // null = list, 'new' = new trip, id = that trip
+  const [current, setCurrent] = useState(null); // the trip open in the form (kept even if it leaves the list)
   const [renaming, setRenaming] = useState(false);
   const [addDrv, setAddDrv] = useState(null);
   const [error, setError] = useState('');
@@ -169,13 +174,23 @@ function EntryPage() {
   }, []);
 
   const loadTrips = useCallback(async () => {
-    if (!driverId) { setTrips(null); return; }
-    const { data, error: err } = await sb().from('transport_entries').select('*').eq('driver_id', driverId)
-      .order('trip_completed').order('entry_date', { ascending: false }).order('created_at', { ascending: false }).limit(isOffice ? 40 : 30);
-    if (err) { setError(err.message); setTrips([]); return; }
-    setTrips(data || []);
+    if (!driverId) { setTrips(null); setDoneTrips(null); setCounts(null); return; }
+    const s = sb();
+    const [o, c] = await Promise.all([
+      s.from('transport_entries').select('*').eq('driver_id', driverId).eq('trip_completed', false)
+        .order('entry_date', { ascending: false }).order('created_at', { ascending: false }).limit(200),
+      s.rpc('driver_trip_counts', { p_driver: driverId })
+    ]);
+    if (o.error) { setError(o.error.message); setTrips([]); } else setTrips(o.data || []);
+    setCounts(c.data || null);
+    if (isOffice) {
+      const { data } = await s.from('transport_entries').select('*').eq('driver_id', driverId).eq('trip_completed', true)
+        .order('completed_at', { ascending: false }).order('entry_date', { ascending: false }).limit(300);
+      setDoneTrips(data || []);
+    }
   }, [driverId, isOffice]);
-  useEffect(() => { setTripId(null); loadTrips(); }, [loadTrips]);
+  useEffect(() => { setTripId(null); setCurrent(null); setListTab('open'); loadTrips(); }, [loadTrips]);
+  const openTrip = (t) => { setCurrent(t); setTripId(t ? t.id : 'new'); };
 
   async function saveDriver(e) {
     e.preventDefault();
@@ -188,7 +203,6 @@ function EntryPage() {
   }
 
   const driver = drivers.find((d) => d.id === driverId);
-  const trip = trips && tripId && tripId !== 'new' ? trips.find((t) => t.id === tripId) : null;
   const papers = (t) => Object.values(t.attachments || {}).flat().filter((x) => !x.deleted_at).length;
   const deleted = (t) => Object.values(t.attachments || {}).flat().filter((x) => x.deleted_at).length;
   const dmy = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
@@ -218,27 +232,43 @@ function EntryPage() {
         <section className="panel">
           <div className="section-head">
             <h2>{driver.name}: trips</h2>
-            <button type="button" className="btn in" onClick={() => setTripId('new')}>＋ New trip</button>
+            <button type="button" className="btn in" onClick={() => openTrip(null)}>＋ New trip</button>
           </div>
-          {trips === null && <p className="muted">Loading...</p>}
-          {trips && !trips.length && <p className="muted" style={{ margin: 0 }}>No open trips. Press ＋ New trip.</p>}
-          <div className="ent-trips">
-            {(trips || []).map((t) => (
-              <button key={t.id} type="button" className={`ent-trip${t.trip_completed ? ' done' : ''}`} onClick={() => setTripId(t.id)}>
-                <span className="ent-trip-date">{dmy(t.entry_date)}</span>
-                <b>{[t.from_place, t.to_place].filter(Boolean).join(' → ') || 'No route yet'}</b>
-                <small>{papers(t)} paper{papers(t) === 1 ? '' : 's'}{isOffice && deleted(t) ? ` · 🗑 ${deleted(t)} deleted` : ''}</small>
-                <span className={`tag ${t.trip_completed ? 'ok' : 'warn'}`}>{t.trip_completed ? '✅ Completed' : 'Open'}</span>
-              </button>
-            ))}
+          <div className="ent-count">
+            <div><span>Open trips</span><b>{trips ? trips.length : '…'}</b></div>
+            <div className="ok"><span>✅ Trips completed</span><b>{counts ? counts.completed : '…'}</b></div>
+            <div><span>Completed this month</span><b>{counts ? counts.this_month : '…'}</b></div>
           </div>
+          {isOffice && (
+            <div className="ent-tabs" role="tablist">
+              <button type="button" role="tab" aria-selected={listTab === 'open'} className={`rp-chip ${listTab === 'open' ? 'active' : ''}`} onClick={() => setListTab('open')}>🟡 Open trips ({trips ? trips.length : 0})</button>
+              <button type="button" role="tab" aria-selected={listTab === 'done'} className={`rp-chip ${listTab === 'done' ? 'active' : ''}`} onClick={() => setListTab('done')}>✅ Completed trips ({doneTrips ? doneTrips.length : 0})</button>
+            </div>
+          )}
+          {(() => {
+            const list = listTab === 'done' && isOffice ? doneTrips : trips;
+            if (list === null) return <p className="muted">Loading...</p>;
+            if (!list.length) return <p className="muted" style={{ margin: '8px 0 0' }}>{listTab === 'done' ? 'No completed trips yet.' : 'No open trips. Press ＋ New trip.'}</p>;
+            return (
+              <div className="ent-trips">
+                {list.map((t) => (
+                  <button key={t.id} type="button" className={`ent-trip${t.trip_completed ? ' done' : ''}`} onClick={() => openTrip(t)}>
+                    <span className="ent-trip-date">{dmy(t.entry_date)}</span>
+                    <b>{[t.from_place, t.to_place].filter(Boolean).join(' → ') || t.description || 'No route yet'}</b>
+                    <small>{papers(t)} paper{papers(t) === 1 ? '' : 's'}{isOffice && deleted(t) ? ` · 🗑 ${deleted(t)} deleted` : ''}{t.trip_completed && t.completed_by ? ` · by ${t.completed_by}` : ''}</small>
+                    <span className={`tag ${t.trip_completed ? 'ok' : 'warn'}`}>{t.trip_completed ? `✅ ${dmy(t.completed_at)}` : 'Open'}</span>
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
         </section>
       )}
 
-      {driver && tripId !== null && (tripId === 'new' || trip) && (
+      {driver && tripId !== null && (
         <section className="panel">
-          <DriverTripForm key={tripId} driver={driver} trip={trip} isOffice={isOffice} label={label} rename={rename} renaming={renaming}
-            flash={flash} onSaved={loadTrips} onClose={() => { setTripId(null); loadTrips(); }} />
+          <DriverTripForm key={tripId} driver={driver} trip={current} isOffice={isOffice} label={label} rename={rename} renaming={renaming}
+            flash={flash} onSaved={loadTrips} onClose={() => { setTripId(null); setCurrent(null); loadTrips(); }} />
         </section>
       )}
 

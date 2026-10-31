@@ -137,3 +137,21 @@ insert into storage.buckets (id, name, public, file_size_limit) values ('trip-fi
 create policy "trip files read" on storage.objects for select to authenticated using (bucket_id = 'trip-files' and (public.can_read() or public.app_role() = 'entry'));
 create policy "trip files add" on storage.objects for insert to authenticated with check (bucket_id = 'trip-files' and (public.can_write() or public.app_role() = 'entry'));
 create policy "trip files remove" on storage.objects for delete to authenticated using (bucket_id = 'trip-files' and public.can_write());
+
+-- 31 Oct 2026 (later): old trips marked Completed / Done in the sheets count as completed trips;
+-- drivers read ONLY open trips; completed trips are counted for them, details only for the office.
+update public.transport_entries set trip_completed = true,
+  completed_at = coalesce(completed_at, (entry_date::timestamp at time zone 'Asia/Muscat') + interval '18 hours'),
+  completed_by = coalesce(completed_by, 'Old trip sheet')
+ where not trip_completed and remarks in ('Completed', 'Done');
+alter policy "entry read open trips" on public.transport_entries using (public.app_role() = 'entry' and not trip_completed);
+create or replace function public.driver_trip_counts(p_driver uuid) returns jsonb
+language sql stable security definer set search_path = public as $$
+  select case when public.app_role() in ('entry', 'admin', 'editor', 'viewer') then jsonb_build_object(
+    'completed', count(*) filter (where trip_completed),
+    'this_month', count(*) filter (where trip_completed and date_trunc('month', completed_at at time zone 'Asia/Muscat') = date_trunc('month', now() at time zone 'Asia/Muscat')),
+    'open', count(*) filter (where not trip_completed)) end
+  from transport_entries where driver_id = p_driver;
+$$;
+revoke all on function public.driver_trip_counts(uuid) from public, anon;
+grant execute on function public.driver_trip_counts(uuid) to authenticated;
