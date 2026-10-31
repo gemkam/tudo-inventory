@@ -20,6 +20,10 @@ import { buildDocReminders } from '@/lib/docChecklist';
 */
 
 const POP_KEY = 'tudo-alarm-seen';
+/* Phones only (same width as the CSS below 760px) */
+function isPhone() {
+  try { return window.matchMedia('(max-width: 760px)').matches; } catch { return false; }
+}
 const LOCAL_KEY = 'tudo-closed-alerts';
 const WORDS = /\b(bank\s*transfer|cash|pdc|cheque)\b/i;
 const ICON = { pay: '💳', maintain: '🔧', renew: '📄', word: '📝', person: '🪪', doc: '📋' };
@@ -75,6 +79,7 @@ export default function AlertsPanel() {
   const [useLocal, setUseLocal] = useState(false);
   const [showClosed, setShowClosed] = useState(false);
   const [popup, setPopup] = useState(false);
+  const [mobOpen, setMobOpen] = useState(false); /* phones: alerts folded to one bar until tapped */
 
   const load = useCallback(async () => {
     const s = sb();
@@ -165,9 +170,10 @@ export default function AlertsPanel() {
   const when = (a) => (a.left === null || a.left === undefined ? (a.date ? `entered ${fmtD(a.date)}` : '') : whenText(a.left));
 
   return (
-    <aside className={`alerts-col ${urgent.length ? 'has-urgent' : ''}`} aria-label="Alerts">
-      <div className="al-head">
-        <button type="button" className="al-clock-btn" onClick={() => urgent.length && setPopup(true)}
+    <aside className={`alerts-col ${urgent.length ? 'has-urgent' : ''} ${mobOpen ? 'mob-open' : ''}`} aria-label="Alerts">
+      <div className="al-head" onClick={() => { if (isPhone()) setMobOpen((v) => !v); }}
+        role={undefined} aria-expanded={mobOpen}>
+        <button type="button" className="al-clock-btn" onClick={(e) => { if (isPhone()) return; e.stopPropagation(); if (urgent.length) setPopup(true); }}
           title={urgent.length ? 'Show urgent alerts' : 'No urgent alerts'} aria-label="Show urgent alerts"
           style={{ background: 'none', border: 0, padding: 0, color: 'inherit', cursor: urgent.length ? 'pointer' : 'default' }}>
           <AlarmClock ringing={urgent.length > 0} />
@@ -176,6 +182,7 @@ export default function AlertsPanel() {
           <h2>Alerts {all && <span className="al-count">{open.length}</span>}</h2>
           <p>{all === null ? 'Checking...' : urgent.length ? `${urgent.length} need attention now` : open.length ? 'Tap × to close one' : 'Nothing needs attention'}</p>
         </div>
+        <span className="al-chev" aria-hidden="true">{mobOpen ? 'Hide ▴' : 'Show all ▾'}</span>
       </div>
 
       <ol className="al-list">

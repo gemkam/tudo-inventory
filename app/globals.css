@@ -1857,6 +1857,22 @@ tr.pickable:hover td { background: var(--row-hover); }
   .home-grid { grid-template-columns: 1fr; }
   .alerts-col { position: static; max-height: none; order: -1; }
 }
+.al-chev { display: none; }
+/* Phones (31 Oct 2026): Inventory, Office Expense and Checklist right under AI search;
+   alerts folded to one tappable bar under them, tap to open the whole list */
+@media screen and (max-width: 760px) {
+  .home-main { display: contents; }
+  .home-grid .hub { order: 1; }
+  .home-grid .dc-home { order: 2; }
+  .home-grid .alerts-col { order: 3; padding: 10px 12px; }
+  .home-grid .hub-links { order: 4; margin-top: 4px; }
+  .alerts-col .al-head { cursor: pointer; padding-bottom: 0; border-bottom: 0; user-select: none; }
+  .alerts-col.mob-open .al-head { padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+  .al-chev { display: inline-block; margin-left: auto; font-size: 12.5px; font-weight: 700; color: var(--brown); white-space: nowrap; }
+  .alerts-col:not(.mob-open) .al-list,
+  .alerts-col:not(.mob-open) .al-empty,
+  .alerts-col:not(.mob-open) .al-closed { display: none; }
+}
 
 /* Trip sheet: choose columns to print (28 Oct 2026) */
 .trip-print { display: none; }
