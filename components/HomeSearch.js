@@ -34,7 +34,11 @@ const PAGES = [
   ['💡 Utility Bills', '/bills', 'bills electricity water internet dispenser'],
   ['📝 Stock log', '/log', 'stock log history']
 ];
-const EXAMPLES = ['What expires this month?', 'Expired licenses of Modern City', 'Money to pay', 'Low stock items', 'Unpaid bills of Abu Wasif'];
+const EXAMPLES = [
+  'What expires this month?', 'Expired licenses of Modern City', 'Money to pay', 'Money to receive',
+  'Low stock items', 'Unpaid bills of Abu Wasif', 'Unpaid bills of Sumptuosity', 'PDC cheques due',
+  'Driver allowance not paid', 'Driver salaries not paid', 'Vehicles with VOC or Mulkiya expiring',
+];
 
 export default function HomeSearch() {
   const [q, setQ] = useState('');
@@ -90,7 +94,11 @@ export default function HomeSearch() {
 
       {!q && !res && (
         <div className="hs-examples">
-          {EXAMPLES.map((x) => <button key={x} type="button" className="rp-chip" onClick={() => ask(x)}>{x}</button>)}
+          <select className="hs-select" value="" aria-label="Ready questions"
+            onChange={(e) => { const v = e.target.value; if (v) { setQ(v); ask(v); } }}>
+            <option value="">💡 Ready questions: pick one to search</option>
+            {EXAMPLES.map((x) => <option key={x} value={x}>{x}</option>)}
+          </select>
         </div>
       )}
 
