@@ -3256,3 +3256,9 @@ body.dfv-open { overflow: hidden; }
 .dtf-actions { position: sticky; bottom: 10px; z-index: 5; align-items: center; background: var(--surface); padding: 8px 10px; border-radius: 14px; border: 1px solid var(--line); box-shadow: 0 10px 24px -14px rgba(0, 0, 0, .4); }
 .dtf-state { margin-right: auto; font-size: 13px; font-weight: 700; color: #13836b; }
 .dtf-state.dirty { color: #b07d00; }
+
+/* Share-link form (/f/<token>) for drivers: office-only parts greyed out (components/EntryForm.js driverMode) */
+.entry-kind .rp-chip.ef-off { opacity: .45; filter: grayscale(1); cursor: not-allowed; pointer-events: none; }
+.ef-details-locked .field:not(.ef-keep) { opacity: .5; filter: grayscale(1); }
+.ef-details-locked .field:not(.ef-keep) input { background: repeating-linear-gradient(135deg, rgba(0,0,0,.03) 0 8px, transparent 8px 16px); cursor: not-allowed; }
+.ef-details-locked .ef-keep select { border-color: var(--brown); }

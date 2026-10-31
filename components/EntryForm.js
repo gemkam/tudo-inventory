@@ -23,7 +23,11 @@ const NUMS = ['rent', 'received', 'driver_allowance', 'diesel', 'toll', 'mainten
     onSubmit(row) -> Promise<string|null>  (error message or null)
     driverExtra: node shown under the driver dropdown (e.g. "+ Add a new driver")
 */
-export default function EntryForm({ drivers, lockedDriverId = null, defaultDriverId = '', askName = false, enteredBy = '', onSubmit, driverExtra = null, intro }) {
+export default function EntryForm({ drivers, lockedDriverId = null, defaultDriverId = '', askName: askNameProp = false, enteredBy = '', onSubmit, driverExtra = null, intro, driverMode = false }) {
+  /* driverMode (share links /f/<token>, 31 Oct 2026): "Expense only" and the Details boxes are office only, so greyed out
+     (Status stays usable); a link made for one driver needs no "Your name": the driver's name is used. */
+  const linkDriver = lockedDriverId ? drivers.find((d) => d.id === lockedDriverId) : null;
+  const askName = askNameProp && !(driverMode && linkDriver);
   const [f, setF] = useState({ ...BLANK, entry_date: todayISO(), driver_id: lockedDriverId || defaultDriverId || '' });
   const [name, setName] = useState('');
   const [error, setError] = useState('');
@@ -82,7 +86,7 @@ export default function EntryForm({ drivers, lockedDriverId = null, defaultDrive
       consignee: f.consignee.trim() || null,
       remarks: f.remarks || null,
       credit_in: f.credit_in.trim() || null,
-      entered_by: askName ? name.trim() : (enteredBy || null)
+      entered_by: askName ? name.trim() : (driverMode && linkDriver ? linkDriver.name : (enteredBy || null))
     };
     setBusy(true);
     const err = await onSubmit(row);
@@ -135,8 +139,8 @@ export default function EntryForm({ drivers, lockedDriverId = null, defaultDrive
       <form className="entry-card" onSubmit={save} noValidate>
         <div className="entry-kind" role="radiogroup" aria-label="Entry type">
           {[['trip', '🚚 Trip'], ['expense', '🔧 Expense only']].map(([k, l]) => (
-            <label key={k} className={`rp-chip ${f.kind === k ? 'active' : ''}`}>
-              <input type="radio" name="kind" value={k} checked={f.kind === k} onChange={set('kind')} className="sr-only" />{l}
+            <label key={k} className={`rp-chip ${f.kind === k ? 'active' : ''}${driverMode && k === 'expense' ? ' ef-off' : ''}`} title={driverMode && k === 'expense' ? 'Office only' : undefined}>
+              <input type="radio" name="kind" value={k} checked={f.kind === k} onChange={set('kind')} className="sr-only" disabled={driverMode && k === 'expense'} />{l}{driverMode && k === 'expense' ? ' 🔒' : ''}
             </label>
           ))}
         </div>
@@ -207,26 +211,26 @@ export default function EntryForm({ drivers, lockedDriverId = null, defaultDrive
           <p className="note">You can type maths, e.g. 25+46+53.</p>
         </fieldset>
 
-        <fieldset>
-          <legend>Details</legend>
+        <fieldset className={driverMode ? 'ef-details-locked' : ''}>
+          <legend>Details{driverMode ? ' (office fills, except Status)' : ''}</legend>
           <div className="field">
             <label htmlFor="e-desc">{isTrip ? 'Description' : 'What was the expense for? *'}</label>
-            <input id="e-desc" value={f.description} onChange={set('description')} placeholder={isTrip ? 'Optional' : 'e.g. Oil filter change'} />
+            <input id="e-desc" disabled={driverMode} value={f.description} onChange={set('description')} placeholder={isTrip ? 'Optional' : 'e.g. Oil filter change'} />
           </div>
           {isTrip && (
             <div className="form-row">
-              <div className="field"><label htmlFor="e-cargo">Cargo detail</label><input id="e-cargo" value={f.cargo} onChange={set('cargo')} /></div>
-              <div className="field"><label htmlFor="e-cons">Consignee</label><input id="e-cons" value={f.consignee} onChange={set('consignee')} /></div>
+              <div className="field"><label htmlFor="e-cargo">Cargo detail</label><input id="e-cargo" disabled={driverMode} value={f.cargo} onChange={set('cargo')} /></div>
+              <div className="field"><label htmlFor="e-cons">Consignee</label><input id="e-cons" disabled={driverMode} value={f.consignee} onChange={set('consignee')} /></div>
             </div>
           )}
           <div className="form-row">
-            <div className="field">
+            <div className="field ef-keep">
               <label htmlFor="e-status">Status</label>
               <select id="e-status" value={f.remarks} onChange={set('remarks')}>
                 <option>Completed</option><option>Loading</option><option>On the way</option><option>Done</option><option>Cancelled</option>
               </select>
             </div>
-            <div className="field"><label htmlFor="e-credit">Payment credit in</label><input id="e-credit" value={f.credit_in} onChange={set('credit_in')} placeholder="e.g. Account" /></div>
+            <div className="field"><label htmlFor="e-credit">Payment credit in</label><input id="e-credit" disabled={driverMode} value={f.credit_in} onChange={set('credit_in')} placeholder="e.g. Account" /></div>
           </div>
         </fieldset>
 

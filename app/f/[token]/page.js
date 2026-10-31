@@ -45,6 +45,7 @@ export default function PublicEntry() {
             drivers={info.drivers || []}
             lockedDriverId={info.driver_id || null}
             askName
+            driverMode
             onSubmit={submit}
             intro="Fill in one trip or expense and press Save. It goes straight to the office. The form clears for the next one."
           />
