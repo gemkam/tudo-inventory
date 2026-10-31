@@ -3165,3 +3165,34 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .dfl-import[disabled] { opacity: .6; cursor: wait; }
 .dfl-note { color: var(--muted); font-size: 11.5px; }
 .dfl-label { display: grid; gap: 6px; font-weight: 600; }
+
+/* Upload the documents v2: file names + ⋯ More box + in-app viewer (31 Oct 2026) */
+.dfl button.dfl-name { font: inherit; font-size: 13px; font-weight: 600; text-align: left; border: 0; background: none; padding: 0; color: var(--brown); cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; flex: none; }
+.dfl button.dfl-name:hover { text-decoration-style: solid; }
+.dfl-none { font-size: 12.5px; }
+.dfl-more { font: inherit; font-size: 12.5px; font-weight: 700; padding: 4px 14px; border-radius: 999px; border: 1.5px solid var(--brown); background: var(--tint); color: var(--brown); cursor: pointer; }
+.dfl-more:hover { background: var(--brown); color: #fff; }
+.dfl-more[disabled] { opacity: .6; cursor: wait; }
+.dfm-imports { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.dfm-big { font: inherit; font-weight: 700; font-size: 14px; display: grid; gap: 2px; text-align: left; padding: 10px 14px; border-radius: 12px; border: 1.5px dashed var(--brown); background: var(--tint); color: var(--brown); cursor: pointer; }
+.dfm-big small { font-weight: 500; font-size: 12px; color: var(--muted); }
+.dfm-big:hover { background: var(--brown); color: #fff; border-style: solid; }
+.dfm-big:hover small { color: rgba(255, 255, 255, .85); }
+.dfm-list { display: grid; gap: 8px; max-height: 55vh; overflow: auto; }
+.dfm-file { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: grid; gap: 8px; }
+.dfm-name { display: grid; gap: 2px; word-break: break-word; }
+.dfm-name small { color: var(--muted); font-size: 12px; }
+.dfm-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+@media (max-width: 520px) { .dfm-imports { grid-template-columns: 1fr; } }
+.dfv-back { position: fixed; inset: 0; z-index: 1200; background: rgba(10, 20, 18, .7); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.dfv { width: min(1100px, 100%); height: min(92vh, 100%); background: var(--surface); border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 30px 80px -20px rgba(0, 0, 0, .6); }
+.dfv-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.dfv-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1 1 200px; }
+.dfv-tools { display: flex; gap: 6px; flex-wrap: wrap; }
+.dfv-close { font-weight: 800; }
+.dfv-body { flex: 1; min-height: 0; background: #525659; display: flex; align-items: center; justify-content: center; overflow: auto; }
+.dfv-frame { width: 100%; height: 100%; border: 0; background: #fff; }
+.dfv-img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.dfv-msg { color: #fff; padding: 24px; text-align: center; }
+body.dfv-open { overflow: hidden; }
+@media (max-width: 600px) { .dfv-back { padding: 0; } .dfv { height: 100%; border-radius: 0; } }
