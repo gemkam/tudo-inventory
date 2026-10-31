@@ -3064,3 +3064,6 @@ html, body { max-width: 100%; overflow-x: hidden; }
   .btt span { display: none; }
 }
 @media print { .btt { display: none !important; } }
+
+/* Trip sheet: Undo bar after Mark paid / Mark all paid (app/transport/[id]/page.js) */
+.mark-all-bar.undo-bar { background: rgba(230, 160, 40, .14); border: 1px dashed rgba(200, 130, 20, .55); }

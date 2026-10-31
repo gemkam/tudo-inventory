@@ -152,10 +152,31 @@ function DriverSheet() {
   const thisPaid = month && month !== 'all' ? num(rows.filter((e) => hasAllow(e) && e.allowance_status === 'Paid').reduce((t, e) => t + Number(e.driver_allowance || 0), 0)) : 0;
   const prevPaidTotal = num(prevPaidHere.reduce((t, g) => t + g.amt, 0));
 
+  // Every Mark paid / Mark all paid is remembered (newest last, up to 20) so "↶ Undo" can put each trip back exactly as it was.
+  // Cleared when the page reloads.
+  const [payUndo, setPayUndo] = useState([]);
+
   async function payPrevious(ids) {
+    const before = entries.filter((e) => ids.includes(e.id)).map((e) => ({ id: e.id, status: e.allowance_status || 'Not paid', amt: Number(e.driver_allowance || 0) }));
     const { error: err } = await sb().from('transport_entries').update({ allowance_status: 'Paid' }).in('id', ids);
     if (err) { flash(err.message, 'err'); return; }
+    const amt = num(before.reduce((t, b) => t + b.amt, 0));
+    setPayUndo((st) => [...st, { before, text: `${before.length} trip${before.length === 1 ? '' : 's'} marked Paid (${fmtAmt(amt)})` }].slice(-20));
     flash('Driver allowance marked Paid');
+    load();
+  }
+
+  async function undoLastPay() {
+    const last = payUndo[payUndo.length - 1];
+    if (!last) return;
+    const byStatus = {};
+    last.before.forEach((b) => { (byStatus[b.status] = byStatus[b.status] || []).push(b.id); });
+    for (const [status, ids] of Object.entries(byStatus)) {
+      const { error: err } = await sb().from('transport_entries').update({ allowance_status: status }).in('id', ids);
+      if (err) { flash(err.message, 'err'); load(); return; }
+    }
+    setPayUndo((st) => st.slice(0, -1));
+    flash('Undone: driver allowance back as it was');
     load();
   }
 
@@ -620,6 +641,12 @@ function DriverSheet() {
             </div>
           ) : null;
         })()}
+        {isAdmin && payUndo.length > 0 && (
+          <div className="mark-all-bar undo-bar">
+            <span>Last change: {payUndo[payUndo.length - 1].text}{payUndo.length > 1 ? ` · ${payUndo.length} changes can be undone` : ''}</span>
+            <button type="button" className="btn small ghost" onClick={undoLastPay} title="Put these trips back to how they were">↶ Undo</button>
+          </div>
+        )}
         {(prevOpen.length > 0 || prevPaidHere.length > 0) && (
           <div className="prev-allow">
             <b>Driver allowance from previous months</b>
