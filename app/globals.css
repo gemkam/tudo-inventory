@@ -3262,3 +3262,4 @@ body.dfv-open { overflow: hidden; }
 .ef-details-locked .field:not(.ef-keep) { opacity: .5; filter: grayscale(1); }
 .ef-details-locked .field:not(.ef-keep) input { background: repeating-linear-gradient(135deg, rgba(0,0,0,.03) 0 8px, transparent 8px 16px); cursor: not-allowed; }
 .ef-details-locked .ef-keep select { border-color: var(--brown); }
+.ia-steps { margin: 0; padding-left: 20px; display: grid; gap: 8px; font-size: 15px; } .ia-btn { white-space: nowrap; }

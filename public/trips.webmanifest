@@ -1,0 +1,17 @@
+{
+  "name": "Tudo Num Trips",
+  "short_name": "Tudo Trips",
+  "description": "Driver trip form: trips, costs, papers and Trip complete",
+  "id": "/entry",
+  "start_url": "/entry",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#13836b",
+  "icons": [
+    { "src": "/icons/trips-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/trips-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/trips-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

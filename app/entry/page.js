@@ -6,6 +6,7 @@ import { sb } from '@/lib/supabase';
 import Modal from '@/components/Modal';
 import DriverTripForm from '@/components/DriverTripForm';
 import { useEntryLabels } from '@/lib/entryLabels';
+import InstallApp from '@/components/InstallApp';
 import { useShare } from '@/components/ShareModal';
 
 function fmtWhen(d) {
@@ -213,6 +214,7 @@ function EntryPage() {
       <div className="page-tools">
         <h1 style={{ margin: 0 }}>🚚 Driver trip form</h1>
         <div className="tools">
+          <InstallApp isOffice={isOffice} />
           {isOffice && <button type="button" className={`btn${renaming ? ' in' : ''}`} aria-pressed={renaming} onClick={() => setRenaming((v) => !v)}>{renaming ? '✓ Done renaming' : '✏️ Rename boxes'}</button>}
           {isOffice && <button type="button" className="btn" onClick={() => setAddDrv({ name: '', vehicle: '' })}>➕ Add driver</button>}
         </div>
