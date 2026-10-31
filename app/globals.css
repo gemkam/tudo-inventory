@@ -2309,6 +2309,13 @@ textarea.drv-input { resize: vertical; }
 .rav-panel-txt { flex: 1; min-width: 200px; }
 .rav-panel-txt h2 { margin: 0 0 4px; }
 .rav-panel-txt .sub { margin: 0; }
+/* Phones (31 Oct 2026): text was squeezed into one word per line; now picture + button on top, text full width below */
+@media (max-width: 760px) {
+  .panel.rav-panel { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px 14px; }
+  .panel.rav-panel > .rav-panel-txt { grid-column: 1 / -1; grid-row: 2; min-width: 0; width: 100%; }
+  .panel.rav-panel > .btn { justify-self: start; }
+  .rav-panel-txt h2 { font-size: 22px; }
+}
 
 /* Documents Checklist: All employees table (29 Oct 2026) */
 .dc-sponsor { width: 150px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: inherit; font: inherit; }
@@ -2902,6 +2909,13 @@ html, body { max-width: 100%; overflow-x: hidden; }
 @media (max-width: 360px) {
   .tbx-name b { font-size: 17px; } .tbx-name small { letter-spacing: .14em; }
   .tbx-nav a { font-size: 11px; }
+}
+/* 31 Oct 2026: Invoices, Data entry, Settings, Users, Activity moved to the top bar.
+   With many buttons the menu takes its own line (and wraps) on computers too. */
+@media (min-width: 761px) {
+  .tbx-nav { flex-wrap: wrap; row-gap: 6px; }
+  .tbx-inner:has(.tbx-nav.n8, .tbx-nav.n9, .tbx-nav.n10, .tbx-nav.n11) { flex-wrap: wrap; row-gap: 8px; }
+  .tbx-nav.n8, .tbx-nav.n9, .tbx-nav.n10, .tbx-nav.n11 { order: 4; flex: 1 1 100%; padding-top: 8px; border-top: 1px solid rgba(255,255,255,.14); }
 }
 [data-theme="dark"] .tbx-nav a.active { background: #fff; color: var(--brown-deep); }
 @media (prefers-reduced-motion: reduce) { .tbx-nav a, .tbx-caret { transition: none; } }

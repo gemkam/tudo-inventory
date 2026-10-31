@@ -54,6 +54,7 @@ export default function ExpenseSideNav() {
       <nav className="tsn-list">
         <div className="tsn-title">🧾 Office Expense</div>
         <Btn href="/expenses/summary" on={onSummary} icon="📊">Group Summary</Btn>
+        <Btn href="/docs" on={false} icon="📋">Documents Checklist</Btn>
         {COMPANIES.map((c) => (
           <div key={c.key} className={`tsn-group${open[c.key] ? ' open' : ''}`}>
             <button type="button" className={`tsn-btn tsn-head${!onSummary && co === c.key ? ' here' : ''}`} aria-expanded={!!open[c.key]} onClick={() => setOpen((o) => ({ ...o, [c.key]: !o[c.key] }))}>

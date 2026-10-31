@@ -2,12 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import AuthGate, { useUser } from '@/components/AuthGate';
+import AuthGate from '@/components/AuthGate';
 import TruckAnim from '@/components/TruckAnim';
 import AlertsPanel from '@/components/AlertsPanel';
 import HomeSearch from '@/components/HomeSearch';
 import { sb, isLow } from '@/lib/supabase';
-import { SECTIONS, docStatus } from '@/lib/docChecklist';
 
 function Letterhead() {
   return (
@@ -23,24 +22,19 @@ function Letterhead() {
 }
 
 function Home() {
-  const { isAdmin, isOwner } = useUser();
   const [inv, setInv] = useState(null);
   const [tr, setTr] = useState(null);
   const [ex, setEx] = useState(null);
-  const [dc, setDc] = useState(null);
 
   useEffect(() => {
     (async () => {
       const s = sb();
-      const [c, d, e, x, k] = await Promise.all([
+      const [c, d, e, x] = await Promise.all([
         s.from('categories').select('id, name, items(quantity, min_qty)').order('sort'),
         s.from('transport_drivers').select('id, name').order('sort'),
         s.from('transport_entries').select('entry_date').order('entry_date', { ascending: false }).limit(1),
-        s.from('exp_entries').select('entry_date, paid'),
-        s.from('doc_checklist').select('section, expiry_date, state')
+        s.from('exp_entries').select('entry_date, paid')
       ]);
-      const kk = k.data || [];
-      setDc({ all: kk.length, bad: kk.filter((r) => docStatus(r).key === 'bad').length, soon: kk.filter((r) => docStatus(r).key === 'soon').length });
       const cats = c.data || [];
       const items = cats.flatMap((x) => x.items || []);
       setInv({ sections: cats.map((x) => x.name), items: items.length, low: items.filter(isLow).length });
@@ -87,30 +81,6 @@ function Home() {
           </span>
         </Link>
       </div>
-      <Link href="/docs" className="dc-home" aria-label="Documents Checklist">
-        <span className="dc-home-ico" aria-hidden="true">📋</span>
-        <span className="dc-home-text">
-          <b>Documents Checklist</b>
-          <small>{SECTIONS.map((x) => x.label).join(' · ')}</small>
-        </span>
-        <span className="dc-home-meta">
-          {dc ? <>
-            {dc.bad > 0 && <em className="dc-bad">{dc.bad} expired</em>}
-            {dc.soon > 0 && <em className="dc-soon">{dc.soon} due in 30 days</em>}
-            {!dc.bad && !dc.soon && <em className="dc-ok">All valid</em>}
-            <small>{dc.all} documents</small>
-          </> : ' '}
-        </span>
-      </Link>
-      {isAdmin && (
-        <div className="hub-links">
-          <Link href="/expenses/docs" className="btn ghost">🧾 Invoices & Receipts</Link>
-          <Link href="/entry" className="btn ghost">✍️ Data entry</Link>
-          <Link href="/settings" className="btn ghost">⚙️ Settings</Link>
-          {isOwner && <Link href="/users" className="btn ghost">👥 Users</Link>}
-          {isOwner && <Link href="/activity" className="btn ghost">👁 User activity</Link>}
-        </div>
-      )}
       </div>
       <AlertsPanel />
       </div>

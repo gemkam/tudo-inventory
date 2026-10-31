@@ -229,6 +229,7 @@ function SummaryPage() {
         {COMPANIES.map((c) => <Link key={c.key} href={`/expenses?co=${c.key}`} role="tab" className="co-tab">{c.short}</Link>)}
         <Link href="/transport" className="co-tab co-tr">🚚 Transport</Link>
         <span className="co-tab on" role="tab" aria-selected="true">📊 Group Summary</span>
+        <Link href="/docs" className="co-tab co-sum">📋 Checklist</Link>
       </div>
 
       <div className="company-head">
