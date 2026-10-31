@@ -3139,3 +3139,29 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .vat-head p { margin: 0; color: var(--muted); }
 .ats-table td.vat-pay { color: #b3261e; font-weight: 700; }
 .ats-table td.vat-claim { color: #13836b; font-weight: 700; }
+
+/* 🖨 Customizable print button in the top bar, next to the company name */
+.tbx-print {
+  order: 1; flex: none; display: inline-flex; align-items: center; gap: 6px; margin-left: 4px;
+  font: inherit; font-size: 13.5px; font-weight: 700; color: #fff; cursor: pointer;
+  padding: 7px 14px; border-radius: 999px; border: 1.5px solid rgba(255, 255, 255, .55); background: rgba(255, 255, 255, .14);
+}
+.tbx-print:hover { background: #fff; color: var(--brown); border-color: #fff; }
+@media (max-width: 760px) { .tbx-print { padding: 6px 10px; font-size: 12.5px; } }
+@media print { .tbx-print { display: none !important; } }
+
+/* ===== Upload the documents (Documents Checklist, components/DocFiles.js) ===== */
+.grid td.col-notes { white-space: normal; height: auto; min-height: 44px; overflow: visible; padding-top: 6px; padding-bottom: 6px; }
+.dfl { display: grid; gap: 5px; justify-items: start; }
+.dfl-file { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; width: 100%; }
+.dfl-name { font-size: 13px; font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1 1 120px; }
+.dfl-btns { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.dfl-btn { font: inherit; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--pill-line, var(--line)); background: var(--surface); color: var(--brown); cursor: pointer; }
+.dfl-btn:hover { background: var(--brown); color: #fff; border-color: var(--brown); }
+.dfl-btn.danger { color: #b3261e; }
+.dfl-btn.danger:hover { background: #b3261e; color: #fff; border-color: #b3261e; }
+.dfl-import { font: inherit; font-size: 12.5px; font-weight: 700; padding: 4px 12px; border-radius: 999px; border: 1.5px dashed var(--brown); background: var(--tint); color: var(--brown); cursor: pointer; }
+.dfl-import:hover { background: var(--brown); color: #fff; border-style: solid; }
+.dfl-import[disabled] { opacity: .6; cursor: wait; }
+.dfl-note { color: var(--muted); font-size: 11.5px; }
+.dfl-label { display: grid; gap: 6px; font-weight: 600; }

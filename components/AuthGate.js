@@ -4,6 +4,7 @@ import TableCards, { ViewSwitch } from '@/components/TableCards';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import TransportSideNav, { showTransportSide } from '@/components/TransportSideNav';
 import ExpenseSideNav, { showExpenseSide } from '@/components/ExpenseSideNav';
+import PrintColumns from '@/components/PrintColumns';
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -131,6 +132,8 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
                 <small>Office Systems</small>
               </span>
             </Link>
+            {/* 🖨 Print with column choice, next to the company name (moved here from bottom-left, 31 Oct 2026) */}
+            {user.canRead && !blocked && <PrintColumns top />}
             <div className="tbx-tools">
               {user.canRead && !user.isEntry && <span className="tbx-view"><ViewSwitch /></span>}
               <ThemeMenu />
@@ -162,7 +165,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
           {blocked ? <div className="error">{blocked}</div> : <><Breadcrumbs />{children}</>}
         </main>
       )}
-      {/* Floating 🖨 Print button removed from every page (user, 31 Oct 2026). Pages keep their own Print buttons. */}
+      {/* 🖨 Print with column choice now sits in the top bar next to the company name (PrintColumns top). */}
       <BackToTop />
       {user.canRead && !blocked && <TableCards />}
       {user.canRead && (

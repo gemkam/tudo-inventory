@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import Modal from '@/components/Modal';
 
 /*
-  🖨 Print with column choice, on every page (shown by AuthGate).
+  🖨 Print with column choice, on every page (shown by AuthGate in the top bar next to the company name, prop top).
   Reads the tables on the page, lets the user tick columns per table (and leave a table out),
   then builds a clean print copy (.pc-sheet) with only those columns and prints it.
   Choice is remembered per page on this device (localStorage "tudo-print:<path>").
@@ -92,7 +92,7 @@ function cleanCopy(t, keep) {
   return copy;
 }
 
-export default function PrintColumns() {
+export default function PrintColumns({ top = false }) {
   const path = usePathname() || '/';
   const [open, setOpen] = useState(false);
   const [tables, setTables] = useState([]);
@@ -180,7 +180,7 @@ export default function PrintColumns() {
 
   return (
     <>
-      <button type="button" className="pc-float" onClick={openPicker} title="Print this page with the columns you choose">🖨 Print</button>
+      <button type="button" className={top ? 'tbx-print' : 'pc-float'} onClick={openPicker} title="Customizable print: choose the tables and columns to print">🖨 <span>Print</span></button>
       {open && (
         <Modal title="Print: choose columns" onClose={() => setOpen(false)}>
           {!tables.length && <p className="muted" style={{ margin: 0 }}>There is no table on this page. Use the browser print (Ctrl + P) for this page.</p>}

@@ -10,6 +10,7 @@ import DataGrid from '@/components/DataGrid';
 import Modal from '@/components/Modal';
 import EditToggle from '@/components/EditToggle';
 import Expiry from '@/components/Expiry';
+import DocFiles from '@/components/DocFiles';
 import { sb } from '@/lib/supabase';
 import { exportExcel, exportStamp } from '@/lib/sheet';
 import { fmtD } from '@/lib/reminders';
@@ -36,7 +37,7 @@ const FILTERS = [['all', 'All'], ['bad', 'Expired'], ['soon', 'Renew in 30 days'
 const TAG = { ok: 'ok', soon: 'warn', bad: 'due', none: 'info', off: 'info' };
 const COLS_KEY = 'tudo-doc-cols';
 const ALL_COLS = ['owner', 'doc_name', 'doc_no', 'issue_date', 'expiry_date', 'status', 'state', 'notes'];
-const COL_LABEL = { owner: 'Name', doc_name: 'Document', doc_no: 'Document No.', issue_date: 'Issue date', expiry_date: 'Expiry date', status: 'Status', state: 'Stop alerts', notes: 'Notes' };
+const COL_LABEL = { owner: 'Name', doc_name: 'Document', doc_no: 'Document No.', issue_date: 'Issue date', expiry_date: 'Expiry date', status: 'Status', state: 'Stop alerts', notes: 'Upload the documents' };
 const PRESETS = [
   ['All columns', ALL_COLS],
   ['Standard', ['owner', 'doc_name', 'issue_date', 'expiry_date', 'status']],
@@ -301,6 +302,7 @@ function DocsPage() {
   function cellText(r, c) {
     if (c === 'status') { const st = docStatus(r); return st.left !== null && st.key !== 'ok' ? `${st.label} (${st.left < 0 ? `${-st.left}d ago` : `${st.left}d left`})` : st.label; }
     if (c === 'issue_date' || c === 'expiry_date') return fmtD(r[c]);
+    if (c === 'notes') return [...(Array.isArray(r.files) ? r.files.map((f) => f.name) : []), r.notes || ''].filter(Boolean).join(', ');
     return r[c] || '';
   }
 
@@ -316,7 +318,7 @@ function DocsPage() {
         rows: (rows || []).filter((r) => r.section === s.key)
           .sort((a, b) => String(a.owner || '').localeCompare(String(b.owner || '')) || (a.sort || 0) - (b.sort || 0))
           .map((r, i) => [i + 1, ...p2.map((c) => cellText(r, c))]),
-        numCols: [], widths: [6, ...p2.map((c) => ({ owner: 40, sponsor: 20, doc_name: 34, notes: 28, status: 22 }[c] || 14))]
+        numCols: [], widths: [6, ...p2.map((c) => ({ owner: 40, sponsor: 20, doc_name: 34, notes: 36, status: 22 }[c] || 14))]
       };
     });
     sheets.splice(1, 0, {
@@ -344,7 +346,10 @@ function DocsPage() {
     expiry_date: { key: 'expiry_date', label: 'Expiry date', type: 'date', width: 150, render: (r) => (r.state ? <span className="muted">{fmtD(r.expiry_date) || '–'}</span> : <Expiry date={r.expiry_date} />) },
     status: { key: 'status', label: 'Status', type: 'calc', width: 130, render: (r) => <StatusTag r={r} /> },
     state: { key: 'state', label: 'Stop alerts', type: 'select', options: STATES, width: 120, render: (r) => r.state || <span className="muted">–</span> },
-    notes: { key: 'notes', label: 'Notes', type: 'text', width: 220 }
+    notes: {
+      key: 'notes', label: 'Upload the documents', type: 'calc', align: 'left', width: 330,
+      render: (r) => <DocFiles row={r} canEdit={isAdmin} userName={name} flash={flash} onSave={(list) => save(r, 'files', list)} />
+    }
   };
   const withSponsor = hasSponsor && (tab === 'employee' || aiMode);
   const columns = [...(aiMode ? [allColumns.section] : []), ...cols.flatMap((c) => (c === 'owner' && withSponsor ? [allColumns.owner, allColumns.sponsor] : [allColumns[c]]))];
