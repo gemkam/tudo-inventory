@@ -3,7 +3,6 @@
 import TableCards, { ViewSwitch } from '@/components/TableCards';
 import TransportSideNav, { showTransportSide } from '@/components/TransportSideNav';
 import ExpenseSideNav, { showExpenseSide } from '@/components/ExpenseSideNav';
-import PrintColumns from '@/components/PrintColumns';
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -161,7 +160,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
           {blocked ? <div className="error">{blocked}</div> : children}
         </main>
       )}
-      {user.canRead && !blocked && <PrintColumns />}
+      {/* Floating 🖨 Print button removed from every page (user, 31 Oct 2026). Pages keep their own Print buttons. */}
       {user.canRead && !blocked && <TableCards />}
       {user.canRead && (
         <RaufAssistant
