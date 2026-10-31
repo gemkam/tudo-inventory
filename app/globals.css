@@ -3321,3 +3321,31 @@ body.dfv-open { overflow: hidden; }
   .dfm-btns .dfl-btn { font-size: 15px; padding: 9px 14px; }
   .dfv-tools .btn { font-size: 15px; padding: 10px 14px; }
 }
+
+/* ===== Personal driver link /d/<username> (install + login once) ===== */
+.dl-page { min-height: 100vh; display: grid; place-items: start center; padding: 24px 14px 40px; }
+.dl-card { width: min(440px, 100%); background: var(--surface); border-radius: 22px; padding: 26px 20px; display: grid; gap: 14px; justify-items: center; text-align: center; box-shadow: 0 20px 50px -24px rgba(0, 0, 0, .45); border: 1px solid var(--line); }
+.dl-logo { width: 96px; height: 96px; border-radius: 22px; box-shadow: 0 8px 20px -8px rgba(0, 0, 0, .4); }
+.dl-card h1 { margin: 0; font-size: 30px; }
+.dl-sub { margin: 0; color: var(--muted); font-size: 16px; }
+.dl-warn { width: 100%; display: grid; gap: 4px; padding: 14px; border-radius: 14px; background: #fff4e0; border: 1.5px solid #e0a100; color: #5c3b00; font-size: 16px; }
+.dl-install { width: 100%; font: inherit; font-size: 22px; font-weight: 800; display: grid; justify-items: center; gap: 2px; padding: 18px; border: 0; border-radius: 18px; background: #13836b; color: #fff; cursor: pointer; box-shadow: 0 12px 26px -10px rgba(19, 131, 107, .8); }
+.dl-install span { font-size: 30px; }
+.dl-install small { font-size: 14px; font-weight: 500; opacity: .9; }
+.dl-login { width: 100%; display: grid; gap: 10px; text-align: left; }
+.dl-user { font-size: 20px; font-weight: 800; text-align: center; padding: 8px; border-radius: 12px; background: var(--tint); color: var(--brown); }
+.dl-login label { font-weight: 700; font-size: 15px; }
+.dl-login input { font: inherit; font-size: 20px; padding: 14px; border-radius: 14px; border: 1.5px solid var(--line); width: 100%; }
+.dl-go { font: inherit; font-size: 20px; font-weight: 800; padding: 16px; border-radius: 16px; border: 0; background: var(--brown); color: #fff; cursor: pointer; width: 100%; }
+.dl-go[disabled] { opacity: .6; }
+.dl-link { font: inherit; background: none; border: 0; color: var(--brown); text-decoration: underline; cursor: pointer; padding: 6px; }
+.dl-err { color: #b3261e; font-weight: 700; }
+.dl-help { position: fixed; inset: 0; z-index: 1300; background: rgba(0, 0, 0, .55); display: grid; place-items: center; padding: 16px; }
+.dl-help-box { background: var(--surface); border-radius: 18px; padding: 20px; width: min(420px, 100%); display: grid; gap: 12px; }
+.dl-help-box h2 { margin: 0; font-size: 21px; }
+.dl-help-box ol { margin: 0; padding-left: 22px; display: grid; gap: 8px; font-size: 17px; }
+.ia-links { display: grid; gap: 8px; }
+.ia-link { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; }
+.ia-link > div { display: grid; gap: 2px; min-width: 0; }
+.ia-link small { color: var(--muted); word-break: break-all; }
+.ia-link-btns { display: flex; gap: 6px; }

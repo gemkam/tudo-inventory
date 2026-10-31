@@ -9,9 +9,9 @@ import Modal from '@/components/Modal';
   Android Chrome: the real install box (beforeinstallprompt). iPhone Safari: short steps (Share → Add to Home Screen).
   Hidden when the form is already opened from the icon. Admin also gets "Send link to drivers" (WhatsApp).
 */
-const LINK = 'https://tudo-inventory.vercel.app/entry';
 
-export default function InstallApp({ isOffice }) {
+export default function InstallApp({ isOffice, driverLinks = [] }) {
+  const [sendOpen, setSendOpen] = useState(false);
   const [prompt, setPrompt] = useState(null);
   const [installed, setInstalled] = useState(false);
   const [help, setHelp] = useState(false);
@@ -38,12 +38,35 @@ export default function InstallApp({ isOffice }) {
     } else setHelp(true);
   }
 
-  const waText = `Tudo Trips (driver trip form)\n\nOpen this link on your phone:\n${LINK}\n\nLog in with your username and password\n\nThen press 📲 Add to my phone\nThe Tudo Trips icon will come on your home screen`;
 
   return (
     <>
       {!installed && <button type="button" className="btn in ia-btn" onClick={install}>📲 Add to my phone</button>}
-      {isOffice && <a className="btn ia-btn" href={`https://wa.me/?text=${encodeURIComponent(waText)}`} target="_blank" rel="noreferrer">📤 Send link to drivers</a>}
+      {isOffice && <button type="button" className="btn ia-btn" onClick={() => setSendOpen(true)}>📤 Send link to drivers</button>}
+      {sendOpen && (
+        <Modal title="Send each driver his own link" onClose={() => setSendOpen(false)}>
+          <p className="muted" style={{ marginTop: 0 }}>Each link opens only that driver's form. He taps Install, types his password once, and gets his own icon.</p>
+          <div className="ia-links">
+            {driverLinks.map((d) => {
+              const url = d.user ? `https://tudo-inventory.vercel.app/d/${d.user}` : '';
+              const text = `Salam ${d.name}\n\nThis is your Tudo trips link\n${url}\n\nOpen it in Chrome\nTap Install ${d.user ? d.user.charAt(0).toUpperCase() + d.user.slice(1) : ''} Trips\nType your password once\n\nThen use the icon on your phone for every trip`;
+              return (
+                <div key={d.id} className="ia-link">
+                  <div><b>{d.name}</b><small>{url || 'No login yet: create one on the Users page (Data entry, pick this driver)'}</small></div>
+                  {url && (
+                    <span className="ia-link-btns">
+                      <a className="btn small in" href={`https://wa.me/?text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer">📤 WhatsApp</a>
+                      <button type="button" className="btn small" onClick={() => { navigator.clipboard?.writeText(url); }}>📋 Copy</button>
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+            {!driverLinks.length && <p className="muted">Only the Administrator can see the drivers' usernames.</p>}
+          </div>
+          <div className="modal-actions"><button type="button" className="btn ghost" onClick={() => setSendOpen(false)}>Close</button></div>
+        </Modal>
+      )}
       {help && (
         <Modal title="Add Tudo Trips to your phone" onClose={() => setHelp(false)}>
           {ios ? (

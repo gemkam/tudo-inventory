@@ -175,6 +175,16 @@ function EntryPage() {
   useEffect(() => { loadDrivers(); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // each driver's own link /d/<username> (usernames can be read by the Administrator only)
+  const [driverLinks, setDriverLinks] = useState([]);
+  useEffect(() => {
+    if (!me.isOwner || !drivers.length) return;
+    sb().rpc('admin_list_users').then(({ data }) => {
+      const byId = Object.fromEntries((data || []).map((x) => [x.id, x]));
+      setDriverLinks(drivers.map((d) => ({ id: d.id, name: d.name, user: d.user_id && byId[d.user_id] ? String(byId[d.user_id].username || byId[d.user_id].email || '').replace('@tudo.local', '') : '' })));
+    });
+  }, [me.isOwner, drivers]);
+
   const loadTrips = useCallback(async () => {
     if (!driverId) { setTrips(null); setDoneTrips(null); setCounts(null); return; }
     const s = sb();
@@ -214,7 +224,7 @@ function EntryPage() {
       <div className="page-tools ent-head">
         <h1 style={{ margin: 0 }}>🚚 Driver trip form</h1>
         <div className="tools">
-          <InstallApp isOffice={isOffice} />
+          <InstallApp isOffice={isOffice} driverLinks={driverLinks} />
           {isOffice && <button type="button" className={`btn${renaming ? ' in' : ''}`} aria-pressed={renaming} onClick={() => setRenaming((v) => !v)}>{renaming ? '✓ Done renaming' : '✏️ Rename boxes'}</button>}
           {isOffice && <button type="button" className="btn" onClick={() => setAddDrv({ name: '', vehicle: '' })}>➕ Add driver</button>}
         </div>
