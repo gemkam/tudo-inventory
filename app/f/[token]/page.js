@@ -1,22 +1,27 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { sb } from '@/lib/supabase';
 import EntryForm from '@/components/EntryForm';
 
-/* Public entry form opened from a shared link. No login. */
+/* Public entry form opened from a shared link. No login.
+   31 Oct 2026: a link made for one driver who now has his own Driver login opens his own app link /d/<username>
+   (step by step phone form, English / Urdu, install icon) instead of this old form. */
 export default function PublicEntry() {
   const { token } = useParams();
+  const router = useRouter();
   const [info, setInfo] = useState(undefined); // undefined = loading, null = not valid
 
   useEffect(() => {
     let alive = true;
     sb().rpc('public_entry_info', { p_token: String(token || '') }).then(({ data, error }) => {
-      if (alive) setInfo(error ? null : data || null);
+      if (!alive) return;
+      if (!error && data?.username) { router.replace(`/d/${data.username}`); return; }
+      setInfo(error ? null : data || null);
     });
     return () => { alive = false; };
-  }, [token]);
+  }, [token, router]);
 
   async function submit(row) {
     const { error } = await sb().rpc('public_add_entry', { p_token: String(token), p_entry: row });
