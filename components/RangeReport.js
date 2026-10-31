@@ -77,7 +77,7 @@ function Sheet({ title, company, from, to, data }) {
   );
 }
 
-export default function RangeReport({ title = 'Report', company, build, label = '📊 Report', className = 'btn', landscape = false, defaultPreset = 'This month' }) {
+export default function RangeReport({ title = 'Report', company, build, label = '📊 Report', className = 'btn', landscape = false, defaultPreset = 'This month', openEvent = '' }) {
   const P = useMemo(presets, []);
   const start = P.find((p) => p[0] === defaultPreset) || P[2];
   const [open, setOpen] = useState(false);
@@ -86,6 +86,14 @@ export default function RangeReport({ title = 'Report', company, build, label = 
   const [land, setLand] = useState(landscape);
   const [printing, setPrinting] = useState(false);
   const bad = from && to && from > to;
+
+  // another part of the screen (e.g. a side menu button) can open this report with window.dispatchEvent(new Event(openEvent))
+  useEffect(() => {
+    if (!openEvent) return undefined;
+    const go = () => setOpen(true);
+    window.addEventListener(openEvent, go);
+    return () => window.removeEventListener(openEvent, go);
+  }, [openEvent]);
 
   const [data, setData] = useState(null);
   useEffect(() => {

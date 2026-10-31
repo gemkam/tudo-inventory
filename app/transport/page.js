@@ -9,6 +9,7 @@ import { sb } from '@/lib/supabase';
 import { num, fmtAmt, monthKey, monthLabel, exportStamp, exportExcel, exportPdf } from '@/lib/sheet';
 import { salaryPayable, vatOf } from '@/lib/transport';
 import CompanyHeader, { COMPANY_NAME } from '@/components/CompanyHeader';
+import { TRANSPORT_ACTION_EVENT, TRANSPORT_RANGE_EVENT, TRANSPORT_ACTIONS } from '@/lib/transportActions';
 import Omr from '@/components/Omr';
 
 const COMPANY = `${COMPANY_NAME} · Transport Division`;
@@ -160,6 +161,33 @@ function TransportPage() {
     setMailing(false);
   }
 
+  /* ---------- Side menu actions (Report by dates, Excel, PDF, Email report) ---------- */
+
+  const actRef = useRef({});
+  actRef.current = {
+    range: () => window.dispatchEvent(new Event(TRANSPORT_RANGE_EVENT)),
+    excel: doExcel,
+    pdf: doPdf,
+    email: () => (isAdmin ? emailReport() : flash('Only an Administrator can email the report.', 'err'))
+  };
+  const ready = !!(drivers && month);
+  useEffect(() => {
+    const on = (e) => actRef.current[e.detail]?.();
+    window.addEventListener(TRANSPORT_ACTION_EVENT, on);
+    return () => window.removeEventListener(TRANSPORT_ACTION_EVENT, on);
+  }, []);
+  useEffect(() => {
+    if (!ready) return undefined;
+    const q = new URLSearchParams(window.location.search);
+    const act = q.get('do');
+    if (!act || !TRANSPORT_ACTIONS.includes(act)) return undefined;
+    q.delete('do');
+    const rest = q.toString();
+    window.history.replaceState(null, '', `${window.location.pathname}${rest ? `?${rest}` : ''}`);
+    const t = setTimeout(() => actRef.current[act]?.(), 200);
+    return () => clearTimeout(t);
+  }, [ready]);
+
   /* ---------- Render ---------- */
 
   if (!drivers || !month) return <div className="loading">Loading transport...</div>;
@@ -186,7 +214,7 @@ function TransportPage() {
           <Link href="/transport/invoice" className="btn">🧾 Invoice</Link>
           <Link href="/transport/reports" className="btn report">📊 Reports</Link>
           <RangeReport title="Transport report (all drivers)" company="Modern City for Express Services LLC · Transport Division" landscape
-            build={(from, to) => transportReport({ entries, drivers: drivers || [], salaries, extras, from, to })} label="🖨 Report by dates" />
+            build={(from, to) => transportReport({ entries, drivers: drivers || [], salaries, extras, from, to })} label="🖨 Report by dates" openEvent={TRANSPORT_RANGE_EVENT} />
           <button type="button" className="btn ghost" onClick={doExcel}>📗 Excel</button>
           <button type="button" className="btn ghost" onClick={doPdf}>📕 PDF</button>
           {isAdmin && <button type="button" className="btn ghost" onClick={emailReport} disabled={mailing}>{mailing ? 'Sending...' : '✉ Email report'}</button>}

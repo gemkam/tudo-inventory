@@ -4,11 +4,12 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { COMPANIES } from '@/lib/expenses';
+import { TransportMenu } from '@/components/TransportSideNav';
 
 /*
   Side buttons for Office Expense (rendered by components/AuthGate.js on every /expenses page), same look as the
   Transport side buttons (tsn-* CSS). Each company opens like a folder: Bills & salary, Attendance, Invoice,
-  Payment receipt. The company and page you are on are filled. Stays in view while you scroll (sticky).
+  Payment receipt. Transport opens the same way with all Transport items (TransportMenu). The company and page you are on are filled. Stays in view while you scroll (sticky).
 */
 
 export const showExpenseSide = (path) => /^\/expenses(\/|$)/.test(path);
@@ -20,7 +21,7 @@ function readCo() {
   } catch { return { co: COMPANIES[0].key, kind: '' }; }
 }
 
-export default function ExpenseSideNav() {
+export default function ExpenseSideNav({ isAdmin = false }) {
   const path = usePathname();
   const [{ co, kind }, setCur] = useState({ co: COMPANIES[0].key, kind: '' });
   const [open, setOpen] = useState({});
@@ -70,7 +71,12 @@ export default function ExpenseSideNav() {
             )}
           </div>
         ))}
-        <Btn href="/transport" icon="🚚">Transport</Btn>
+        <div className={`tsn-group${open.transport ? ' open' : ''}`}>
+          <button type="button" className="tsn-btn tsn-head" aria-expanded={!!open.transport} onClick={() => setOpen((o) => ({ ...o, transport: !o.transport }))}>
+            <span className="tsn-ic" aria-hidden="true">🚚</span><span className="tsn-tx">Transport</span><span className="tsn-car" aria-hidden="true">▸</span>
+          </button>
+          {open.transport && <div className="tsn-kids"><TransportMenu nested isAdmin={isAdmin} /></div>}
+        </div>
         <div className="tsn-sep" />
         <Btn href="/docs" icon="📋">Documents Checklist</Btn>
       </nav>

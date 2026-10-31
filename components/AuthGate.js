@@ -153,7 +153,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
       </header>
       {!blocked && !user.isEntry && (showTransportSide(path) || showExpenseSide(path)) ? (
         <main className="page wide has-side">
-          {showTransportSide(path) ? <TransportSideNav /> : <ExpenseSideNav />}
+          {showTransportSide(path) ? <TransportSideNav isAdmin={user.isAdmin} /> : <ExpenseSideNav isAdmin={user.isAdmin} />}
           <div className="side-main">{showTransportSide(path) && <OfficeTabs />}{children}</div>
         </main>
       ) : (
