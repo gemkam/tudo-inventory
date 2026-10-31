@@ -3131,3 +3131,11 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .co-switch button.co-tab { font: inherit; cursor: pointer; background: transparent; color: inherit; }
 .co-switch .co-tab.co-vat { border: 1.5px solid #e0a100; color: #8a5a00; font-weight: 700; }
 .co-switch .co-tab.co-vat:hover { background: #f6c445; color: #3d2a00; }
+
+/* ===== VAT return page (/expenses/vat) ===== */
+.vat-head { border-left: 6px solid #e0a100; padding: 6px 0 6px 14px; }
+.vat-head span { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.vat-head h1 { margin: 2px 0; }
+.vat-head p { margin: 0; color: var(--muted); }
+.ats-table td.vat-pay { color: #b3261e; font-weight: 700; }
+.ats-table td.vat-claim { color: #13836b; font-weight: 700; }
