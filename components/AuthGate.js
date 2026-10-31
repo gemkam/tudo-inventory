@@ -110,8 +110,8 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
   // Transport lives inside Office Expense (4th tab), so it has no top bar button of its own
   const quick = user.canRead ? [['/inventory', 'Inventory', 'box'], ['/expenses', 'Office Expense', 'receipt']] : [];
   // Buttons that used to sit at the bottom of Home (31 Oct 2026): now in the top bar
-  if (user.isAdmin) quick.push(['/expenses/docs', 'Invoices', 'invoice'], ['/entry', 'Data entry', 'entry'], ['/settings', 'Settings', 'gear']);
-  if (user.isOwner) quick.push(['/users', 'Users', 'users'], ['/activity', 'Activity', 'eye']);
+  // Settings, Users and Activity live inside Admin (/admin) since 31 Oct 2026
+  if (user.isAdmin) quick.push(['/expenses/docs', 'Invoices', 'invoice'], ['/entry', 'Data entry', 'entry'], ['/admin', 'Admin', 'shield']);
 
   let blocked = '';
   if (ownerOnly && !user.isOwner) blocked = 'Only Administrator can open this page.';
@@ -144,7 +144,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
             ))}
             {quick.length > 0 && <i className="tbx-sep" aria-hidden="true" />}
             {quick.map(([href, label, ico]) => (
-              <Link key={href} href={href} className={path === href || (path.startsWith(`${href}/`) && !(href === '/expenses' && path === '/expenses/docs')) || (href === '/expenses' && (path.startsWith('/transport') || path === '/docs')) ? 'active' : ''}>
+              <Link key={href} href={href} className={path === href || (href === '/admin' && ['/settings', '/users', '/activity'].some((x) => path.startsWith(x))) || (path.startsWith(`${href}/`) && !(href === '/expenses' && path === '/expenses/docs')) || (href === '/expenses' && (path.startsWith('/transport') || path === '/docs')) ? 'active' : ''}>
                 <Ico name={ico} /><span>{label}</span>
               </Link>
             ))}
@@ -187,6 +187,7 @@ const ICONS = {
   receipt: <><path d="M6 3h12v18l-2.5-1.5L13 21l-2.5-1.5L8 21l-2-1.5z" /><path d="M9 8h6M9 12h6M9 16h3" /></>,
   entry: <><path d="M8 4h8v3H8z" /><path d="M16 5.5h2.5V21h-13V5.5H8" /><path d="M9 12h6M9 16h4" /></>,
   invoice: <><path d="M6 3h9l3 3v15H6z" /><path d="M15 3v3h3" /><path d="M9 11h6M9 15h6M9 7h3" /></>,
+  shield: <><path d="M12 3 4 6v6c0 4.5 3.4 8.2 8 9 4.6-.8 8-4.5 8-9V6z" /><path d="m9 12 2 2 4-4" /></>,
   gear: <><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1" /></>,
   users: <><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5" /><circle cx="17" cy="9" r="2.5" /><path d="M17 14.5c2.4 0 4 1.5 4.5 4.5" /></>,
   eye: <><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></>,
