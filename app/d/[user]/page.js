@@ -35,9 +35,11 @@ export default function DriverLink() {
   const [help, setHelp] = useState(false);
   const [ask, setAsk] = useState(false); // full-screen "tap to install" as soon as the phone allows it
   const [done, setDone] = useState(false);
+  const [out, setOut] = useState(false); // came here after Logout
 
   useEffect(() => {
     try { navigator.serviceWorker?.register('/sw.js'); } catch { /* ignore */ }
+    try { setOut(new URLSearchParams(window.location.search).get('out') === '1'); } catch { /* ignore */ }
     const ua = navigator.userAgent || '';
     setEnv({ ios: /iphone|ipad|ipod/i.test(ua), inApp: /WhatsApp|FBAN|FBAV|Instagram|; wv\)/i.test(ua) });
     setStandalone(!!(window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone));
@@ -110,6 +112,7 @@ export default function DriverLink() {
 
         {state === 'loading' && <p className="dl-sub">{t('Please wait...')}</p>}
 
+        {out && state === 'login' && <div className="logout-note">{ur ? '✅ آپ لاگ آؤٹ ہو گئے ہیں۔ دوبارہ کھولنے کے لیے پاس ورڈ لکھیں۔' : '✅ You have logged out. Type your password to open again.'}</div>}
         {state === 'login' && (
           <form className="dl-login" onSubmit={login}>
             <div className="dl-user">👤 {u}</div>

@@ -47,6 +47,7 @@ function readUser(session) {
   const name = u.user_metadata?.display_name || (u.email || '').split('@')[0];
   return {
     id: u.id,
+    username: (u.email || '').split('@')[0],
     name,
     role,
     isOwner: role === 'admin', // can manage users
@@ -82,9 +83,12 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
       else setUser(u);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) router.replace('/login');
+      if (!session) { setUser(null); router.replace('/login'); }
     });
-    return () => sub.subscription.unsubscribe();
+    // phone Back button can bring back an old copy of the page: check the login again
+    const onShow = (e) => { if (e.persisted) supabase.auth.getSession().then(({ data }) => { if (!data.session) window.location.replace('/login'); }); };
+    window.addEventListener('pageshow', onShow);
+    return () => { sub.subscription.unsubscribe(); window.removeEventListener('pageshow', onShow); };
   }, [router, entryPage]);
 
   // Activity log for the Administrator (/activity)
@@ -106,12 +110,21 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
     return () => clearTimeout(t);
   }, [path]);
 
+  /* Logout (31 Oct 2026): hide every bit of data at once, sign out on this device, clear the saved login,
+     then load the login page fresh (no Back to old data). Drivers go back to their own link with the
+     username filled in. Each step has a time limit so a weak phone signal cannot leave the data on screen. */
+  const [leaving, setLeaving] = useState(false);
   async function switchUser() {
-    await endActivity('logout');
-    await sb().auth.signOut();
-    router.replace('/login');
+    const dest = user?.isEntry && user.username ? `/d/${user.username}?out=1` : '/login?out=1';
+    setLeaving(true);
+    const limit = (p, ms) => Promise.race([p, new Promise((r) => setTimeout(r, ms))]);
+    try { await limit(endActivity('logout'), 1500); } catch { /* ignore */ }
+    try { await limit(sb().auth.signOut({ scope: 'local' }), 2000); } catch { /* ignore */ }
+    try { Object.keys(localStorage).filter((k) => k.startsWith('sb-')).forEach((k) => localStorage.removeItem(k)); } catch { /* ignore */ }
+    window.location.replace(dest);
   }
 
+  if (leaving) return <div className="loading">Logging out...</div>;
   if (!user) return <div className="loading">Loading...</div>;
 
   const nav = user.isEntry ? [['/entry', 'Data entry', 'entry']] : [['/', 'Home', 'home'], ['/sitemap', 'Sitemap', 'map'], ['/timeline', 'Timeline', 'clock']];

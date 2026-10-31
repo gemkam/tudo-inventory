@@ -13,8 +13,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [out, setOut] = useState(false); // came here after Logout
 
   useEffect(() => {
+    try { setOut(new URLSearchParams(window.location.search).get('out') === '1'); } catch { /* ignore */ }
     sb().auth.getSession().then(({ data }) => {
       if (data.session) router.replace('/');
     });
@@ -39,6 +41,7 @@ export default function LoginPage() {
     <div className="login">
       <form className="login-card panel" onSubmit={submit}>
         <h1>Tudo Num Office Systems</h1>
+        {out && <div className="logout-note">✅ You have logged out. Nothing is shown until you log in again.</div>}
         {error && <div className="error">{error}</div>}
         <div className="field">
           <label htmlFor="username">Username</label>

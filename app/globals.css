@@ -3411,3 +3411,4 @@ body.dfv-open { overflow: hidden; }
 body:has(.ent-page.ur) .modal, body:has(.ent-page.ur) .dfv { font-family: 'Noto Nastaliq Urdu', 'Noto Naskh Arabic', serif; line-height: 1.9; }
 .ent-head .lang-switch { margin-inline-start: auto; }
 @media (max-width: 760px), (max-device-width: 820px) { .ent-page .ent-head .lang-switch { align-self: center; } .ent-page .lang-switch button { font-size: 17px; padding: 9px 22px; } .ent-page .lang-switch .ur-txt { font-size: 20px; } }
+.logout-note { padding: 12px 14px; border-radius: 12px; background: #e3f4ed; border: 1.5px solid #13836b; color: #0f3d33; font-weight: 700; text-align: center; margin-bottom: 8px; }
