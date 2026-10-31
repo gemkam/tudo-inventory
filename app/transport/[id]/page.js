@@ -634,10 +634,14 @@ function DriverSheet() {
         )}
         {isAdmin && month !== 'all' && (() => {
           const open = rows.filter((e) => hasAllow(e) && e.allowance_status !== 'Paid');
-          return open.length > 1 ? (
+          return open.length > 0 ? (
             <div className="mark-all-bar">
-              <span>{open.length} trips with driver allowance not paid in {monthLabel(month)}: <b>{fmtAmt(open.reduce((t, e) => t + Number(e.driver_allowance || 0), 0))}</b></span>
-              <button type="button" className="btn small in" onClick={() => payPrevious(open.map((e) => e.id))}>✓ Mark all paid</button>
+              <span>{open.length} trip{open.length === 1 ? '' : 's'} with driver allowance not paid in {monthLabel(month)}: <b>{fmtAmt(open.reduce((t, e) => t + Number(e.driver_allowance || 0), 0))}</b></span>
+              <span className="tag warn">Not paid</span>
+              <span className="mab-btns">
+                <button type="button" className="btn small in" onClick={() => payPrevious(open.map((e) => e.id))}>✓ Mark all paid</button>
+                <button type="button" className="btn small ghost" onClick={undoLastPay} disabled={!payUndo.length} title={payUndo.length ? 'Undo the last Mark paid' : 'Nothing to undo yet'}>↶ Undo</button>
+              </span>
             </div>
           ) : null;
         })()}
@@ -657,6 +661,7 @@ function DriverSheet() {
                   <strong>{calc(g.parts)}{fmtAmt(g.amt)}</strong>
                   <span className="tag warn">Not paid</span>
                   {isAdmin && <button type="button" className="btn small" onClick={() => payPrevious(g.ids)}>Mark paid</button>}
+                  {isAdmin && <button type="button" className="btn small ghost" onClick={undoLastPay} disabled={!payUndo.length} title={payUndo.length ? 'Undo the last Mark paid' : 'Nothing to undo yet'}>↶ Undo</button>}
                 </li>
               ))}
               {prevPaidHere.map((g) => (

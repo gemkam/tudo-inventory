@@ -3067,3 +3067,21 @@ html, body { max-width: 100%; overflow-x: hidden; }
 
 /* Trip sheet: Undo bar after Mark paid / Mark all paid (app/transport/[id]/page.js) */
 .mark-all-bar.undo-bar { background: rgba(230, 160, 40, .14); border: 1px dashed rgba(200, 130, 20, .55); }
+
+/* Wide tables can always move sideways (31 Oct 2026): the table box may not grow wider than its card, so it scrolls
+   instead of being cut off; DataGrid shows ‹ › buttons on the sides while there is more to see. */
+.sheet { grid-template-columns: minmax(0, 1fr); }
+.sheet > *, .grid-wrap, .table-wrap, .at-wrap { min-width: 0; max-width: 100%; }
+.grid-wrap, .table-wrap { overflow-x: auto !important; }
+.dg-outer { position: relative; min-width: 0; max-width: 100%; }
+.dg-arrow {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 8; width: 34px; height: 54px; border-radius: 10px;
+  border: 1px solid var(--line-strong, var(--line)); background: var(--surface); color: var(--brown); font-size: 26px; line-height: 1;
+  display: grid; place-items: center; cursor: pointer; box-shadow: 0 6px 18px -6px rgba(0, 0, 0, .35); opacity: .92;
+}
+.dg-arrow:hover { background: var(--brown); color: #fff; opacity: 1; }
+.dg-arrow.left { left: 6px; } .dg-arrow.right { right: 6px; }
+@media print { .dg-arrow { display: none !important; } }
+.mark-all-bar .mab-btns { display: inline-flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+.mark-all-bar .tag, .prev-allow .tag { white-space: nowrap; }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }

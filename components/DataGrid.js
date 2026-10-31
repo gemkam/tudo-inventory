@@ -62,6 +62,29 @@ export default function DataGrid({ columns, rows, canEdit, onSave, onAdd, addLab
   const [editing, setEditingState] = useState(null);
   const editingRef = useRef(null);
   const wrapRef = useRef(null);
+
+  /* Wide tables move left / right: ‹ › buttons on the sides (also mouse wheel with Shift, touchpad, finger, scroll bar). */
+  const [canLeft, setCanLeft] = useState(false);
+  const [canRight, setCanRight] = useState(false);
+  function checkSides() {
+    const w = wrapRef.current;
+    if (!w) return;
+    setCanLeft(w.scrollLeft > 2);
+    setCanRight(w.scrollLeft + w.clientWidth < w.scrollWidth - 2);
+  }
+  function slide(dir) {
+    const w = wrapRef.current;
+    if (w) w.scrollBy({ left: dir * Math.max(200, w.clientWidth * 0.7), behavior: 'smooth' });
+  }
+  useEffect(() => {
+    const w = wrapRef.current;
+    if (!w) return undefined;
+    checkSides();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(checkSides) : null;
+    if (ro) { ro.observe(w); if (w.firstElementChild) ro.observe(w.firstElementChild); }
+    window.addEventListener('resize', checkSides);
+    return () => { ro?.disconnect(); window.removeEventListener('resize', checkSides); };
+  }, [rows, columns, canEdit]); // eslint-disable-line react-hooks/exhaustive-deps
   const setEditing = (v) => { editingRef.current = v; setEditingState(v); };
 
   const firstWidth = columns[0]?.width || 140;
@@ -227,7 +250,10 @@ export default function DataGrid({ columns, rows, canEdit, onSave, onAdd, addLab
   const span = columns.length + (showDelete ? 1 : 0);
 
   return (
-    <div className="grid-wrap" ref={wrapRef} tabIndex={0} onKeyDown={onKey}>
+    <div className="dg-outer">
+    {canLeft && <button type="button" className="dg-arrow left" aria-label="Move table left" title="Move left" onClick={() => slide(-1)}>‹</button>}
+    {canRight && <button type="button" className="dg-arrow right" aria-label="Move table right" title="Move right" onClick={() => slide(1)}>›</button>}
+    <div className="grid-wrap" ref={wrapRef} tabIndex={0} onKeyDown={onKey} onScroll={checkSides}>
       <table className="grid dg" style={{ '--w-name': `${firstWidth}px` }}>
         <colgroup>
           <col className="w-num" />
@@ -292,6 +318,7 @@ export default function DataGrid({ columns, rows, canEdit, onSave, onAdd, addLab
           </tfoot>
         )}
       </table>
+    </div>
     </div>
   );
 }
