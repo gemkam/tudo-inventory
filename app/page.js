@@ -67,6 +67,18 @@ function Home() {
             {inv ? <>{inv.items} {inv.items === 1 ? "item" : "items"}{inv.low > 0 && <b className="hub-alert">{inv.low} low</b>}</> : ' '}
           </span>
         </Link>
+        <Link href="/transport" className="hub-tile">
+          <Letterhead />
+          <span className="hub-kicker">Transport Division</span>
+          <span className="hub-title-row">
+            <span className="hub-title">Transport Expense</span>
+            <TruckAnim />
+          </span>
+          <span className="hub-sub">Trips · Diesel · Tolls · Maintenance · Salaries</span>
+          <span className="hub-meta">
+            {tr ? <>{tr.drivers.length} drivers{tr.drivers.length > 0 && `: ${tr.drivers.join(', ')}`}</> : ' '}
+          </span>
+        </Link>
         <Link href="/expenses" className="hub-tile">
           <span className="hub-brand brand-anim" role="img" aria-label="Tudo Num Group">
             <img className="ba-base" src="/brand-base.png" alt="" />
