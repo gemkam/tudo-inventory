@@ -3557,3 +3557,18 @@ body:has(.ent-page.ur) .modal, body:has(.ent-page.ur) .dfv { font-family: 'Noto 
 .paid-btn:hover:not([disabled]) { border-color: #13836b; color: #13836b; }
 .paid-btn.on { background: #13836b; border-color: #13836b; color: #fff; }
 .paid-btn[disabled] { cursor: default; }
+.ssl-add { display: grid; gap: 6px; max-height: 50vh; overflow: auto; }
+.ssl-add .dfl-btn { justify-content: flex-start; text-align: left; }
+.ssl-add { display: grid; gap: 6px; max-height: 50vh; overflow: auto; }
+.ssl-add .dfl-btn { justify-content: flex-start; text-align: left; }
+/* Pop-up boxes above the sticky top bar (top bar is z-index 60), 1 Nov 2026 */
+.modal-back { z-index: 1000; }
+.modal-back ~ .toast, .toast { z-index: 1100; }
+/* check boxes keep their own size (the global input rule made them full width) */
+.modal input[type="checkbox"], .modal input[type="radio"], .pc-include input, .pc-opts input { width: auto; flex: none; margin: 0; padding: 0; }
+/* 🖨 Print (choose columns) box: wider, title and buttons always in view, list scrolls */
+.modal:has(.pc-list) { max-width: 720px; max-height: calc(100vh - 32px); display: flex; flex-direction: column; overflow: hidden; }
+.modal:has(.pc-list) > * { flex: none; }
+.modal:has(.pc-list) > .pc-list { flex: 1 1 auto; max-height: none; min-height: 0; overflow: auto; }
+.pc-include b { font-size: 15px; }
+.pc-opts label { white-space: nowrap; }
