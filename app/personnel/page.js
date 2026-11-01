@@ -254,6 +254,7 @@ function PersonnelPage() {
     let err = null;
     if (step.type === 'patch') {
       ({ error: err } = await s.from(step.table).update(step.before).eq('id', step.id));
+      if (!err && step.table === 'exp_staff' && step.before.company) await s.from('exp_attendance').update({ company: step.before.company }).eq('staff_id', step.id);
       if (!err) setterOf(step.table)((l) => (l || []).map((x) => (x.id === step.id ? { ...x, ...step.before } : x)));
     } else if (step.type === 'add') {
       ({ error: err } = await s.from(step.table).delete().eq('id', step.id));
