@@ -24,7 +24,7 @@ export default function RootLayout({ children }) {
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
         {/* Phone with Chrome "Desktop site" switched on: the page is laid out 980px wide and looks tiny.
             Scale it up to the phone's real width so text stays readable (31 Oct 2026). */}
-        <script dangerouslySetInnerHTML={{ __html: "(function(){try{var t=('ontouchstart' in window)||navigator.maxTouchPoints>0;var sw=Math.min(screen.width,screen.height);var f=function(){var w=window.innerWidth;if(t&&sw&&sw<820&&w>sw*1.4){document.documentElement.style.zoom=(w/sw).toFixed(3);document.documentElement.classList.add('desk-on-phone');}};f();window.addEventListener('resize',f);}catch(e){}})();" }} />
+        <script dangerouslySetInnerHTML={{ __html: "(function(){try{var d=document.documentElement;var coarse=window.matchMedia&&matchMedia('(pointer: coarse)').matches&&!matchMedia('(any-pointer: fine)').matches;var f=function(){var sw=screen.width;var w=window.innerWidth;if(coarse&&sw&&sw<820&&w>sw*1.4){d.style.zoom=(w/sw).toFixed(3);d.classList.add('desk-on-phone');}else{d.style.zoom='';d.classList.remove('desk-on-phone');}};f();window.addEventListener('resize',f);}catch(e){}})();" }} />
         {/* Speed (31 Oct 2026): open the database connection early, and load the Google fonts WITHOUT holding up the page
             (the page shows at once in the normal font, the nice font swaps in when it arrives). */}
         <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL} crossOrigin="" />
