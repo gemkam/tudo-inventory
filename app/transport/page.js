@@ -86,8 +86,8 @@ function TransportPage() {
       r.receivable = num(r.work - r.received);
       r.expenses = num(r.diesel + r.toll + r.maintenance + r.salary + r.other);
       r.vat = num(es.reduce((t, e) => t + vatOf(e), 0));
-      // Profit: salary is NOT subtracted (client rule). VAT 5% kept aside. Driver allowance counted per trip.
-      r.profit = num(r.work - r.vat - r.diesel - r.toll - r.maintenance - r.tripAllowance - r.other);
+      // Excel rule (Transport_Division Sheet4): Profit = Work − (Diesel + Toll + Maintenance + Total Salary (salary sheet Balance Payable) + Trailer rent / other). VAT 5% inside work kept aside.
+      r.profit = num(r.work - r.vat - r.expenses);
       return r;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps

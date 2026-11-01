@@ -85,10 +85,11 @@ function TransportReports() {
         allowanceOpen: sum(de.filter((e) => e.allowance_status !== 'Paid'), 'driver_allowance'),
         other: sum(ex.filter((x) => x.driver_id === d.id), 'amount')
       };
-      o.expenses = num(o.diesel + o.toll + o.maintenance + o.salary + o.allowance + o.other);
+      // Excel rule (Transport_Division Sheet4): Profit = Work − (Diesel + Toll + Maintenance + Total Salary (salary sheet Balance Payable) + Trailer rent / other). VAT 5% inside work kept aside.
+      o.expenses = num(o.diesel + o.toll + o.maintenance + o.pay + o.other);
       o.workNet = num(o.work - o.vat);
       // Profit: salary is NOT subtracted (client rule); VAT 5% kept aside
-      o.profit = num(o.workNet - o.diesel - o.toll - o.maintenance - o.allowance - o.other);
+      o.profit = num(o.workNet - o.expenses);
       o.dieselPerTrip = o.trips ? num(o.diesel / o.trips) : 0;
       return o;
     });
@@ -110,11 +111,11 @@ function TransportReports() {
     const byMonth = months.map((m) => {
       const me = entries.filter((e) => monthKey(e.entry_date) === m);
       const work = sum(me, 'rent');
-      const salPart = num(salaries.filter((s) => monthKey(s.month) === m).reduce((t, s) => t + salaryPayable(s) - Number(s.trip_allowance || 0) - Number(s.allowance_carried || 0), 0));
-      const cost = num(sum(me, 'diesel') + sum(me, 'toll') + sum(me, 'maintenance') + sum(me, 'driver_allowance') + salPart
+      const salPart = num(salaries.filter((s) => monthKey(s.month) === m).reduce((t, s) => t + salaryPayable(s), 0));
+      const cost = num(sum(me, 'diesel') + sum(me, 'toll') + sum(me, 'maintenance') + salPart
         + sum(extras.filter((x) => monthKey(x.month) === m), 'amount'));
       const vat = vatSum(me);
-      return { m, label: monthLabel(m).replace(/ \d{4}$/, (y) => ` '${y.trim().slice(2)}`), work, vat, cost, profit: num(work - vat - (cost - salPart)) };
+      return { m, label: monthLabel(m).replace(/ \d{4}$/, (y) => ` '${y.trim().slice(2)}`), work, vat, cost, profit: num(work - vat - cost) };
     });
 
     const toCollect = es.filter((e) => Number(e.rent) > Number(e.received)).map((e) => ({ ...e, due: num(Number(e.rent) - Number(e.received)) }));
@@ -129,8 +130,7 @@ function TransportReports() {
     { label: 'Diesel', value: T.diesel, color: SERIES[0] },
     { label: 'Toll + visa exit fee', value: T.toll, color: SERIES[1] },
     { label: 'Maintenance', value: T.maintenance, color: SERIES[2] },
-    { label: 'Driver allowance', value: T.allowance, color: SERIES[5] },
-    { label: 'Salaries (fixed)', value: T.salary, color: SERIES[3] },
+    { label: 'Total salary (salary sheet)', value: T.pay, color: SERIES[3] },
     { label: 'Other (trailer rent etc.)', value: T.other, color: SERIES[4] }
   ];
   const biggestCost = [...costSlices].sort((a, b) => b.value - a.value)[0];
@@ -184,8 +184,7 @@ function TransportReports() {
             ['Received', T.received, `${T.work ? Math.round((T.received / T.work) * 100) : 0}% of work amount`],
             ['Receivable', T.receivable, plural(r.toCollect.length, 'trip') + ' not fully paid'],
             ['Diesel', T.diesel, ''], ['Toll + visa exit fee', T.toll, ''], ['Maintenance', T.maintenance, ''],
-            ['Driver allowance', T.allowance, T.allowanceOpen ? `${fmtAmt(T.allowanceOpen)} not paid yet` : 'All paid'],
-            ['Salaries (fixed part)', T.salary, r.wholeMonths ? 'Without driver allowance' : 'Not included in a 7-day view'], ['Other expenses', T.other, ''],
+            ['Total salary (salary sheet)', T.pay, r.wholeMonths ? 'Balance payable incl. driver allowance' : 'Not included in a 7-day view'], ['Trailer rent / other', T.other, ''],
             ['Total expenses', T.expenses, 'Includes salaries'], ['Profit', T.profit, `${margin}% of work amount · salary not subtracted`]
           ],
           boldRows: [10, 11]
@@ -236,7 +235,7 @@ function TransportReports() {
           <div className="rp-tile"><div className="rp-tile-label">🧾 VAT 5%</div><div className="rp-tile-num">{fmtAmt(T.vat)}</div><div className="rp-tile-sub">{T.vat ? `Inside work amount · without VAT ${fmtAmt(T.workNet)}` : 'No trip with VAT 5% added'}</div></div>
           <div className="rp-tile"><div className="rp-tile-label">✅ Received</div><div className="rp-tile-num">{fmtAmt(T.received)}</div><div className="rp-tile-sub">{T.work ? Math.round((T.received / T.work) * 100) : 0}% of work amount</div></div>
           <div className="rp-tile"><div className="rp-tile-label">⏳ Still to collect</div><div className={`rp-tile-num ${T.receivable > 0 ? 'neg' : ''}`}>{fmtAmt(T.receivable)}</div><div className="rp-tile-sub">{r.toCollect.length ? `${plural(r.toCollect.length, 'trip')} not fully paid` : 'Everything collected'}</div></div>
-          <div className="rp-tile"><div className="rp-tile-label">🧾 Total expenses</div><div className="rp-tile-num">{fmtAmt(T.expenses)}</div><div className="rp-tile-sub">Diesel {fmtAmt(T.diesel)} · Salary {fmtAmt(T.salary)}</div></div>
+          <div className="rp-tile"><div className="rp-tile-label">🧾 Total expenses</div><div className="rp-tile-num">{fmtAmt(T.expenses)}</div><div className="rp-tile-sub">Diesel {fmtAmt(T.diesel)} · Salary {fmtAmt(T.pay)}</div></div>
           <div className="rp-tile hero"><div className="rp-tile-label">📈 Profit</div><div className="rp-tile-num">{fmtAmt(T.profit)}</div><div className="rp-tile-sub">{margin}% of work amount{T.vat ? ' · VAT kept aside' : ''}</div></div>
           <div className="rp-tile"><div className="rp-tile-label">🛣 Top route</div><div className="rp-tile-num" style={{ fontSize: 18 }}>{topRoute ? topRoute.label : '-'}</div><div className="rp-tile-sub">{topRoute ? `${plural(topRoute.trips, 'trip')} · ${fmtAmt(topRoute.rent)} OMR` : 'No trips yet'}</div></div>
           <div className="rp-tile"><div className="rp-tile-label">⛽ Diesel per trip</div><div className="rp-tile-num">{T.trips ? fmtAmt(num(T.diesel / T.trips)) : 0}</div><div className="rp-tile-sub">{fmtAmt(T.diesel)} OMR diesel in total</div></div>
