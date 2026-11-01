@@ -9,6 +9,7 @@ import DocFiles from '@/components/DocFiles';
 import Modal from '@/components/Modal';
 import Expiry from '@/components/Expiry';
 import AttendanceSheet from '@/components/AttendanceSheet';
+import SalarySlips from '@/components/SalarySlips';
 import { sb } from '@/lib/supabase';
 import { COMPANIES, n, r3 } from '@/lib/expenses';
 import { daysOfMonth, marksByStaff, personMonth } from '@/lib/attendance';
@@ -32,7 +33,8 @@ const TABS = [
   ['drivers', '🚚 Drivers'],
   ['site', '👷 Site Employees'],
   ['sub', '🤝 Subcontractors'],
-  ['attendance', '🗓 Attendance']
+  ['attendance', '🗓 Attendance'],
+  ['slips', '🧾 Salary slips']
 ];
 const TICKETS = ['Yes', 'No', 'Yearly', 'Every 2 years'];
 const BUCKET = 'staff-files';
@@ -341,7 +343,8 @@ function PersonnelPage() {
 
   if (staff === null) return <div className="loading">Loading...</div>;
 
-  const showCo = tab !== 'sub' && tab !== 'attendance';
+  const showCo = tab !== 'sub' && tab !== 'attendance' && tab !== 'slips';
+  const own = tab === 'attendance' || tab === 'slips'; // tabs with their own toolbar
   const canDel = isAdmin && canDelete;
   let grid = null;
   if (tab === 'office' || tab === 'site') {
@@ -384,8 +387,8 @@ function PersonnelPage() {
               <button type="button" className="btn ghost sm" onClick={() => setMonth(shiftM(month, 1))} aria-label="Next month">›</button>
             </div>
           ) : null}
-          {tab !== 'attendance' && <input className="pn-search" type="search" placeholder="Search name, passport, mobile..." value={q} onChange={(e) => setQ(e.target.value)} />}
-          {tab !== 'attendance' && <button type="button" className="btn ghost" onClick={doExcel}>📗 Excel</button>}
+          {!own && <input className="pn-search" type="search" placeholder="Search name, passport, mobile..." value={q} onChange={(e) => setQ(e.target.value)} />}
+          {!own && <button type="button" className="btn ghost" onClick={doExcel}>📗 Excel</button>}
         </div>
       </div>
 
@@ -417,7 +420,7 @@ function PersonnelPage() {
       {tab === 'drivers' && <p className="muted pn-note no-print">Same drivers as Transport &gt; Drivers. Monthly driver salaries stay in the Transport salary sheets.</p>}
 
       {/* Two buttons just above the table: ✏️ Edit (menu: Edit cells, Add new, Delete, Undo) and 🖨 Print */}
-      {tab !== 'attendance' && <div className="pn-bar no-print">
+      {!own && <div className="pn-bar no-print">
         {tab !== 'attendance' && isAdmin && (
           <EditMenu
             edit={edit} delMode={delMode} undoCount={undo.length}
@@ -434,8 +437,8 @@ function PersonnelPage() {
         {(edit || delMode) && <span className="pn-mode">{[edit && '✏️ Editing: tap a box to change it', delMode && '🗑 Delete buttons are on'].filter(Boolean).join(' · ')}</span>}
       </div>}
 
-      {tab === 'attendance' ? (
-        <AttendanceSheet />
+      {tab === 'attendance' ? <AttendanceSheet /> : tab === 'slips' ? (
+        <SalarySlips staff={staff} drivers={drivers} me={me} isAdmin={isAdmin} flash={flash} onSend={(x) => setSend(x)} />
       ) : grid}
 
       {send && <SendModal table={send.table} row={(send.table === 'exp_staff' ? staff : drivers).find((x) => x.id === send.row.id) || send.row} onClose={() => setSend(null)} onToggle={(row, on) => patchRow(send.table, row, { slip_link_on: on })} flash={flash} />}
@@ -505,12 +508,11 @@ function SendModal({ row, onClose, onToggle, flash }) {
   const url = typeof window !== 'undefined' ? `${window.location.origin}/s/${row.slip_token}` : '';
   const digits = String(row.mobile || row.phone || '').replace(/\D/g, '');
   const wa = digits ? (digits.length === 8 ? `968${digits}` : digits) : '';
-  const count = filesOf(row, 'slip').length;
-  const text = `Salam ${row.name}\n\nThis is your salary slip link\n${url}\n\nOpen it any time to see and download your salary slips`;
+  const text = `Salam ${row.name}\n\nThis is your salary slip link\n${url}\n\nOpen it in Chrome\nTap Add to my phone\nTap Notify me\n\nEvery month your salary slip shows there with PDF download`;
   return (
     <Modal title={`Send To Employee · ${row.name}`} onClose={onClose}>
       <p className="muted" style={{ marginTop: 0 }}>
-        His own link. It opens only his salary slips ({count} uploaded), no login needed. Upload slips with ⋯ More · Salary slip.
+        His own link. Install it once on his phone: every month his approved salary slip shows there by itself (tab 🧾 Salary slips), with PDF download. No login needed.
       </p>
       <div className="pn-link">
         <code>{url}</code>

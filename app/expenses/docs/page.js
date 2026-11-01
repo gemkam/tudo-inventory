@@ -173,6 +173,10 @@ function DocsPage() {
           onClick={() => { if (doc) closeDoc(); setCo(c.key); }}>{c.short}</button>
       ))}
       <Link href="/transport" className="co-tab co-tr">🚚 Transport</Link>
+      <Link href="/expenses/summary" className="co-tab co-sum">📊 Group Summary</Link>
+      <Link href="/docs" className="co-tab co-sum">📋 Checklist</Link>
+      <span className="co-tab co-sum co-inv on" role="tab" aria-selected="true">🧾 Invoices</span>
+      <Link href="/expenses/vat" className="co-tab co-sum co-vat">🧾 VAT return</Link>
     </div>
   );
 

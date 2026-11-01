@@ -134,7 +134,8 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
   // Buttons that used to sit at the bottom of Home (31 Oct 2026): now in the top bar
   // Settings, Users and Activity live inside Admin (/admin) since 31 Oct 2026
   // Full access (editor): everything except the Admin panel; only the Administrator gets the Admin button (31 Oct 2026)
-  if (user.isAdmin) quick.push(['/expenses/docs', 'Invoices', 'invoice'], ['/entry', 'Data entry', 'entry']);
+  // Invoices moved into the All Companies tabs (before VAT return), 1 Nov 2026
+  if (user.isAdmin) quick.push(['/entry', 'Data entry', 'entry']);
   // 👥 Personnel (1 Nov 2026): Employees (Office, Drivers, Site, Subcontractors, Attendance), just before Admin
   if (user.canRead) quick.push(['/personnel', 'Personnel', 'users']);
   if (user.isOwner) quick.push(['/admin', 'Admin', 'shield']);
@@ -170,7 +171,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
             ))}
             {quick.length > 0 && <i className="tbx-sep" aria-hidden="true" />}
             {quick.map(([href, label, ico]) => (
-              <Link key={href} href={href} className={path === href || (href === '/admin' && ['/settings', '/users', '/activity'].some((x) => path.startsWith(x))) || (path.startsWith(`${href}/`) && !(href === '/expenses' && path === '/expenses/docs')) || (href === '/expenses' && (path.startsWith('/transport') || path === '/docs')) ? 'active' : ''}>
+              <Link key={href} href={href} className={path === href || (href === '/admin' && ['/settings', '/users', '/activity'].some((x) => path.startsWith(x))) || path.startsWith(`${href}/`) || (href === '/expenses' && (path.startsWith('/transport') || path === '/docs')) ? 'active' : ''}>
                 <Ico name={ico} /><span>{label}</span>
               </Link>
             ))}

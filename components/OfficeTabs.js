@@ -19,6 +19,7 @@ export default function OfficeTabs({ active = 'transport' }) {
       {active === 'docs'
         ? <span className="co-tab co-sum on" role="tab" aria-selected="true">📋 Checklist</span>
         : <Link href="/docs" className="co-tab co-sum">📋 Checklist</Link>}
+      <Link href="/expenses/docs?kind=invoice" className="co-tab co-sum co-inv">🧾 Invoices</Link>
       <Link href="/expenses/vat" className="co-tab co-sum co-vat">🧾 VAT return</Link>
     </div>
   );

@@ -56,7 +56,7 @@ function trail(path, q, names) {
   if (seg[0] === 'bills') return [HOME, INVENTORY, ['Bills', path]];
   if (seg[0] === 'log') return [HOME, INVENTORY, ['Stock log', path]];
   if (seg[0] === 'personnel') {
-    const t = { office: 'Office Employees', drivers: 'Drivers', site: 'Site Employees', sub: 'Subcontractors', attendance: 'Attendance' }[q.get('tab') || 'office'];
+    const t = { office: 'Office Employees', drivers: 'Drivers', site: 'Site Employees', sub: 'Subcontractors', attendance: 'Attendance', slips: 'Salary slips' }[q.get('tab') || 'office'];
     return [HOME, ['Personnel', '/personnel'], ['Employees', '/personnel'], [t || 'Office Employees', path]];
   }
   if (seg[0] === 'admin') return [HOME, ADMIN];
