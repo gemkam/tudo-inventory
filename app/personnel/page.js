@@ -441,7 +441,10 @@ function PersonnelPage() {
 
       {showCo && (
         <div className="pn-chips no-print">
-          <button type="button" className={!co ? 'on' : ''} onClick={() => setCo('')}>All companies</button>
+          <CompanyList companies={allCos} staff={staff || []} drivers={drivers || []} active={!co}
+            onAll={() => setCo('')}
+            onPick={(k) => setCo(k)}
+            onPerson={(k, tabKey, name) => { setCo(k); goTab(tabKey); setQ(name); }} />
           {allCos.map((c) => <button key={c.key} type="button" className={co === c.key ? 'on' : ''} onClick={() => setCo(c.key)} title={c.name || c.short}>{c.short}</button>)}
         </div>
       )}
@@ -556,6 +559,63 @@ function EditMenu({ edit, delMode, undoCount, canDel, delNote, onEdit, onAdd, on
           <button type="button" role="menuitem" className={delMode ? 'on' : ''} onClick={act(onDelete)} disabled={!canDel}>🗑 {delMode ? 'Hide Delete buttons' : 'Delete'}<small>{delNote || 'shows a Delete button on each row'}</small></button>
           <button type="button" role="menuitem" onClick={act(onUndo)} disabled={!undoCount}>↶ Undo{undoCount ? ` (${undoCount})` : ''}<small>last change, add or delete</small></button>
           {on && <button type="button" role="menuitem" className="done" onClick={act(onDone)}>✓ Done</button>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* "All companies ▾": every company with its employees (Office, Site, Drivers). Subcontractors are left out:
+   their visa is not with our companies. Tap a company to filter, tap a name to open him. */
+function CompanyList({ companies, staff, drivers, active, onAll, onPick, onPerson }) {
+  const [open, setOpen] = useState(false);
+  const [shut, setShut] = useState({});
+  const box = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = (e) => { if (box.current && !box.current.contains(e.target)) setOpen(false); };
+    const esc = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('pointerdown', close);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('pointerdown', close); document.removeEventListener('keydown', esc); };
+  }, [open]);
+  const people = (k) => [
+    ...staff.filter((p) => p.company === k && p.active !== false).map((p) => ({ id: p.id, name: p.name, type: p.staff_type === 'Site' ? 'Site' : 'Office', tab: p.staff_type === 'Site' ? 'site' : 'office', job: p.designation || p.department || '' })),
+    ...drivers.filter((p) => (p.company || 'modern-city') === k).map((p) => ({ id: p.id, name: p.name, type: 'Driver', tab: 'drivers', job: p.vehicle_no || '' }))
+  ];
+  const total = companies.reduce((t, c) => t + people(c.key).length, 0);
+  return (
+    <div className="cl" ref={box}>
+      <button type="button" className={active ? 'on' : ''} aria-haspopup="listbox" aria-expanded={open} onClick={() => { onAll(); setOpen((v) => !v); }}>
+        All companies <small className="cl-n">{total}</small> <span aria-hidden="true">▾</span>
+      </button>
+      {open && (
+        <div className="cl-menu" role="listbox">
+          <div className="cl-note">Employees on our companies' visa (subcontractors not included)</div>
+          {companies.map((c) => {
+            const list = people(c.key);
+            const n = (t) => list.filter((x) => x.type === t).length;
+            return (
+              <div key={c.key} className="cl-co">
+                <div className="cl-head">
+                  <button type="button" className="cl-name" onClick={() => { onPick(c.key); setOpen(false); }} title={c.name}>
+                    <b>{c.short}</b><small>{list.length} · Office {n('Office')} · Site {n('Site')} · Drivers {n('Driver')}</small>
+                  </button>
+                  {list.length > 0 && <button type="button" className="cl-tog" aria-label={shut[c.key] ? 'Show names' : 'Hide names'} onClick={() => setShut((x) => ({ ...x, [c.key]: !x[c.key] }))}>{shut[c.key] ? '▸' : '▾'}</button>}
+                </div>
+                {!shut[c.key] && (
+                  <div className="cl-people">
+                    {list.map((p) => (
+                      <button key={p.id} type="button" className="cl-p" onClick={() => { onPerson(c.key, p.tab, p.name); setOpen(false); }}>
+                        <span>{p.name}</span><small>{[p.type, p.job].filter(Boolean).join(' · ')}</small>
+                      </button>
+                    ))}
+                    {!list.length && <small className="muted">No employees yet</small>}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
