@@ -443,7 +443,6 @@ function PersonnelPage() {
         <div className="pn-chips no-print">
           <button type="button" className={!co ? 'on' : ''} onClick={() => setCo('')}>All companies</button>
           {allCos.map((c) => <button key={c.key} type="button" className={co === c.key ? 'on' : ''} onClick={() => setCo(c.key)} title={c.name || c.short}>{c.short}</button>)}
-          {isAdmin && <button type="button" className="pn-addco" onClick={() => setAddCo({ short: '', name: '' })}>＋ Add company</button>}
         </div>
       )}
 
