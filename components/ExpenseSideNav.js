@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { COMPANIES } from '@/lib/expenses';
 import { TransportMenu } from '@/components/TransportSideNav';
+import SideToggle from '@/components/SideToggle';
 
 /*
   Side buttons for All Companies (rendered by components/AuthGate.js on every /expenses page), same look as the
@@ -53,7 +54,7 @@ export default function ExpenseSideNav({ isAdmin = false }) {
         🧾 All Companies menu{onSummary ? ' · Reports & Summary' : here ? ` · ${here.short}` : ''} <span aria-hidden="true">{phoneOpen ? '▴' : '▾'}</span>
       </button>
       <nav className="tsn-list">
-        <div className="tsn-title">🧾 All Companies</div>
+        <div className="tsn-title"><span className="tsn-title-tx">🧾 All Companies</span><SideToggle /></div>
         <Btn href="/docs" on={false} icon="📋">Documents Checklist</Btn>
         <Btn href="/expenses/salary" on={path === '/expenses/salary'} icon="💰">Salary</Btn>
         <Btn href="/expenses/vat" on={path === '/expenses/vat'} icon="🧾">VAT return</Btn>

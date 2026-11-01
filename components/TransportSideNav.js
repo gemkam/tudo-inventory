@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { sb } from '@/lib/supabase';
 import { runTransportAction } from '@/lib/transportActions';
+import SideToggle from '@/components/SideToggle';
 
 /*
   Side buttons for Transport Expense (rendered by components/AuthGate.js on every /transport page except the salary slip).
@@ -96,7 +97,7 @@ export default function TransportSideNav({ isAdmin = false }) {
         🚚 Transport menu <span aria-hidden="true">{phoneOpen ? '▴' : '▾'}</span>
       </button>
       <nav className="tsn-list">
-        <div className="tsn-title">🚚 Transport Expense</div>
+        <div className="tsn-title"><span className="tsn-title-tx">🚚 Transport Expense</span><SideToggle /></div>
         <TransportMenu isAdmin={isAdmin} />
         <div className="tsn-sep" />
         <Link href="/expenses/summary" className="tsn-btn"><span className="tsn-ic" aria-hidden="true">🏢</span><span className="tsn-tx">Reports & Summary</span></Link>
