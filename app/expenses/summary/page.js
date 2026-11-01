@@ -213,16 +213,12 @@ function SummaryPage() {
       <div className="page-tools">
         <Link href="/expenses" className="crumb">← All Companies</Link>
         <div className="tools">
-          <button type="button" className="btn" onClick={() => openTab('sales')} title="Sales: everything earned">💰 Sales</button>
           <button type="button" className="btn" onClick={() => {
             const el = document.getElementById('pl-statement');
             if (!el) return;
             el.scrollIntoView({ behavior: 'smooth', block: 'start' });
             el.classList.remove('pl-flash'); void el.offsetWidth; el.classList.add('pl-flash');
           }} title="Go to the Profit and Loss statement">📑 Profit and Loss</button>
-          <button type="button" className="btn" onClick={() => openTab('vat')}>🧾 VAT return</button>
-          <button type="button" className="btn" onClick={() => openTab('cash')}>💵 Cash forecast</button>
-          <button type="button" className="btn" onClick={() => openTab('checks')}>🔍 Checks</button>
           {isAdmin && <button type="button" className="btn" onClick={() => setBudgetOpen(true)}>🎯 Budgets</button>}
           <button type="button" className="btn" onClick={downloadPdf} disabled={busy}>{busy ? 'Making PDF...' : '📕 PDF'}</button>
           <button type="button" className="btn" onClick={share}>📤 Share</button>
@@ -232,33 +228,10 @@ function SummaryPage() {
         </div>
       </div>
 
-      <div className="co-switch no-print" role="tablist" aria-label="Company">
-        {COMPANIES.map((c) => <Link key={c.key} href={`/expenses?co=${c.key}`} role="tab" className="co-tab">{c.short}</Link>)}
-        <Link href="/transport" className="co-tab co-tr">🚚 Transport</Link>
-        <Link href="/docs" className="co-tab co-sum">📋 Checklist</Link>
-        <Link href="/expenses/docs?kind=invoice" className="co-tab">🧾 Invoices</Link>
-        <Link href="/expenses/salary" className="co-tab">💰 Salary</Link>
-        <Link href="/expenses/vat" className="co-tab co-sum co-vat">🧾 VAT return</Link>
-      </div>
-
-
-
 
       <div className="sum-controls no-print">
-        <div className="sum-dd" ref={ddRef}>
-          <button type="button" className="btn" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
-            Show: {G.chosen.length === SOURCES.length ? 'All' : G.chosen.length ? G.chosen.map((s) => s.label).join(', ') : 'Choose...'} ▾
-          </button>
-          {open && (
-            <div className="sum-dd-menu" role="menu">
-              <label className="check"><input type="checkbox" checked={G.chosen.length === SOURCES.length} onChange={(e) => savePick(e.target.checked ? SOURCES.map((s) => s.key) : [])} /> <b>All</b></label>
-              {SOURCES.map((s) => (
-                <label key={s.key} className="check"><input type="checkbox" checked={pick.includes(s.key)} onChange={() => toggle(s.key)} /> {s.label}</label>
-              ))}
-            </div>
-          )}
-        </div>
         <div className="sum-pills" role="group" aria-label="Quick select">
+          <button type="button" className={`rp-chip ${G.chosen.length === SOURCES.length ? 'active' : ''}`} onClick={() => savePick(SOURCES.map((x) => x.key))} aria-pressed={G.chosen.length === SOURCES.length}>{G.chosen.length === SOURCES.length ? '✓ ' : ''}All</button>
           {SOURCES.map((s) => (
             <button key={s.key} type="button" className={`rp-chip ${pick.includes(s.key) ? 'active' : ''}`} onClick={() => toggle(s.key)} aria-pressed={pick.includes(s.key)}>
               {pick.includes(s.key) ? '✓ ' : ''}{s.label}
