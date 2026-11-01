@@ -6,6 +6,7 @@ import AuthGate, { useUser } from '@/components/AuthGate';
 import Modal from '@/components/Modal';
 import { sb } from '@/lib/supabase';
 import DateInput from '@/components/DateInput';
+import { requestEditPassword, lockEdit } from '@/lib/editLock';
 
 /* ---------- Company details (shown on the invoice only, every line can be edited on the invoice) ---------- */
 const COMPANY = {
@@ -434,7 +435,7 @@ function InvoicePage() {
                     <td>{x.kind === 'interim' ? (x.client || x.project) : x.customer}</td>
                     <td className="num">{money(totals(x).total)}</td>
                     <td className="num">
-                      <button type="button" className="iv-row-edit" onClick={(e) => { e.stopPropagation(); open(x); }}>
+                      <button type="button" className="iv-row-edit" onClick={async (e) => { e.stopPropagation(); if (!isAdmin || await requestEditPassword()) open(x); }}>
                         {isAdmin ? '✏️ Edit' : 'Open'}
                       </button>
                     </td>

@@ -15,6 +15,8 @@ import { RaufCtx, defaultGreeting } from '@/components/RaufContext';
 import ThemeMenu from '@/components/ThemeMenu';
 import OfficeTabs from '@/components/OfficeTabs';
 import BackToTop from '@/components/BackToTop';
+import EditPasswordHost from '@/components/EditPasswordHost';
+import { lockEdit } from '@/lib/editLock';
 import { startActivity, logPage, endActivity } from '@/lib/activity';
 
 /*
@@ -101,6 +103,9 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
   useEffect(() => {
     if (user && path) logPage(path);
   }, [user, path]);
+
+  // Edit password: opening another page locks editing again
+  useEffect(() => { lockEdit(); }, [path]);
 
   // Every page opens at the top (no jumping to the middle)
   useEffect(() => {
@@ -202,6 +207,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
       {/* 🖨 Print with column choice (1 Nov 2026): in each page's toolbar, not in the top bar */}
       {user.canRead && !blocked && !user.isEntry && <PrintColumns auto />}
       <BackToTop />
+      <EditPasswordHost />
       {user.canRead && !blocked && <TableCards />}
       {user.canRead && (
         <RaufAssistant

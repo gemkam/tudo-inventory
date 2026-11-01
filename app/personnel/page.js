@@ -8,6 +8,7 @@ import DataGrid from '@/components/DataGrid';
 import DocFiles from '@/components/DocFiles';
 import Modal from '@/components/Modal';
 import Expiry from '@/components/Expiry';
+import { requestEditPassword, lockEdit } from '@/lib/editLock';
 import AttendanceSheet from '@/components/AttendanceSheet';
 import SendSlipLink from '@/components/SendSlipLink';
 import SlipViewer from '@/components/SlipViewer';
@@ -549,7 +550,7 @@ function PersonnelPage() {
             onUndo={doUndo}
             salaryOn={salaryOn} onSalary={() => setSalaryOn((v) => !v)}
             papersOn={papersOn} onPapers={() => setPapersOn((v) => !v)}
-            onDone={() => { setEdit(false); setDelMode(false); setSalaryOn(false); setPapersOn(false); }}
+            onDone={() => { setEdit(false); setDelMode(false); setSalaryOn(false); setPapersOn(false); lockEdit(); }}
           />
         )}
         {isAdmin && (tab === 'office' || tab === 'site' || tab === 'drivers') && (
@@ -677,7 +678,7 @@ function EditMenu({ edit, delMode, undoCount, canDel, delNote, onEdit, onAdd, on
   const on = edit || delMode || salaryOn || papersOn;
   return (
     <div className="pn-edit" ref={box}>
-      <button type="button" className={`btn${on ? ' in' : ''}`} aria-pressed={on} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+      <button type="button" className={`btn${on ? ' in' : ''}`} aria-pressed={on} aria-haspopup="menu" aria-expanded={open} onClick={async () => { if (open) { setOpen(false); return; } if (await requestEditPassword()) setOpen(true); }}>
         ✏️ Edit <span aria-hidden="true">▾</span>
       </button>
       {open && (

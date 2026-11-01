@@ -19,6 +19,7 @@ import Omr from '@/components/Omr';
 import EditToggle from '@/components/EditToggle';
 import SalarySlipPaper from '@/components/SalarySlip';
 import { SALARY_FIELDS, salaryTotal, salaryPayable, allowancePlan, vatOf, driverProfit, TAX_RATE } from '@/lib/transport';
+import { requestEditPassword, lockEdit } from '@/lib/editLock';
 
 const NUM_KEYS = ['rent', 'received', 'driver_allowance', 'diesel', 'toll', 'maintenance', 'gate_pass', 'exit_fee', 'empty_border_fee', 'container_wash', 'vehicle_wash'];
 
@@ -509,7 +510,8 @@ function DriverSheet() {
     setTimeout(() => openSlipEdit(), 0);
   }
 
-  function openSlipEdit() {
+  async function openSlipEdit() {
+    if (!(await requestEditPassword())) return;
     const v = Object.fromEntries(EDIT_FIELDS.map(([k]) => [k, Number(slipSal[k] || 0)]));
     v.trips = Object.fromEntries(allowTrips.map((e) => [e.id, { paid: e.allowance_salary_id === slipSal.id, amt: Number(e.driver_allowance || 0) }]));
     v.allowMonth = Object.fromEntries(allowMonths.map((k) => [k, num(allowTrips.filter((e) => monthKey(e.entry_date) === k && e.allowance_salary_id === slipSal.id).reduce((t, e) => t + Number(e.driver_allowance || 0), 0))]));
@@ -628,7 +630,7 @@ function DriverSheet() {
             </select>
           </div>
           {isAdmin && (
-            <button type="button" className={`btn ${editMode ? 'in' : ''}`} onClick={() => setEditMode((v) => !v)} aria-pressed={editMode}>
+            <button type="button" className={`btn ${editMode ? 'in' : ''}`} onClick={async () => { if (editMode) { lockEdit(); setEditMode(false); } else if (await requestEditPassword()) setEditMode(true); }} aria-pressed={editMode}>
               {editMode ? '✓ Done editing' : 'Edit'}
             </button>
           )}

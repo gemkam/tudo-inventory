@@ -8,6 +8,7 @@ import Modal from '@/components/Modal';
 import { sb, isLow, fmtDateTime } from '@/lib/supabase';
 import Omr from '@/components/Omr';
 import EditToggle from '@/components/EditToggle';
+import { requestEditPassword, lockEdit } from '@/lib/editLock';
 
 /*
   Sheet columns.
@@ -696,7 +697,7 @@ function SheetPage() {
             <input id="sheet-search" type="search" placeholder="Search items" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           {isAdmin && (
-            <button type="button" className={`btn ${editMode ? 'in' : ''}`} onClick={toggleEditMode} aria-pressed={editMode}>
+            <button type="button" className={`btn ${editMode ? 'in' : ''}`} onClick={async () => { if (editMode) { lockEdit(); toggleEditMode(); } else if (await requestEditPassword()) toggleEditMode(); }} aria-pressed={editMode}>
               {editMode ? '✓ Done editing' : 'Edit'}
             </button>
           )}

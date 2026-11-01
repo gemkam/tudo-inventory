@@ -20,6 +20,7 @@ import AllowanceNotes from '@/components/AllowanceNotes';
 import { allowanceStory } from '@/lib/transport';
 import { PayCard, PaySection, PayRow, AmountInput, BalanceBox, money } from '@/components/PayCard';
 import { hasPaidCols, driverBalance, salaryDue } from '@/lib/payBalance';
+import { requestEditPassword, lockEdit } from '@/lib/editLock';
 
 /*
   One driver's own salary sheet (/transport/salary-sheet/<driver id>).
@@ -215,7 +216,7 @@ function DriverSheet() {
                   <PayCard key={s.id} title={monthLabel(k)} className={editing ? 'editing' : ''} badge={due == null ? null : due > 0.0005 ? <span className="pc-tag due">Not paid {money(due)}</span> : <span className="pc-tag ok">Paid ✓</span>}>
                     {isAdmin && (
                       <div className="pc-act no-print">
-                        <button type="button" className={`btn small ${editing ? 'in' : ''}`} onClick={() => setEditSal(editing ? null : s.id)}>{editing ? '✓ Done' : '✏️ Edit'}</button>
+                        <button type="button" className={`btn small ${editing ? 'in' : ''}`} onClick={async () => { if (editing) { lockEdit(); setEditSal(null); } else if (await requestEditPassword()) setEditSal(s.id); }}>{editing ? '✓ Done' : '✏️ Edit'}</button>
                         {(undo[s.id] || []).length > 0 && <button type="button" className="btn small ghost" onClick={() => undoSal(s)}>↶ Undo{undo[s.id].length > 1 ? ` (${undo[s.id].length})` : ''}</button>}
                         {hasPaidCols(s) && due > 0.0005 && <button type="button" className="btn small in" onClick={() => savePaid(s, salaryPayable(s))}>✓ Mark paid</button>}
                         {hasPaidCols(s) && s.paid_amount != null && <button type="button" className="btn small ghost" onClick={() => savePaid(s, null)}>✗ Not paid</button>}

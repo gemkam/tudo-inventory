@@ -9,6 +9,7 @@ import { COMPANIES } from '@/lib/expenses';
 import { daysOfMonth, marksByStaff } from '@/lib/attendance';
 import { exportExcel, exportStamp, todayISO } from '@/lib/sheet';
 import PaidButton from '@/components/PaidButton';
+import { requestEditPassword, lockEdit } from '@/lib/editLock';
 import { notifySlips, loadCredits, markPaid, unmarkPaid, creditKey } from '@/lib/salaryCredit';
 import { buildStaffSlip, buildDriverSlip, totals, sameMoney, slipPdf, slipsPdf, m3, r3, mKey, monthName, prevMonth } from '@/lib/salarySlips';
 
@@ -303,7 +304,7 @@ export default function SalarySlips({ staff, drivers, me, isAdmin, flash, onSend
         <SlipEditMenu
           isAdmin={isAdmin} editOn={editOn} delOn={delOn} undoCount={undo.length} undoLabel={undo[undo.length - 1]?.label || ''}
           onEdit={() => setEditOn((v) => !v)} onAdd={() => setAddOpen(true)} onUndo={doUndo} onDelete={() => setDelOn((v) => !v)}
-          onImport={() => setImportOpen(true)} onPdf={doPdf} onExcel={doExcel} onDone={() => { setEditOn(false); setDelOn(false); }} />
+          onImport={() => setImportOpen(true)} onPdf={doPdf} onExcel={doExcel} onDone={() => { setEditOn(false); setDelOn(false); lockEdit(); }} />
         <PrintColumns className="btn ghost" />
       </div>
 
@@ -509,7 +510,7 @@ function SlipEditMenu({ isAdmin, editOn, delOn, undoCount, undoLabel, onEdit, on
   const on = editOn || delOn;
   return (
     <div className="pn-edit" ref={box}>
-      <button type="button" className={`btn${on ? ' in' : ''}`} aria-pressed={on} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)}>✏️ Edit <span aria-hidden="true">▾</span></button>
+      <button type="button" className={`btn${on ? ' in' : ''}`} aria-pressed={on} aria-haspopup="menu" aria-expanded={open} onClick={async () => { if (open) { setOpen(false); return; } if (await requestEditPassword()) setOpen(true); }}>✏️ Edit <span aria-hidden="true">▾</span></button>
       {open && (
         <div className="pn-menu" role="menu">
           {isAdmin && <button type="button" role="menuitem" className={editOn ? 'on' : ''} onClick={act(onEdit)}>✏️ {editOn ? 'Stop editing' : 'Edit slips'}<small>Deductions, Regenerate, Approve on each row</small></button>}
