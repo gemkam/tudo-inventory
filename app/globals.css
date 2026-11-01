@@ -3692,7 +3692,7 @@ body:has(.ent-page.ur) .modal, body:has(.ent-page.ur) .dfv { font-family: 'Noto 
 /* ===== Opening animation (1 Nov 2026, white look), components/IntroSplash.js =====
    Plays on every open / refresh of the main page and from the "▶ Intro" button.
    Timeline (ms): 0 stage fades in · 350 logo focuses · 1150 arrow draws · 1450 TUDO NUM GROUP letters rise
-   · 2550 OFFICE SYSTEMS closes in · 2750 light runs over the title · 3400 Powered by KS TECH LLC · 5400 fade out → normal page */
+   · 2550 OFFICE SYSTEMS closes in · 2750 light runs over the title · 3400 Powered by KS TECH LLC · ~5000 all shown, holds 3 s · 8000 fade out → normal page */
 html.intro-playing, html.intro-playing body { overflow: hidden; }
 html.intro-done .intro-splash { display: none !important; }
 .content { transition: transform .9s cubic-bezier(.16, 1, .3, 1), opacity .9s ease, filter .9s ease; }

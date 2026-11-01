@@ -13,7 +13,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { INTRO_REPLAY } from '@/lib/intro';
 
-const OUT_AT = 5400;   // ms after open when the fade out starts
+const OUT_AT = 8000;   // ms after open when the fade out starts (all done by ~5s, then holds 3 s)
 const OUT_MS = 900;    // length of the fade out
 
 function Letters({ text, start, step, glint, className }) {
