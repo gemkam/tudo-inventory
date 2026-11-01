@@ -1,21 +1,20 @@
 'use client';
-// Opening animation (1 Nov 2026).
-// Plays once per browser tab when the app is first opened:
-//   1. dark stage fades in (moving light in the theme colour), the Tudo Num Group logo comes into focus
-//      and its green arrow draws itself up
+// Opening animation (1 Nov 2026, white look).
+// Plays every time the MAIN page (/) is opened or refreshed, and again from the "▶ Intro" button on the Home page:
+//   1. white stage fades in (soft moving light), the Tudo Num Group logo comes into focus
+//      and its green arrow draws itself up, a shine runs over it
 //   2. "TUDO NUM GROUP" letters rise one by one out of a blur, then a light runs across them
 //   3. "OFFICE SYSTEMS" closes in from wide letter spacing, gold lines draw out on both sides
 //   4. "Powered by KS TECH LLC" rises at the bottom with a glowing line
 //   5. everything fades away and the normal page comes forward
-// Tap / click / any key skips it. Not shown to people who ask their phone for less motion.
+// Tap / click / any key skips it. Not shown to people who ask their device for less motion.
 // The overlay is in the server HTML so the page never flashes before it; INTRO_BOOT
-// (lib/intro.js, run in app/layout.js <head>) hides it at once if it already played in this tab.
+// (lib/intro.js, run in app/layout.js <head>) hides it at once on every page except the main page.
 import { useEffect, useRef, useState } from 'react';
-import { INTRO_KEY as KEY } from '@/lib/intro';
+import { INTRO_REPLAY } from '@/lib/intro';
 
 const OUT_AT = 5400;   // ms after open when the fade out starts
 const OUT_MS = 900;    // length of the fade out
-
 
 function Letters({ text, start, step, glint, className }) {
   let i = 0;
@@ -36,13 +35,16 @@ function Letters({ text, start, step, glint, className }) {
 
 export default function IntroSplash() {
   const [state, setState] = useState('play'); // play | out | gone
+  const [run, setRun] = useState(0);           // changes on replay so every CSS animation starts again
   const timers = useRef([]);
   const leaving = useRef(false);
+
+  const clear = () => { timers.current.forEach(clearTimeout); timers.current = []; };
 
   const leave = () => {
     if (leaving.current) return;
     leaving.current = true;
-    timers.current.forEach(clearTimeout);
+    clear();
     const root = document.documentElement;
     setState('out');
     root.classList.remove('intro-playing');   // page underneath comes forward while the splash fades
@@ -52,17 +54,30 @@ export default function IntroSplash() {
     }, OUT_MS));
   };
 
+  const start = () => {
+    clear();
+    leaving.current = false;
+    const root = document.documentElement;
+    root.classList.remove('intro-done');
+    root.classList.add('intro-playing');
+    setRun((r) => r + 1);
+    setState('play');
+    timers.current.push(setTimeout(leave, OUT_AT));
+  };
+
   useEffect(() => {
     const root = document.documentElement;
-    if (root.classList.contains('intro-done')) { setState('gone'); return undefined; }
-    try { sessionStorage.setItem(KEY, '1'); } catch (e) { /* private mode: plays each time */ }
-    root.classList.add('intro-playing');
-    timers.current.push(setTimeout(leave, OUT_AT));
-    const onKey = () => leave();
+    if (root.classList.contains('intro-done')) setState('gone');
+    else { root.classList.add('intro-playing'); timers.current.push(setTimeout(leave, OUT_AT)); }
+
+    const onKey = () => { if (!leaving.current && root.classList.contains('intro-playing')) leave(); };
+    const onReplay = () => start();
     window.addEventListener('keydown', onKey);
+    window.addEventListener(INTRO_REPLAY, onReplay);
     return () => {
-      timers.current.forEach(clearTimeout);
+      clear();
       window.removeEventListener('keydown', onKey);
+      window.removeEventListener(INTRO_REPLAY, onReplay);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -70,12 +85,11 @@ export default function IntroSplash() {
   if (state === 'gone') return null;
 
   return (
-    <div className={`intro-splash${state === 'out' ? ' is-out' : ''}`} role="presentation" onClick={leave}>
+    <div key={run} className={`intro-splash${state === 'out' ? ' is-out' : ''}`} role="presentation" onClick={leave}>
       <div className="is-aurora" aria-hidden="true">
         <i className="a1" /><i className="a2" /><i className="a3" />
       </div>
       <div className="is-grid" aria-hidden="true" />
-      <div className="is-vignette" aria-hidden="true" />
 
       <div className="is-center">
         <div className="is-logo-wrap">
@@ -106,5 +120,19 @@ export default function IntroSplash() {
 
       <span className="is-skip" aria-hidden="true">Tap to skip</span>
     </div>
+  );
+}
+
+// Small button for the Home page that plays the opening animation again.
+export function IntroReplayButton() {
+  return (
+    <button
+      type="button"
+      className="intro-replay no-print"
+      onClick={() => window.dispatchEvent(new Event(INTRO_REPLAY))}
+      title="Play the opening animation"
+    >
+      ▶ Intro
+    </button>
   );
 }

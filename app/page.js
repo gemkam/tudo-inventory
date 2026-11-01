@@ -6,6 +6,7 @@ import AuthGate from '@/components/AuthGate';
 import TruckAnim from '@/components/TruckAnim';
 import AlertsPanel from '@/components/AlertsPanel';
 import HomeSearch from '@/components/HomeSearch';
+import { IntroReplayButton } from '@/components/IntroSplash';
 import { sb, isLow } from '@/lib/supabase';
 
 function Letterhead() {
@@ -51,6 +52,7 @@ function Home() {
         <span className="home-kicker">Modern City · Abu Wasif · Sumptuosity</span>
         <h1 className="center">Tudo Num Office Systems</h1>
         <span className="home-rule" aria-hidden="true"><i /></span>
+        <IntroReplayButton />
       </div>
       <HomeSearch />
       <div className="home-grid">
