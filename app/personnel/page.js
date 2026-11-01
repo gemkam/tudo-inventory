@@ -69,7 +69,7 @@ function PersonnelPage() {
   const [delMode, setDelMode] = useState(false); // Delete buttons on each row
   const [extraCos, setExtraCos] = useState([]); // companies added with ＋ Add company (personnel_companies)
   const [addCo, setAddCo] = useState(null); // { short, name }
-  const allCos = useMemo(() => [...COMPANIES, ...extraCos], [extraCos]);
+  const allCos = useMemo(() => [...COMPANIES, ...extraCos.filter((e) => !COMPANIES.some((c) => c.key === e.key))], [extraCos]);
   const CO_SHORT = useMemo(() => Object.fromEntries(allCos.map((c) => [c.key, c.short])), [allCos]);
   const CO_KEY = useMemo(() => Object.fromEntries(allCos.map((c) => [c.short, c.key])), [allCos]);
   const [undo, setUndo] = useState([]); // [{ type: 'patch'|'add'|'delete', table, id, before | row, label }]

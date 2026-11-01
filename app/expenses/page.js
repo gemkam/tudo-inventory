@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import PrintColumns from '@/components/PrintColumns';
 import AuthGate, { useUser } from '@/components/AuthGate';
+import AddCompany from '@/components/AddCompany';
 import DataGrid from '@/components/DataGrid';
 import Modal from '@/components/Modal';
 import Omr from '@/components/Omr';
@@ -179,6 +180,7 @@ function ExpensesPage() {
       <Link href={`/expenses/docs?co=${co}&kind=invoice`} className="co-tab">🧾 Invoices</Link>
       <Link href={`/expenses/salary?co=${co}`} className="co-tab">💰 Salary</Link>
       <Link href="/expenses/vat" className="co-tab co-sum co-vat">🧾 VAT return</Link>
+      {isAdmin && <AddCompany flash={flash} onAdded={(k) => switchCo(k)} />}
     </div>
   );
   if (!co || !rows || !month) return <>{co && switcher}<div className="loading">Loading expenses...</div></>;

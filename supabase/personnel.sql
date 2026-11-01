@@ -30,3 +30,6 @@ create table if not exists public.personnel_companies (key text primary key, sho
 alter table public.personnel_companies enable row level security;
 create policy personnel_co_read on public.personnel_companies for select using (public.can_read());
 create policy personnel_co_write on public.personnel_companies for all using (public.can_write()) with check (public.can_write());
+-- 1 Nov 2026: personnel_companies also feeds All Companies (＋ Add company), extra columns
+alter table public.personnel_companies add column if not exists cr text, add column if not exists address text;
+-- salary_slips, slip_push_subs, salary_credits, public_save_push, push_private_key: migrations salary_slips_monthly and salary_credits

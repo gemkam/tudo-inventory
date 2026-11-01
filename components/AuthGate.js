@@ -9,6 +9,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { sb, setAppRole } from '@/lib/supabase';
+import { loadAddedCompanies } from '@/lib/expenses';
 import RaufAssistant from '@/components/NoorAssistant';
 import { RaufCtx, defaultGreeting } from '@/components/RaufContext';
 import ThemeMenu from '@/components/ThemeMenu';
@@ -80,6 +81,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
       setAppRole(u?.role || '');
       if (!u) router.replace('/login');
       else if (u.isEntry && !entryPage) router.replace('/entry'); // data entry users only see the entry form
+      else if (u.canRead) loadAddedCompanies(supabase).then(() => setUser(u)); // ＋ Add company: extra companies first
       else setUser(u);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {

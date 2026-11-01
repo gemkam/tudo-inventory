@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import AuthGate, { useUser } from '@/components/AuthGate';
 import SalarySlips from '@/components/SalarySlips';
+import AddCompany from '@/components/AddCompany';
 import SendSlipLink from '@/components/SendSlipLink';
 import { sb } from '@/lib/supabase';
 import { COMPANIES } from '@/lib/expenses';
@@ -51,6 +52,7 @@ function SalaryPage() {
       <Link href={`/expenses/docs?${co ? `co=${co}&` : ''}kind=invoice`} className="co-tab">🧾 Invoices</Link>
       <span className="co-tab on" role="tab" aria-selected="true">💰 Salary</span>
       <Link href="/expenses/vat" className="co-tab co-sum co-vat">🧾 VAT return</Link>
+      {isAdmin && <AddCompany flash={flash} onAdded={(k) => pick(k)} />}
     </div>
   );
 
