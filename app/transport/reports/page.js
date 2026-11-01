@@ -16,16 +16,18 @@ const RANGE_KEYS = ['week', 'month', 'lastmonth', 'quarter', 'all'];
 const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 const clean = (s) => String(s || '').trim().replace(/\s+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
-/* Salary cell in Drivers compared: total, then fixed part and driver allowance with paid / not paid */
-function SalaryCell({ salary, allowance, open }) {
-  const paid = num(allowance - open);
+/* Salary cell in Drivers compared (1 Nov 2026: ONE calculation, the same as the salary sheet):
+   total = salary sheet payable of the month(s); under it the fixed part and the driver allowance paid with that
+   salary (this month's trips + earlier trips carried over). Trips of this period whose allowance is not paid yet
+   are shown only as a note (they go into a later salary). */
+function SalaryCell({ pay, fixed, allowPaid, open, hasSheet }) {
+  if (!hasSheet) return <span className="rp-sal"><b>–</b><small>No salary sheet{open > 0 ? '' : ''}</small>{open > 0 && <small className="neg">✗ {fmtAmt(open)} allowance not paid</small>}</span>;
   return (
     <span className="rp-sal">
-      <b>{fmtAmt(num(salary + allowance))}</b>
-      <small>Fixed {fmtAmt(salary)}</small>
-      {allowance > 0 && <small>Allowance {fmtAmt(allowance)}</small>}
-      {paid > 0 && <small className="pos">✓ {fmtAmt(paid)} paid</small>}
-      {open > 0 && <small className="neg">✗ {fmtAmt(open)} not paid</small>}
+      <b>{fmtAmt(pay)}</b>
+      <small>Fixed {fmtAmt(fixed)}</small>
+      {allowPaid > 0 && <small className="pos">Allowance {fmtAmt(allowPaid)} ✓ paid</small>}
+      {open > 0 && <small className="neg">✗ {fmtAmt(open)} not paid yet (next salary)</small>}
     </span>
   );
 }
@@ -75,6 +77,10 @@ function TransportReports() {
         work: sum(de, 'rent'), vat: vatSum(de), received: sum(de, 'received'), diesel: sum(de, 'diesel'), toll: sum(de, 'toll'), maintenance: sum(de, 'maintenance'),
         // salary without the driver allowance part (that is counted per trip below, by trip date, paid or not)
         salary: num(sal.filter((s) => s.driver_id === d.id).reduce((t, s) => t + salaryPayable(s) - Number(s.trip_allowance || 0) - Number(s.allowance_carried || 0), 0)),
+        // the salary sheet (what was paid for the month): same figure as the salary sheet and the salary slip
+        pay: num(sal.filter((s) => s.driver_id === d.id).reduce((t, s) => t + salaryPayable(s), 0)),
+        allowPaid: num(sal.filter((s) => s.driver_id === d.id).reduce((t, s) => t + Number(s.trip_allowance || 0) + Number(s.allowance_carried || 0), 0)),
+        hasSheet: sal.some((s) => s.driver_id === d.id),
         allowance: sum(de, 'driver_allowance'),
         allowanceOpen: sum(de.filter((e) => e.allowance_status !== 'Paid'), 'driver_allowance'),
         other: sum(ex.filter((x) => x.driver_id === d.id), 'amount')
@@ -87,7 +93,7 @@ function TransportReports() {
       return o;
     });
     const tot = (k) => num(perDriver.reduce((t, x) => t + x[k], 0));
-    const T = { trips: trips.length, work: tot('work'), vat: tot('vat'), workNet: tot('workNet'), received: tot('received'), diesel: tot('diesel'), toll: tot('toll'), maintenance: tot('maintenance'), salary: tot('salary'), allowance: tot('allowance'), allowanceOpen: tot('allowanceOpen'), other: tot('other'), expenses: tot('expenses'), profit: tot('profit') };
+    const T = { trips: trips.length, work: tot('work'), vat: tot('vat'), workNet: tot('workNet'), received: tot('received'), diesel: tot('diesel'), toll: tot('toll'), maintenance: tot('maintenance'), salary: tot('salary'), pay: tot('pay'), allowPaid: tot('allowPaid'), hasSheet: perDriver.some((x) => x.hasSheet), allowance: tot('allowance'), allowanceOpen: tot('allowanceOpen'), other: tot('other'), expenses: tot('expenses'), profit: tot('profit') };
     T.receivable = num(T.work - T.received);
 
     const routes = {};
@@ -137,9 +143,9 @@ function TransportReports() {
 
   /* ---------- Exports ---------- */
 
-  const driverHead = ['Driver', 'Trips', 'Work', 'VAT 5%', 'Work w/o VAT', 'Received', 'Diesel', 'Toll', 'Maintenance', 'Salary (incl. driver allowance)', 'Driver allowance paid', 'Driver allowance not paid', 'Other', 'Expenses', 'Profit'];
-  const driverRows = r.perDriver.map((x) => [x.d.name, x.trips, x.work, x.vat, x.workNet, x.received, x.diesel, x.toll, x.maintenance, num(x.salary + x.allowance), num(x.allowance - x.allowanceOpen), x.allowanceOpen, x.other, x.expenses, x.profit]);
-  const driverTotal = ['Total', T.trips, T.work, T.vat, T.workNet, T.received, T.diesel, T.toll, T.maintenance, num(T.salary + T.allowance), num(T.allowance - T.allowanceOpen), T.allowanceOpen, T.other, T.expenses, T.profit];
+  const driverHead = ['Driver', 'Trips', 'Work', 'VAT 5%', 'Work w/o VAT', 'Received', 'Diesel', 'Toll', 'Maintenance', 'Salary (salary sheet)', 'Driver allowance paid with salary', 'Driver allowance not paid yet', 'Other', 'Expenses', 'Profit'];
+  const driverRows = r.perDriver.map((x) => [x.d.name, x.trips, x.work, x.vat, x.workNet, x.received, x.diesel, x.toll, x.maintenance, x.pay, x.allowPaid, x.allowanceOpen, x.other, x.expenses, x.profit]);
+  const driverTotal = ['Total', T.trips, T.work, T.vat, T.workNet, T.received, T.diesel, T.toll, T.maintenance, T.pay, T.allowPaid, T.allowanceOpen, T.other, T.expenses, T.profit];
   const tripRows = r.es.map((e) => [fmtFullDate(e.entry_date), driverName(e.driver_id), e.from_place || '', e.to_place || e.description || '', num(e.rent), vatOf(e), num(e.received), num(e.diesel), num(e.toll), num(e.maintenance), e.payment_status || '']);
   const collectRows = r.toCollect.map((e) => [fmtFullDate(e.entry_date), driverName(e.driver_id), `${clean(e.from_place)} → ${clean(e.to_place)}`, num(e.rent), num(e.received), e.due]);
   const fileBase = `Transport report ${RANGES[range]} ${new Date().toISOString().slice(0, 10)}`;
@@ -287,7 +293,7 @@ function TransportReports() {
           <div className="rp-card rp-wide">
             <div className="rp-card-title">Drivers compared</div>
             <div className="rp-takeaway">{T.work ? `${topDriver.d.name} made the most profit: ${fmtAmt(topDriver.profit)} OMR.` : 'No trips in this period.'}</div>
-            <p className="rp-card-note" style={{ margin: '0 0 8px' }}>Salary = fixed salary + driver allowance of the trips in this period (paid or not), shown under it.</p>
+            <p className="rp-card-note" style={{ margin: '0 0 8px' }}>Salary = the salary sheet of the month (what is paid): fixed salary + driver allowance paid with it. Trips whose allowance is not paid yet are shown in red; they go into the next salary.</p>
             <div className="table-wrap">
               <table className="rp-block-table">
                 <thead>
@@ -304,7 +310,7 @@ function TransportReports() {
                       <td className="num">{fmtAmt(x.dieselPerTrip)}</td>
                       <td className="num">{fmtAmt(x.toll)}</td>
                       <td className="num">{fmtAmt(x.maintenance)}</td>
-                      <td className="num"><SalaryCell salary={x.salary} allowance={x.allowance} open={x.allowanceOpen} /></td>
+                      <td className="num"><SalaryCell pay={x.pay} fixed={num(x.pay - x.allowPaid)} allowPaid={x.allowPaid} open={x.allowanceOpen} hasSheet={x.hasSheet} /></td>
                       <td className="num">{fmtAmt(x.other)}</td>
                       <td className={`num ${x.profit < 0 ? 'neg' : ''}`}><b>{fmtAmt(x.profit)}</b></td>
                     </tr>
@@ -312,7 +318,7 @@ function TransportReports() {
                   <tr className="sum">
                     <td>Total</td><td className="num">{T.trips}</td><td className="num">{fmtAmt(T.work)}</td><td className="num">{fmtAmt(T.vat)}</td><td className="num">{fmtAmt(T.diesel)}</td>
                     <td className="num">{T.trips ? fmtAmt(num(T.diesel / T.trips)) : 0}</td><td className="num">{fmtAmt(T.toll)}</td><td className="num">{fmtAmt(T.maintenance)}</td>
-                    <td className="num"><SalaryCell salary={T.salary} allowance={T.allowance} open={T.allowanceOpen} /></td><td className="num">{fmtAmt(T.other)}</td><td className="num">{fmtAmt(T.profit)}</td>
+                    <td className="num"><SalaryCell pay={T.pay} fixed={num(T.pay - T.allowPaid)} allowPaid={T.allowPaid} open={T.allowanceOpen} hasSheet={T.hasSheet} /></td><td className="num">{fmtAmt(T.other)}</td><td className="num">{fmtAmt(T.profit)}</td>
                   </tr>
                 </tbody>
               </table>
