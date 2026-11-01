@@ -160,6 +160,12 @@ function VatReturnPage() {
 
   return (
     <>
+      <header className="vat-head">
+        <span>Tudo Num Group</span>
+        <h1>🧾 VAT return</h1>
+        <p>{pLabel} · {shownSrc.map((s) => s.label).join(', ')} · File and pay by <b>{dmy(fileBy)}</b></p>
+      </header>
+
       <div className="page-tools">
         <Link href="/expenses/summary" className="crumb">← Group Summary</Link>
         <div className="tools">
@@ -177,11 +183,6 @@ function VatReturnPage() {
         </div>
       </div>
 
-      <header className="vat-head">
-        <span>Tudo Num Group</span>
-        <h1>🧾 VAT return</h1>
-        <p>{pLabel} · {shownSrc.map((s) => s.label).join(', ')} · File and pay by <b>{dmy(fileBy)}</b></p>
-      </header>
 
       <div className="ats-chips no-print" role="group" aria-label="Companies">
         {SOURCES.map((s) => (

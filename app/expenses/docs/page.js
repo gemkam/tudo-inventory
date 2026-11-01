@@ -312,13 +312,12 @@ function DocsPage() {
 
   return (
     <>
-      <div className="page-tools">
-        <Link href={`/expenses?co=${co}`} className="crumb">← All Companies</Link>
-        <div className="tools">
-          <input className="iv-search" type="search" placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} />
-          {isAdmin && <button type="button" className="btn" onClick={newDoc}>+ New {K.one.toLowerCase()}</button>}
-        </div>
+      <div className="company-head ch-top">
+        <span className="company-name">{C.name}</span>
+        <h1>{K.label}</h1>
+        <p className="sub">{kind === 'receipt' ? 'Each receipt is added to All Companies by itself' : 'S.No, description and amount'}</p>
       </div>
+
       {switcher}
       <div className="head-chips no-print" style={{ marginTop: 10 }}>
         {Object.entries(KINDS).map(([k, v]) => (
@@ -326,9 +325,12 @@ function DocsPage() {
         ))}
       </div>
 
-      <div className="iv-list-head">
-        <h1>{K.label}</h1>
-        <p>{C.name}{kind === 'receipt' ? ' · each receipt is added to All Companies by itself' : ' · S.No, description and amount'}</p>
+      <div className="page-tools">
+        <Link href={`/expenses?co=${co}`} className="crumb">← All Companies</Link>
+        <div className="tools">
+          <input className="iv-search" type="search" placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} />
+          {isAdmin && <button type="button" className="btn" onClick={newDoc}>+ New {K.one.toLowerCase()}</button>}
+        </div>
       </div>
 
       {list === null ? <div className="loading">Loading...</div> : shown.length === 0 ? (

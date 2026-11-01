@@ -3497,3 +3497,5 @@ body:has(.ent-page.ur) .modal, body:has(.ent-page.ur) .dfv { font-family: 'Noto 
 /* Attendance sheet inside Personnel (1 Nov 2026) */
 .company-head.at-head { margin: 12px 0; }
 .company-head.at-head h2 { margin: 2px 0; font-family: var(--display); font-size: 26px; color: var(--brown); }
+.company-head.ch-top + .office-tabs, .company-head.ch-top + .co-switch { margin-bottom: 12px; }
+.vat-head + .page-tools { margin-top: 12px; }

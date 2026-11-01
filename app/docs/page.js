@@ -379,6 +379,11 @@ function DocsPage() {
 
   return (
     <>
+      <div className="company-head ch-top">
+        <span className="company-name">All Companies</span>
+        <h1>📋 Documents Checklist</h1>
+        <p className="sub">Issue date and expiry of every document. Status is worked out from the expiry date. Alerts show on Home 30 days before.</p>
+      </div>
       <OfficeTabs active="docs" />
       <div className="page-tools">
         <Link href="/expenses" className="crumb">← All Companies</Link>
@@ -388,10 +393,6 @@ function DocsPage() {
           <PrintColumns className="btn ghost" />
           <button type="button" className="btn ghost" onClick={doExcel}>📗 Excel</button>
         </div>
-      </div>
-      <div>
-        <h1>📋 Documents Checklist</h1>
-        <p className="sub">Issue date and expiry of every document. Status is worked out from the expiry date. Alerts show on Home 30 days before.</p>
       </div>
 
       <div className="kpi-row">
