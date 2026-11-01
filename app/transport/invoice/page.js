@@ -183,7 +183,7 @@ function InvoicePage() {
     const s = sb();
     const [i, d, e] = await Promise.all([
       s.from('transport_invoices').select('*').order('invoice_date', { ascending: false }).order('created_at', { ascending: false }),
-      s.from('transport_drivers').select('id, name, vehicle_no').order('sort').order('name'),
+      s.from('transport_drivers').select('id, name, vehicle_no').is('archived_at', null).order('sort').order('name'),
       s.from('transport_entries').select('from_place, to_place, consignee, description, cargo, credit_in').limit(2000)
     ]);
     if (i.error) flash(i.error.message, 'err');

@@ -78,7 +78,7 @@ export default function AttendanceSheet() {
     const s = sb();
     const days = daysOfMonth(month);
     const [st, a] = await Promise.all([
-      s.from('exp_staff').select('*').eq('company', co).order('sort').order('name'),
+      s.from('exp_staff').select('*').is('archived_at', null).eq('company', co).order('sort').order('name'),
       s.from('exp_attendance').select('id, staff_id, day, mark, note').eq('company', co).gte('day', days[0].iso).lte('day', days[days.length - 1].iso)
     ]);
     setStaff((st.data || []).filter((x) => x.active !== false));

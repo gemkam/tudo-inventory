@@ -35,3 +35,5 @@ alter table public.personnel_companies add column if not exists cr text, add col
 -- salary_slips, slip_push_subs, salary_credits, public_save_push, push_private_key: migrations salary_slips_monthly and salary_credits
 alter table public.personnel_subcontractors add column if not exists company text; -- company the subcontractor works for (1 Nov 2026)
 alter table public.exp_staff add column if not exists user_id uuid; -- login of a non-driver (Data entry > Create users)
+-- 🗄 Archives (1 Nov 2026, migration personnel_archives): archived_at, archived_by, archive_reason on exp_staff, transport_drivers,
+-- personnel_subcontractors. Archived = hidden in every list (queries add .is('archived_at', null)); slip_token_ok refuses archived people.

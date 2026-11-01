@@ -15,7 +15,7 @@ export default function NonDrivers({ flash, canAdd }) {
   const [staff, setStaff] = useState(null);
   const [addP, setAddP] = useState(null);
   const load = useCallback(async () => {
-    const { data } = await sb().from('exp_staff').select('id, name, company, staff_type, designation, department, user_id, active').order('company').order('sort').order('name');
+    const { data } = await sb().from('exp_staff').select('id, name, company, staff_type, designation, department, user_id, active').is('archived_at', null).order('company').order('sort').order('name');
     setStaff((data || []).filter((x) => x.active !== false));
   }, []);
   useEffect(() => { load(); }, [load]);

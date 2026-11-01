@@ -3616,3 +3616,14 @@ body:has(.ent-page.ur) .modal, body:has(.ent-page.ur) .dfv { font-family: 'Noto 
 .cl-p small { color: var(--muted); font-size: 12px; font-weight: 500; white-space: nowrap; }
 .cl-p:hover { background: var(--tint) !important; color: var(--brown); }
 .cl-people > .muted { padding: 7px 12px; }
+/* Personnel > 🗄 Archives (1 Nov 2026) */
+.arch-list { display: grid; gap: 8px; }
+.arch-item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 14px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.arch-who { display: grid; gap: 2px; min-width: 0; }
+.arch-who b { font-size: 15px; }
+.arch-who small { color: var(--muted); font-size: 12.5px; }
+.arch-when { color: #8a5a00 !important; }
+.arch-btns { display: flex; gap: 6px; }
+.arch-dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px 16px; margin: 0; }
+.arch-dl dt { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.arch-dl dd { margin: 0; font-weight: 600; }

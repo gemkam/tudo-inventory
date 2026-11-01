@@ -64,7 +64,7 @@ function ExpensesPage() {
     const s = sb();
     const [e, st] = await Promise.all([
       s.from('exp_entries').select('*').eq('company', co).order('entry_date').order('sort').order('created_at'),
-      s.from('exp_staff').select('*').eq('company', co).order('sort').order('name')
+      s.from('exp_staff').select('*').is('archived_at', null).eq('company', co).order('sort').order('name')
     ]);
     if (e.error) { setError(e.error.message); setRows([]); return; }
     setRows(e.data || []);

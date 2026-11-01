@@ -53,7 +53,7 @@ function DriversPage() {
   const load = useCallback(async () => {
     const s = sb();
     const [d, v] = await Promise.all([
-      s.from('transport_drivers').select('*').order('sort').order('name'),
+      s.from('transport_drivers').select('*').is('archived_at', null).order('sort').order('name'),
       s.from('transport_vehicles').select('id, part, plate_no, driver_id')
     ]);
     setDrivers(d.data || []);

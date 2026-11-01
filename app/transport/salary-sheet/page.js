@@ -44,7 +44,7 @@ function SheetPage() {
   const load = useCallback(async () => {
     const s = sb();
     const [d, sa, e] = await Promise.all([
-      s.from('transport_drivers').select('*').order('sort').order('name'),
+      s.from('transport_drivers').select('*').is('archived_at', null).order('sort').order('name'),
       s.from('transport_salaries').select('*'),
       s.from('transport_entries').select('id, driver_id, entry_date, driver_allowance, allowance_status, allowance_salary_id')
     ]);

@@ -172,7 +172,7 @@ function EntryPage() {
   }, []);
 
   async function loadDrivers(newId) {
-    const { data } = await sb().from('transport_drivers').select('id, name, vehicle_no, user_id, status, sort').order('sort').order('name');
+    const { data } = await sb().from('transport_drivers').select('id, name, vehicle_no, user_id, status, sort').is('archived_at', null).order('sort').order('name');
     let list = (data || []).filter((d) => d.status !== 'Inactive');
     const mine = list.find((d) => d.user_id && d.user_id === me.id);
     if (!isOffice && mine) list = [mine]; // a driver's login shows only his own name

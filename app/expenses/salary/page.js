@@ -33,8 +33,8 @@ function SalaryPage() {
   useEffect(() => {
     try { const k = new URLSearchParams(window.location.search).get('co') || ''; if (COMPANIES.some((c) => c.key === k)) setCo(k); } catch { /* ignore */ }
     Promise.all([
-      sb().from('exp_staff').select('*').order('company').order('sort').order('name'),
-      sb().from('transport_drivers').select('*').order('sort').order('name')
+      sb().from('exp_staff').select('*').is('archived_at', null).order('company').order('sort').order('name'),
+      sb().from('transport_drivers').select('*').is('archived_at', null).order('sort').order('name')
     ]).then(([a, b]) => { setStaff(a.data || []); setDrivers(b.data || []); });
   }, []);
   function pick(k) {

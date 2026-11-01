@@ -39,8 +39,8 @@ export default function CreateUsers({ flash, onChanged }) {
   const load = useCallback(async () => {
     const s = sb();
     const [d, st, u] = await Promise.all([
-      s.from('transport_drivers').select('id, name, vehicle_no, user_id, company, status, sort').order('sort').order('name'),
-      s.from('exp_staff').select('id, name, company, staff_type, designation, department, user_id, active, sort').order('company').order('sort').order('name'),
+      s.from('transport_drivers').select('id, name, vehicle_no, user_id, company, status, sort').is('archived_at', null).order('sort').order('name'),
+      s.from('exp_staff').select('id, name, company, staff_type, designation, department, user_id, active, sort').is('archived_at', null).order('company').order('sort').order('name'),
       s.rpc('admin_list_users')
     ]);
     setDrivers((d.data || []).filter((x) => x.status !== 'Inactive'));

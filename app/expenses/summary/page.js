@@ -50,7 +50,7 @@ function SummaryPage() {
       s.from('exp_budgets').select('*'),
       s.from('transport_vehicles').select('*'),
       s.from('vehicle_maintenance').select('*'),
-      s.from('exp_staff').select('*'),
+      s.from('exp_staff').select('*').is('archived_at', null),
       s.from('exp_attendance').select('company, staff_id, day, mark'),
       s.from('company_docs').select('company, kind, doc_no, doc_date, party, items, vat_pct').eq('kind', 'invoice')
     ]);

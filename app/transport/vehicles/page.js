@@ -49,7 +49,7 @@ function VehiclesPage() {
     const s = sb();
     const [v, d] = await Promise.all([
       s.from('transport_vehicles').select('*').order('sort').order('created_at'),
-      s.from('transport_drivers').select('id, name').order('sort')
+      s.from('transport_drivers').select('id, name').is('archived_at', null).order('sort')
     ]);
     if (v.error) { setError(v.error.message); setVehicles([]); return; }
     setVehicles(v.data || []);

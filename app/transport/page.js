@@ -34,7 +34,7 @@ function TransportPage() {
   const load = useCallback(async () => {
     const s = sb();
     const [d, e, sa, ex] = await Promise.all([
-      s.from('transport_drivers').select('*').order('sort').order('name'),
+      s.from('transport_drivers').select('*').is('archived_at', null).order('sort').order('name'),
       s.from('transport_entries').select('id, driver_id, entry_date, from_place, to_place, description, payment_status, sort, rent, received, diesel, toll, maintenance, driver_allowance, allowance_status, allowance_salary_id, vat_included'),
       s.from('transport_salaries').select('*'),
       s.from('transport_extras').select('*').order('created_at')

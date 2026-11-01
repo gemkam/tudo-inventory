@@ -36,7 +36,7 @@ export async function POST(req) {
     transportData(supa).then(transportContext).catch(() => ''),
     inventoryData(supa).then(inventoryContext).catch(() => ''),
     q(supa.from('doc_checklist').select('section, owner, doc_name, doc_no, issue_date, expiry_date, state').order('sort')),
-    q(supa.from('transport_drivers').select('id, name').order('sort')),
+    q(supa.from('transport_drivers').select('id, name').is('archived_at', null).order('sort')),
     q(supa.from('categories').select('id, name').order('sort'))
   ]);
 

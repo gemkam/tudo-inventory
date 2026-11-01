@@ -29,7 +29,7 @@ export function TransportMenu({ nested = false, isAdmin = false }) {
 
   useEffect(() => {
     let alive = true;
-    sb().from('transport_drivers').select('id, name, status, vehicle_no').order('sort').order('name')
+    sb().from('transport_drivers').select('id, name, status, vehicle_no').is('archived_at', null).order('sort').order('name')
       .then(({ data }) => { if (alive) setDrivers(sortDrivers(data || [])); });
     return () => { alive = false; };
   }, []);

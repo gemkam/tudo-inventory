@@ -104,8 +104,8 @@ function DocsPage() {
     const q = (p) => p.then((r) => r.data || []).catch(() => []);
     const [d, drv, staff] = await Promise.all([
       s.from('doc_checklist').select('*').order('sort'),
-      q(s.from('transport_drivers').select('id, name, status, resident_card, resident_card_expiry, visa_expiry')),
-      q(s.from('exp_staff').select('id, name, company, active, resident_card, resident_card_expiry, visa_expiry'))
+      q(s.from('transport_drivers').select('id, name, status, resident_card, resident_card_expiry, visa_expiry').is('archived_at', null)),
+      q(s.from('exp_staff').select('id, name, company, active, resident_card, resident_card_expiry, visa_expiry').is('archived_at', null))
     ]);
     if (d.error) { flash(d.error.message, 'err'); setRows([]); return; }
     setRows(d.data || []);

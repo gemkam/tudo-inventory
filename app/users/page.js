@@ -53,7 +53,7 @@ function UsersPage() {
   const load = useCallback(async () => {
     const [{ data, error: err }, d] = await Promise.all([
       sb().rpc('admin_list_users'),
-      sb().from('transport_drivers').select('id, name, vehicle_no, user_id, sort').order('sort')
+      sb().from('transport_drivers').select('id, name, vehicle_no, user_id, sort').is('archived_at', null).order('sort')
     ]);
     if (err) { setError(err.message); setUsers([]); return; }
     setUsers(data || []);

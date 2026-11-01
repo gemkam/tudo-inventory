@@ -150,9 +150,9 @@ export default function AlertsPanel() {
       q(s.from('transport_vehicles').select('id, name, part, plate_no, voc_expiry, mulkiya_expiry')),
       q(s.from('vehicle_maintenance').select('*')),
       q(s.from('transport_entries').select('id, driver_id, entry_date, description, from_place, to_place, rent, maintenance, diesel, toll')),
-      q(s.from('transport_drivers').select('id, name, status, resident_card, resident_card_expiry, visa_expiry')),
+      q(s.from('transport_drivers').select('id, name, status, resident_card, resident_card_expiry, visa_expiry').is('archived_at', null)),
       q(s.from('exp_entries').select('id, company, entry_date, description, paid, unpaid, source').is('source', null)),
-      q(s.from('exp_staff').select('id, name, company, active, resident_card, resident_card_expiry, visa_expiry')),
+      q(s.from('exp_staff').select('id, name, company, active, resident_card, resident_card_expiry, visa_expiry').is('archived_at', null)),
       q(s.from('doc_checklist').select('id, section, owner, doc_name, doc_no, expiry_date, state')),
       s.from('alert_dismissals').select('key')
     ]);

@@ -77,7 +77,7 @@ function AllTripSheets() {
     (async () => {
       const s = sb();
       const [d, e] = await Promise.all([
-        s.from('transport_drivers').select('id, name, status, vehicle_no, sort').order('sort').order('name'),
+        s.from('transport_drivers').select('id, name, status, vehicle_no, sort').is('archived_at', null).order('sort').order('name'),
         s.from('transport_entries').select('*').order('entry_date').order('sort').order('created_at')
       ]);
       const list = (d.data || []).sort((a, b) => (a.status === 'Inactive') - (b.status === 'Inactive') || String(a.name).localeCompare(String(b.name)));

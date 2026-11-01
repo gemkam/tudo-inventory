@@ -38,7 +38,8 @@ const TABS = [
   ['drivers', '🚚 Drivers'],
   ['site', '👷 Site Employees'],
   ['sub', '🤝 Subcontractors'],
-  ['attendance', '🗓 Attendance']
+  ['attendance', '🗓 Attendance'],
+  ['archives', '🗄 Archives']
 ];
 const TICKETS = ['Yes', 'No', 'Yearly', 'Every 2 years'];
 const BUCKET = 'staff-files';
@@ -79,6 +80,9 @@ function PersonnelPage() {
   const [att, setAtt] = useState([]);
   const [month, setMonth] = useState(thisMonth());
   const [send, setSend] = useState(null); // { table, row }
+  const [archived, setArchived] = useState([]); // [{ table, row }]
+  const [viewArch, setViewArch] = useState(null);
+  const [delReason, setDelReason] = useState('');
   const [slipsAll, setSlipsAll] = useState([]);
   const [credits, setCredits] = useState({});
   const [viewSlip, setViewSlip] = useState(null); // { name, kind, id }
@@ -124,9 +128,16 @@ function PersonnelPage() {
     setExtraCos(pc.data || []);
     const err = st.error || dr.error || sc.error;
     if (err) setError(err.message);
-    setStaff(st.data || []);
-    setDrivers(dr.data || []);
-    setSubs(sc.data || []);
+    // 🗄 Archives: deleted people stay in the database (archived_at) but are hidden everywhere
+    const live = (l) => (l || []).filter((x) => !x.archived_at);
+    setStaff(live(st.data));
+    setDrivers(live(dr.data));
+    setSubs(live(sc.data));
+    setArchived([
+      ...(st.data || []).filter((x) => x.archived_at).map((row) => ({ table: 'exp_staff', row })),
+      ...(dr.data || []).filter((x) => x.archived_at).map((row) => ({ table: 'transport_drivers', row })),
+      ...(sc.data || []).filter((x) => x.archived_at).map((row) => ({ table: 'personnel_subcontractors', row }))
+    ].sort((a, b) => String(b.row.archived_at).localeCompare(String(a.row.archived_at))));
     setAtt(a.data || []);
     const sl = await s.from('salary_slips').select('*').order('month', { ascending: false });
     setSlipsAll(sl.data || []);
@@ -192,14 +203,32 @@ function PersonnelPage() {
     flash('Added at the bottom: type the name in the first box');
   }
 
+  /* Delete = move to 🗄 Archives: hidden from every table, list, salary, attendance and alert; his salary link stops.
+     Nothing is removed from the database. Restore brings him back as he was. */
+  const archPatch = (table, on, reason = '') => ({
+    archived_at: on ? new Date().toISOString() : null, archived_by: on ? me || null : null, archive_reason: on ? reason || null : null,
+    slip_link_on: table === 'personnel_subcontractors' ? undefined : !on,
+    ...(table === 'exp_staff' ? { active: !on } : {})
+  });
+  const clean = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined));
   async function confirmDelete() {
     const { table, row } = del;
-    setDel(null);
-    const { error: err } = await sb().from(table).delete().eq('id', row.id);
+    const patch = clean(archPatch(table, true, delReason.trim()));
+    setDel(null); setDelReason('');
+    const { error: err } = await sb().from(table).update(patch).eq('id', row.id);
     if (err) { flash(err.message, 'err'); return; }
     setterOf(table)((l) => (l || []).filter((x) => x.id !== row.id));
-    remember({ type: 'delete', table, id: row.id, row, label: row.name });
-    flash('Deleted. ↶ Undo brings it back');
+    setArchived((a) => [{ table, row: { ...row, ...patch } }, ...a]);
+    remember({ type: 'archive', table, id: row.id, row, label: row.name });
+    flash(`${row.name} moved to 🗄 Archives. ↶ Undo brings him back`);
+  }
+  async function restore(table, row) {
+    const patch = clean(archPatch(table, false));
+    const { error: err } = await sb().from(table).update(patch).eq('id', row.id);
+    if (err) { flash(err.message, 'err'); return false; }
+    setArchived((a) => a.filter((x) => x.row.id !== row.id));
+    setterOf(table)((l) => [...(l || []), { ...row, ...patch }]);
+    return true;
   }
   /* ＋ Add company: a new pill next to the others (Personnel only; Office Expense keeps its 3 companies) */
   async function saveCompany() {
@@ -228,6 +257,8 @@ function PersonnelPage() {
     } else if (step.type === 'add') {
       ({ error: err } = await s.from(step.table).delete().eq('id', step.id));
       if (!err) setterOf(step.table)((l) => (l || []).filter((x) => x.id !== step.id));
+    } else if (step.type === 'archive') {
+      if (!(await restore(step.table, step.row))) return;
     } else if (step.type === 'delete') {
       ({ error: err } = await s.from(step.table).insert(step.row));
       if (!err) setterOf(step.table)((l) => [...(l || []), step.row]);
@@ -382,7 +413,7 @@ function PersonnelPage() {
   if (staff === null) return <div className="loading">Loading...</div>;
 
   const showCo = tab !== 'attendance';
-  const own = tab === 'attendance'; // tab with its own toolbar
+  const own = tab === 'attendance' || tab === 'archives'; // tabs with their own toolbar
   const canDel = isAdmin && canDelete;
   let grid = null;
   if (tab === 'office' || tab === 'site') {
@@ -401,6 +432,7 @@ function PersonnelPage() {
       <DataGrid columns={driverColumns} groups={salaryGroups(driverColumns)} rows={driverRows} canEdit={edit && isAdmin} flash={flash}
         onSave={(row, key, value) => onSave('transport_drivers', row, key, value)}
         onAdd={edit && isAdmin ? addRow : undefined} addLabel="+ Add driver"
+        onDelete={delMode && canDel ? (row) => setDel({ table: 'transport_drivers', row }) : undefined}
         footer={sumFoot(driverRows, 'salary')} />
     );
   } else if (tab === 'sub') {
@@ -434,7 +466,7 @@ function PersonnelPage() {
         {TABS.map(([k, label]) => (
           <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => goTab(k)}>
             {label}
-            <small className="pn-count">{k === 'office' ? (staff || []).filter((r) => (r.staff_type || 'Office') !== 'Site' && r.active !== false && coOk(r)).length : k === 'site' ? (staff || []).filter((r) => r.staff_type === 'Site' && r.active !== false && coOk(r)).length : k === 'drivers' ? (drivers || []).filter(coOk).length : k === 'sub' ? (subs || []).filter(coOk).length : ''}</small>
+            <small className="pn-count">{k === 'office' ? (staff || []).filter((r) => (r.staff_type || 'Office') !== 'Site' && r.active !== false && coOk(r)).length : k === 'site' ? (staff || []).filter((r) => r.staff_type === 'Site' && r.active !== false && coOk(r)).length : k === 'drivers' ? (drivers || []).filter(coOk).length : k === 'sub' ? (subs || []).filter(coOk).length : k === 'archives' ? archived.filter((x) => coOk(x.row)).length : ''}</small>
           </button>
         ))}
       </div>
@@ -464,8 +496,8 @@ function PersonnelPage() {
         {tab !== 'attendance' && isAdmin && (
           <EditMenu
             edit={edit} delMode={delMode} undoCount={undo.length}
-            canDel={canDel && tab !== 'drivers'}
-            delNote={tab === 'drivers' ? 'Drivers are deleted from Transport > Drivers' : !canDel ? 'Only Full access and Administrator can delete' : ''}
+            canDel={canDel}
+            delNote={!canDel ? 'Only Full access and Administrator can delete' : 'moves him to 🗄 Archives (hidden everywhere, kept in the database)'}
             onEdit={() => setEdit((v) => !v)}
             onAdd={addRow}
             onDelete={() => setDelMode((v) => !v)}
@@ -480,7 +512,28 @@ function PersonnelPage() {
         {(edit || delMode) && <span className="pn-mode">{[edit && '✏️ Editing: tap a box to change it', delMode && '🗑 Delete buttons are on'].filter(Boolean).join(' · ')}</span>}
       </div>}
 
-      {tab === 'attendance' ? <AttendanceSheet /> : grid}
+      {tab === 'attendance' ? <AttendanceSheet /> : tab === 'archives' ? (
+        <section className="panel arch">
+          <div className="section-head"><h2>🗄 Archives <small className="muted">{archived.filter((a) => coOk(a.row) && match(a.row)).length}</small></h2></div>
+          <p className="muted" style={{ marginTop: 0 }}>Previous employees, drivers and subcontractors. They are hidden from every table, salary, attendance and alert and get no updates. Their data stays here as it was.</p>
+          {!archived.length && <p className="muted">Nothing in the Archives.</p>}
+          <div className="arch-list">
+            {archived.filter((a) => coOk(a.row) && match(a.row)).map(({ table, row }) => (
+              <div key={row.id} className="arch-item">
+                <div className="arch-who">
+                  <b>{row.name}</b>
+                  <small>{[table === 'transport_drivers' ? 'Driver' : table === 'personnel_subcontractors' ? 'Subcontractor' : `${row.staff_type || 'Office'} employee`, CO_SHORT[row.company] || row.company, row.designation || row.department || row.vehicle_no || row.company_name].filter(Boolean).join(' · ')}</small>
+                  <small className="arch-when">Archived {new Date(row.archived_at).toLocaleDateString('en-GB')}{row.archived_by ? ` by ${row.archived_by}` : ''}{row.archive_reason ? ` · ${row.archive_reason}` : ''}</small>
+                </div>
+                <span className="arch-btns">
+                  <button type="button" className="dfl-btn" onClick={() => setViewArch({ table, row })}>👁 View</button>
+                  {isAdmin && <button type="button" className="dfl-btn" onClick={async () => { if (await restore(table, row)) flash(`${row.name} is back in ${table === 'transport_drivers' ? 'Drivers' : table === 'personnel_subcontractors' ? 'Subcontractors' : 'Employees'}`); }}>♻ Restore</button>}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : grid}
 
       {send && (
         <SendSlipLink table={send.table} row={(send.table === 'exp_staff' ? staff : drivers).find((x) => x.id === send.row.id) || send.row} flash={flash} onClose={() => setSend(null)}
@@ -520,14 +573,35 @@ function PersonnelPage() {
         </Modal>
       )}
       {del && (
-        <Modal title="Delete?" onClose={() => setDel(null)}>
-          <p style={{ margin: 0 }}>Delete <b>{del.row.name}</b>?{del.table === 'exp_staff' ? ' This person is also removed from the All Companies salary sheet and attendance.' : ''}</p>
+        <Modal title="Delete?" onClose={() => { setDel(null); setDelReason(''); }}>
+          <p style={{ margin: 0 }}>Delete <b>{del.row.name}</b>? He disappears from every table, list, salary, attendance and alert{del.table !== 'personnel_subcontractors' ? ' and his salary slip link stops working' : ''}. Nothing is lost: he is kept in <b>🗄 Archives</b> and can be restored.</p>
+          <label className="dfl-label" style={{ marginTop: 10 }}>Reason (optional)
+            <input className="drv-input" value={delReason} placeholder="e.g. Left the company, visa cancelled" onChange={(e) => setDelReason(e.target.value)} />
+          </label>
           <div className="modal-actions">
-            <button type="button" className="btn ghost" onClick={() => setDel(null)}>Cancel</button>
-            <button type="button" className="btn danger" onClick={confirmDelete}>Delete</button>
+            <button type="button" className="btn ghost" onClick={() => { setDel(null); setDelReason(''); }}>Cancel</button>
+            <button type="button" className="btn danger" onClick={confirmDelete}>Delete (move to Archives)</button>
           </div>
         </Modal>
       )}
+      {viewArch && (() => {
+        const r = viewArch.row;
+        const rows = [
+          ['Name', r.name], ['Company', CO_SHORT[r.company] || r.company], ['Designation', r.designation || r.department], ['Type', viewArch.table === 'transport_drivers' ? 'Driver' : viewArch.table === 'personnel_subcontractors' ? 'Subcontractor' : r.staff_type],
+          ['Company name', r.company_name], ['Vehicle', r.vehicle_no], ['Contract', r.contract], ['Passport', r.passport], ['Resident card', r.resident_card], ['Resident card expiry', r.resident_card_expiry], ['Visa expiry', r.visa_expiry],
+          ['Basic salary', viewArch.table === 'transport_drivers' ? r.salary : r.basic], ['Allowance total', r.allowances], ['House rent', r.house_rent], ['Utilities', r.utilities], ['Ticket', r.ticket],
+          ['Mobile', r.mobile || r.phone || r.contact], ['Archived', `${new Date(r.archived_at).toLocaleString('en-GB')}${r.archived_by ? ` by ${r.archived_by}` : ''}`], ['Reason', r.archive_reason]
+        ].filter(([, v]) => v !== null && v !== undefined && v !== '' && !(typeof v === 'number' && !v) && v !== '0');
+        return (
+          <Modal title={`🗄 ${r.name}`} onClose={() => setViewArch(null)}>
+            <dl className="arch-dl">{rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{String(v)}</dd></div>)}</dl>
+            <div className="modal-actions">
+              <button type="button" className="btn ghost" onClick={() => setViewArch(null)}>Close</button>
+              {isAdmin && <button type="button" className="btn in" onClick={async () => { if (await restore(viewArch.table, r)) { flash(`${r.name} restored`); setViewArch(null); } }}>♻ Restore</button>}
+            </div>
+          </Modal>
+        );
+      })()}
       {toast && <div className={`toast ${toast.kind}`} role="status">{toast.text}</div>}
     </>
   );
