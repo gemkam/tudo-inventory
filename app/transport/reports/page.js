@@ -88,7 +88,6 @@ function TransportReports() {
       // Excel rule (Transport_Division Sheet4): Profit = Work − (Diesel + Toll + Maintenance + Total Salary (salary sheet Balance Payable) + Trailer rent / other). VAT 5% inside work kept aside.
       o.expenses = num(o.diesel + o.toll + o.maintenance + o.pay + o.other);
       o.workNet = num(o.work - o.vat);
-      // Profit: salary is NOT subtracted (client rule); VAT 5% kept aside
       o.profit = num(o.workNet - o.expenses);
       o.dieselPerTrip = o.trips ? num(o.diesel / o.trips) : 0;
       return o;
@@ -185,7 +184,7 @@ function TransportReports() {
             ['Receivable', T.receivable, plural(r.toCollect.length, 'trip') + ' not fully paid'],
             ['Diesel', T.diesel, ''], ['Toll + visa exit fee', T.toll, ''], ['Maintenance', T.maintenance, ''],
             ['Total salary (salary sheet)', T.pay, r.wholeMonths ? 'Balance payable incl. driver allowance' : 'Not included in a 7-day view'], ['Trailer rent / other', T.other, ''],
-            ['Total expenses', T.expenses, 'Includes salaries'], ['Profit', T.profit, `${margin}% of work amount · salary not subtracted`]
+            ['Total expenses', T.expenses, 'Includes salaries'], ['Profit', T.profit, `${margin}% of work amount · Work minus Total expenses`]
           ],
           boldRows: [10, 11]
         },
@@ -260,7 +259,7 @@ function TransportReports() {
           </div>
           <div className="rp-card">
             <div className="rp-card-title">Work amount and expenses each month</div>
-            <div className="rp-takeaway">{r.byMonth.length ? 'Expenses include salaries. Profit does not subtract salary.' : 'No data yet.'}</div>
+            <div className="rp-takeaway">{r.byMonth.length ? 'Expenses include salaries. Profit = Work minus Total expenses (Excel Sheet4).' : 'No data yet.'}</div>
             <PairBars labels={r.byMonth.map((x) => x.label)} a={r.byMonth.map((x) => x.work)} b={r.byMonth.map((x) => x.cost)} aLabel="Work amount" bLabel="Expenses" fmt={(v) => `${fmtAmt(v)} OMR`} />
           </div>
           <div className="rp-card">

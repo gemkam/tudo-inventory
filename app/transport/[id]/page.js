@@ -50,7 +50,8 @@ function DriverSheet() {
   const [del, setDel] = useState(null);
   const [error, setError] = useState('');
   const [cols, setCols] = useState(DEFAULT_COLS);
-  const [taken, setTaken] = useState([]); // profit taken (transport_profit_taken)
+  const [taken, setTaken] = useState([]);
+  const [extras, setExtras] = useState([]); // trailer rent / other of this driver (transport_extras) // profit taken (transport_profit_taken)
   const [takeOpen, setTakeOpen] = useState(false);
   const [takeForm, setTakeForm] = useState({ date: '', amount: '', note: '' });
   const [takeBusy, setTakeBusy] = useState(false);
@@ -68,12 +69,14 @@ function DriverSheet() {
 
   const load = useCallback(async () => {
     const s = sb();
-    const [d, e, sa, pt] = await Promise.all([
+    const [d, e, sa, pt, ex] = await Promise.all([
       s.from('transport_drivers').select('*').eq('id', id).single(),
       s.from('transport_entries').select('*').eq('driver_id', id).order('entry_date').order('sort').order('created_at'),
       s.from('transport_salaries').select('*').eq('driver_id', id),
-      s.from('transport_profit_taken').select('*').eq('driver_id', id).order('taken_on').order('created_at')
+      s.from('transport_profit_taken').select('*').eq('driver_id', id).order('taken_on').order('created_at'),
+      s.from('transport_extras').select('*').eq('driver_id', id)
     ]);
+    setExtras(ex.error ? [] : (ex.data || []));
     setTaken(pt.error ? [] : (pt.data || []));
     setSalMonths(Object.fromEntries((sa.data || []).map((x) => [x.id, monthKey(x.month)])));
     setSalaries(sa.data || []);
@@ -134,8 +137,8 @@ function DriverSheet() {
   /* Profit of this sheet (month or all months) and the running balance of all months */
   const inPeriod = (d) => month === 'all' || monthKey(d) === month;
   const taxOn = Boolean(driver?.tax_on);
-  const profit = driverProfit({ trips: rows, salaries: salaries.filter((x) => inPeriod(x.month)), taken: taken.filter((x) => inPeriod(x.taken_on)), taxOn });
-  const profitAll = driverProfit({ trips: entries, salaries, taken, taxOn });
+  const profit = driverProfit({ trips: rows, salaries: salaries.filter((x) => inPeriod(x.month)), extras: extras.filter((x) => inPeriod(x.month)), taken: taken.filter((x) => inPeriod(x.taken_on)), taxOn });
+  const profitAll = driverProfit({ trips: entries, salaries, extras, taken, taxOn });
 
   /* Driver allowance brought forward: earlier months' allowance still not paid shows on this month's sheet.
      When it is paid (Mark paid), it shows as Paid here and on the earlier month's sheet. */
@@ -782,7 +785,8 @@ function DriverSheet() {
               {profit.vat > 0 && <div className="pc-row minus"><span className="pc-l">VAT 5% (inside rent, kept aside)</span><span className="pc-v">− {fmtAmt(profit.vat)}</span></div>}
               {profit.vat > 0 && <div className="pc-row total"><span className="pc-l">Rent without VAT</span><span className="pc-v">{fmtAmt(profit.income)}</span></div>}
               <div className="pc-row minus"><span className="pc-l">Trip costs (diesel, toll, maintenance)</span><span className="pc-v">{profit.costs ? `− ${fmtAmt(profit.costs)}` : '–'}</span></div>
-              <div className="pc-row minus"><span className="pc-l">Driver allowance</span><span className="pc-v">{profit.allowance ? `− ${fmtAmt(profit.allowance)}` : '–'}</span></div>
+              <div className="pc-row minus"><span className="pc-l">Total salary (salary sheet, incl. driver allowance)</span><span className="pc-v">{profit.salary ? `− ${fmtAmt(profit.salary)}` : '–'}</span></div>
+              <div className="pc-row minus"><span className="pc-l">Trailer rent / other</span><span className="pc-v">{profit.other ? `− ${fmtAmt(profit.other)}` : '–'}</span></div>
               <div className="pc-row total"><span className="pc-l">Profit before tax</span><span className={`pc-v ${profit.before < 0 ? 'neg' : ''}`}>{fmtAmt(profit.before)}</span></div>
               {taxOn && <div className="pc-row minus"><span className="pc-l">Govt tax {TAX_RATE}%{profit.before <= 0 ? <small>No tax on a loss</small> : null}</span><span className="pc-v">{profit.tax ? `− ${fmtAmt(profit.tax)}` : '–'}</span></div>}
               {taxOn && <div className="pc-row total"><span className="pc-l">Profit after tax</span><span className={`pc-v ${profit.after < 0 ? 'neg' : ''}`}>{fmtAmt(profit.after)}</span></div>}
