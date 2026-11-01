@@ -129,7 +129,10 @@ function Palm({ x, y, s = 1 }) {
 export default function IntroScene() {
   return (
     <div className="is-scene" aria-hidden="true">
-      <svg viewBox="0 0 1600 380" preserveAspectRatio="xMidYMax slice">
+      {/* the stage keeps the 1600 x 380 shape and covers the scene box; the vehicles are separate layers on it so
+          the browser can slide them on the graphics card (smooth, no stutter) instead of redrawing the picture */}
+      <div className="is-stage">
+      <svg viewBox="0 0 1600 380" preserveAspectRatio="xMidYMax meet" className="is-stage-bg">
         <defs>
           <linearGradient id="isGlass" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor="#dbeaf6" />
@@ -216,13 +219,14 @@ export default function IntroScene() {
         <rect x="0" y="348" width="1600" height="6" fill="#d5dde3" />
         <rect x="0" y="354" width="1600" height="26" fill="url(#isFade)" />
 
-        {/* far lane: container truck going left */}
-        <g className="is-sc-drive t2"><g transform="translate(0 242) scale(-0.62 0.62)"><Truck cab="#13836b" trailer="#c99a3b" container mirrored label="TUDO NUM" /></g></g>
-        {/* near lane: Tudo Num trailer going right */}
-        <g className="is-sc-drive t1"><g transform="translate(0 256) scale(0.82)"><Truck /></g></g>
-        {/* near lane: delivery van a little later */}
-        <g className="is-sc-drive t3"><g transform="translate(0 288) scale(0.8)"><Van /></g></g>
       </svg>
+        {/* far lane: container truck going left */}
+        <div className="is-veh t2"><svg viewBox="0 0 352 100"><g transform="translate(346 0) scale(-1 1)"><Truck cab="#13836b" trailer="#c99a3b" container mirrored label="TUDO NUM" /></g></svg></div>
+        {/* near lane: Tudo Num trailer going right */}
+        <div className="is-veh t1"><svg viewBox="-6 0 352 100"><Truck /></svg></div>
+        {/* near lane: delivery van a little later */}
+        <div className="is-veh t3"><svg viewBox="-4 0 124 64"><Van /></svg></div>
+      </div>
     </div>
   );
 }
