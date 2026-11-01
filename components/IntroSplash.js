@@ -1,7 +1,8 @@
 'use client';
 // Opening animation (1 Nov 2026).
 // Plays once per browser tab when the app is first opened:
-//   1. dark stage fades in (moving light in the theme colour) and the logo comes into focus
+//   1. dark stage fades in (moving light in the theme colour), the Tudo Num Group logo comes into focus
+//      and its green arrow draws itself up
 //   2. "TUDO NUM GROUP" letters rise one by one out of a blur, then a light runs across them
 //   3. "OFFICE SYSTEMS" closes in from wide letter spacing, gold lines draw out on both sides
 //   4. "Powered by KS TECH LLC" rises at the bottom with a glowing line
@@ -78,10 +79,10 @@ export default function IntroSplash() {
 
       <div className="is-center">
         <div className="is-logo-wrap">
-          <span className="is-ring r1" aria-hidden="true" />
-          <span className="is-ring r2" aria-hidden="true" />
-          <span className="is-logo">
-            <img src="/tudonum-logo-lg.png" alt="" />
+          <span className="is-halo" aria-hidden="true" />
+          <span className="is-logo" role="img" aria-label="Tudo Num Group">
+            <img className="is-lg-base" src="/brand-base.png" alt="" />
+            <img className="is-lg-arrow" src="/brand-arrow.png" alt="" />
             <span className="is-logo-shine" aria-hidden="true" />
           </span>
         </div>
