@@ -81,6 +81,7 @@ function PersonnelPage() {
   const [month, setMonth] = useState(thisMonth());
   const [send, setSend] = useState(null); // { table, row }
   const [archived, setArchived] = useState([]); // [{ table, row }]
+  const [papersOn, setPapersOn] = useState(false); // ⋯ More (Contract, Resident card, Passport) locked until ✏️ Edit › Enable papers
   const [salaryOn, setSalaryOn] = useState(false); // Salary Credited, 👁 Slip and 📤 Send To Employee stay locked until ✏️ Edit › Enable
   const [coDetail, setCoDetail] = useState(''); // company shown as a full table (from All companies ▾)
   const [viewArch, setViewArch] = useState(null);
@@ -282,6 +283,7 @@ function PersonnelPage() {
         bucket={BUCKET}
         row={{ id: doc === 'slip' ? `slip/${row.slip_token}` : `${table}/${row.id}/${doc}`, files: filesOf(row, doc), owner: row.name, doc_name: label }}
         canEdit={isAdmin}
+        locked={!papersOn}
         userName={me}
         flash={flash}
         onSave={(list) => saveFiles(table, row, doc, list)}
@@ -546,7 +548,8 @@ function PersonnelPage() {
             onDelete={() => setDelMode((v) => !v)}
             onUndo={doUndo}
             salaryOn={salaryOn} onSalary={() => setSalaryOn((v) => !v)}
-            onDone={() => { setEdit(false); setDelMode(false); setSalaryOn(false); }}
+            papersOn={papersOn} onPapers={() => setPapersOn((v) => !v)}
+            onDone={() => { setEdit(false); setDelMode(false); setSalaryOn(false); setPapersOn(false); }}
           />
         )}
         {isAdmin && (tab === 'office' || tab === 'site' || tab === 'drivers') && (
@@ -555,7 +558,7 @@ function PersonnelPage() {
         {tab === 'drivers' && <Link href="/transport/trip-sheets" className="btn">🚚 Trip sheets</Link>}
         <PrintColumns className="btn" />
         {!own && <button type="button" className="btn" onClick={doExcel}>📗 Excel</button>}
-        {(edit || delMode || salaryOn) && <span className="pn-mode">{[edit && '✏️ Editing: tap a box to change it', delMode && '🗑 Tap the red 🗑 at the start of a row to delete (moves to Archives)', salaryOn && '🔓 Salary buttons on'].filter(Boolean).join(' · ')}</span>}
+        {(edit || delMode || salaryOn || papersOn) && <span className="pn-mode">{[edit && '✏️ Editing on', delMode && '🗑 Delete on (red 🗑 at the start of a row)', papersOn && '📎 Papers on', salaryOn && '💵 Salary buttons on'].filter(Boolean).join(' · ')} · press ✏️ Edit › ✓ Done to lock all</span>}
       </div>}
 
 
@@ -659,7 +662,7 @@ function PersonnelPage() {
 }
 
 /* ✏️ Edit button with its menu: Edit cells, ＋ Add new, 🗑 Delete, ↶ Undo, ✓ Done */
-function EditMenu({ edit, delMode, undoCount, canDel, delNote, onEdit, onAdd, onDelete, onUndo, onDone, salaryOn, onSalary }) {
+function EditMenu({ edit, delMode, undoCount, canDel, delNote, onEdit, onAdd, onDelete, onUndo, onDone, salaryOn, onSalary, papersOn, onPapers }) {
   const [open, setOpen] = useState(false);
   const box = useRef(null);
   useEffect(() => {
@@ -671,7 +674,7 @@ function EditMenu({ edit, delMode, undoCount, canDel, delNote, onEdit, onAdd, on
     return () => { document.removeEventListener('pointerdown', close); document.removeEventListener('keydown', esc); };
   }, [open]);
   const act = (fn) => () => { setOpen(false); fn(); };
-  const on = edit || delMode || salaryOn;
+  const on = edit || delMode || salaryOn || papersOn;
   return (
     <div className="pn-edit" ref={box}>
       <button type="button" className={`btn${on ? ' in' : ''}`} aria-pressed={on} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
@@ -679,12 +682,14 @@ function EditMenu({ edit, delMode, undoCount, canDel, delNote, onEdit, onAdd, on
       </button>
       {open && (
         <div className="pn-menu" role="menu">
-          <button type="button" role="menuitem" className={edit ? 'on' : ''} onClick={act(onEdit)}>✏️ {edit ? 'Stop editing' : 'Edit table'}<small>tap a box to change it</small></button>
+          {/* every option works the same way: Enable (turns on, ✓ shown) / Disable; ✓ Done disables all */}
+          <button type="button" role="menuitem" className={edit ? 'on' : ''} onClick={act(onEdit)}>{edit ? '✓ ✏️ Disable editing' : '✏️ Enable editing'}<small>boxes of the table and the Company drop-down</small></button>
+          <button type="button" role="menuitem" className={delMode ? 'on' : ''} onClick={act(onDelete)} disabled={!canDel}>{delMode ? '✓ 🗑 Disable delete' : '🗑 Enable delete'}<small>{delNote || 'red 🗑 at the start of each row'}</small></button>
+          {onPapers && <button type="button" role="menuitem" className={papersOn ? 'on' : ''} onClick={act(onPapers)}>{papersOn ? '✓ 📎 Disable papers' : '📎 Enable papers'}<small>⋯ More of Contract, Resident card, Passport</small></button>}
+          {onSalary && <button type="button" role="menuitem" className={salaryOn ? 'on' : ''} onClick={act(onSalary)}>{salaryOn ? '✓ 💵 Disable salary buttons' : '💵 Enable salary buttons'}<small>Salary Credited, 👁 Slip, 📤 Send To Employee, All Salary Paid</small></button>}
           <button type="button" role="menuitem" onClick={act(onAdd)}>＋ Add new<small>new row at the bottom</small></button>
-          <button type="button" role="menuitem" className={delMode ? 'on' : ''} onClick={act(onDelete)} disabled={!canDel}>🗑 {delMode ? 'Hide Delete buttons' : 'Delete'}<small>{delNote || 'shows a Delete button on each row'}</small></button>
           <button type="button" role="menuitem" onClick={act(onUndo)} disabled={!undoCount}>↶ Undo{undoCount ? ` (${undoCount})` : ''}<small>last change, add or delete</small></button>
-          {onSalary && <button type="button" role="menuitem" className={salaryOn ? 'on' : ''} onClick={act(onSalary)}>{salaryOn ? '🔒 Disable salary buttons' : '🔓 Enable salary buttons'}<small>Salary Credited, 👁 Slip, 📤 Send To Employee, All Salary Paid</small></button>}
-          {on && <button type="button" role="menuitem" className="done" onClick={act(onDone)}>✓ Done</button>}
+          {on && <button type="button" role="menuitem" className="done" onClick={act(onDone)}>✓ Done<small>disables everything again</small></button>}
         </div>
       )}
     </div>

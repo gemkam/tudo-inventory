@@ -113,7 +113,7 @@ export function printBlob(url, f, flash) {
   }
 }
 
-export default function DocFiles({ row, canEdit, userName, onSave, flash, bucket = BUCKET, compact = false, label = '' }) {
+export default function DocFiles({ row, canEdit, userName, onSave, flash, bucket = BUCKET, compact = false, label = '', locked = false }) {
   const files = Array.isArray(row.files) ? row.files : [];
   const oneRef = useRef(null);
   const manyRef = useRef(null);
@@ -204,7 +204,7 @@ export default function DocFiles({ row, canEdit, userName, onSave, flash, bucket
         </button>
       ))}
       {!compact && !files.length && <span className="muted dfl-none">No document yet</span>}
-      <button type="button" className="dfl-more" onClick={() => setMore(true)} disabled={busy}>
+      <button type="button" className="dfl-more" onClick={() => setMore(true)} disabled={busy || locked} title={locked ? 'Locked: ✏️ Edit › Enable papers' : ''}>
         {busy ? 'Uploading...' : `⋯ More${label ? ` · ${label}` : ''}${files.length ? ` (${files.length})` : ''}`}
       </button>
       <input ref={oneRef} type="file" accept={ACCEPT} hidden onChange={onPick} />
