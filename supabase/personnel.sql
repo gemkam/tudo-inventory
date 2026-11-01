@@ -25,3 +25,8 @@ create policy "staff files add" on storage.objects for insert to authenticated w
 create policy "staff files change" on storage.objects for update to authenticated using (bucket_id = 'staff-files' and public.can_write());
 create policy "staff files remove" on storage.objects for delete to authenticated using (bucket_id = 'staff-files' and public.can_write());
 -- functions slip_token_ok(text) and public_staff_slip(text): see migration personnel_module in Supabase
+-- ＋ Add company (1 Nov 2026): extra companies for Personnel
+create table if not exists public.personnel_companies (key text primary key, short text not null, name text, sort integer not null default 0, created_at timestamptz not null default now());
+alter table public.personnel_companies enable row level security;
+create policy personnel_co_read on public.personnel_companies for select using (public.can_read());
+create policy personnel_co_write on public.personnel_companies for all using (public.can_write()) with check (public.can_write());

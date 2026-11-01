@@ -5,7 +5,6 @@ import Link from 'next/link';
 import AuthGate, { useUser } from '@/components/AuthGate';
 import DataGrid from '@/components/DataGrid';
 import DocFiles from '@/components/DocFiles';
-import EditToggle from '@/components/EditToggle';
 import Modal from '@/components/Modal';
 import Expiry from '@/components/Expiry';
 import { sb } from '@/lib/supabase';
@@ -33,8 +32,6 @@ const TABS = [
   ['sub', '🤝 Subcontractors'],
   ['attendance', '🗓 Attendance']
 ];
-const CO_SHORT = Object.fromEntries(COMPANIES.map((c) => [c.key, c.short]));
-const CO_KEY = Object.fromEntries(COMPANIES.map((c) => [c.short, c.key]));
 const TICKETS = ['Yes', 'No', 'Yearly', 'Every 2 years'];
 const BUCKET = 'staff-files';
 const thisMonth = () => todayISO().slice(0, 7);
@@ -60,7 +57,14 @@ function PersonnelPage() {
   const [tab, setTab] = useState('office');
   const [co, setCo] = useState('');
   const [q, setQ] = useState('');
-  const [edit, setEdit] = useState(false);
+  const [edit, setEdit] = useState(false); // cells can be changed
+  const [delMode, setDelMode] = useState(false); // Delete buttons on each row
+  const [extraCos, setExtraCos] = useState([]); // companies added with ＋ Add company (personnel_companies)
+  const [addCo, setAddCo] = useState(null); // { short, name }
+  const allCos = useMemo(() => [...COMPANIES, ...extraCos], [extraCos]);
+  const CO_SHORT = useMemo(() => Object.fromEntries(allCos.map((c) => [c.key, c.short])), [allCos]);
+  const CO_KEY = useMemo(() => Object.fromEntries(allCos.map((c) => [c.short, c.key])), [allCos]);
+  const [undo, setUndo] = useState([]); // [{ type: 'patch'|'add'|'delete', table, id, before | row, label }]
   const [staff, setStaff] = useState(null);
   const [drivers, setDrivers] = useState(null);
   const [subs, setSubs] = useState(null);
@@ -82,19 +86,21 @@ function PersonnelPage() {
     try { const t = new URLSearchParams(window.location.search).get('tab'); if (TABS.some(([k]) => k === t)) setTab(t); } catch { /* ignore */ }
   }, []);
   function goTab(k) {
-    setTab(k); setEdit(false);
+    setTab(k); setEdit(false); setDelMode(false);
     try { window.history.replaceState(null, '', `/personnel?tab=${k}`); } catch { /* ignore */ }
   }
 
   const load = useCallback(async () => {
     const s = sb();
     const days = daysOfMonth(month);
-    const [st, dr, sc, a] = await Promise.all([
+    const [st, dr, sc, a, pc] = await Promise.all([
       s.from('exp_staff').select('*').order('company').order('sort').order('name'),
       s.from('transport_drivers').select('*').order('sort').order('name'),
       s.from('personnel_subcontractors').select('*').order('sort').order('created_at'),
-      s.from('exp_attendance').select('staff_id, day, mark').gte('day', days[0].iso).lte('day', days[days.length - 1].iso)
+      s.from('exp_attendance').select('staff_id, day, mark').gte('day', days[0].iso).lte('day', days[days.length - 1].iso),
+      s.from('personnel_companies').select('*').order('sort').order('created_at')
     ]);
+    setExtraCos(pc.data || []);
     const err = st.error || dr.error || sc.error;
     if (err) setError(err.message);
     setStaff(st.data || []);
@@ -112,9 +118,11 @@ function PersonnelPage() {
   const TABLE = { office: 'exp_staff', site: 'exp_staff', drivers: 'transport_drivers', sub: 'personnel_subcontractors' };
   const setterOf = (table) => (table === 'exp_staff' ? setStaff : table === 'transport_drivers' ? setDrivers : setSubs);
 
-  async function patchRow(table, row, patch) {
+  const remember = (step) => setUndo((u) => [...u.slice(-49), step]);
+  async function patchRow(table, row, patch, record = false) {
     const { error: err } = await sb().from(table).update(patch).eq('id', row.id);
     if (err) { flash(err.message, 'err'); return false; }
+    if (record) remember({ type: 'patch', table, id: row.id, before: Object.fromEntries(Object.keys(patch).map((k) => [k, row[k] ?? null])), label: row.name });
     setterOf(table)((list) => (list || []).map((x) => (x.id === row.id ? { ...x, ...patch } : x)));
     return true;
   }
@@ -130,7 +138,7 @@ function PersonnelPage() {
       patch = { [key]: v, allowances: r3(Math.max(0, n(row.allowances) - n(row[key]) + v)) };
     }
     if (key === 'allowances') patch = { allowances: Math.max(n(value), n(row.house_rent) + n(row.utilities)) };
-    if (await patchRow(table, row, patch)) flash('Saved');
+    if (await patchRow(table, row, patch, true)) flash('Saved');
   }
 
   async function saveFiles(table, row, doc, list) {
@@ -154,7 +162,10 @@ function PersonnelPage() {
       res = await s.from('personnel_subcontractors').insert({ name: 'New subcontractor', sort: (subs || []).length + 1 }).select().single();
       if (!res.error) setSubs((l) => [...(l || []), res.data]);
     }
-    if (res.error) flash(res.error.message, 'err'); else flash('Added: type the name in the first box');
+    if (res.error) { flash(res.error.message, 'err'); return; }
+    remember({ type: 'add', table: TABLE[tab], id: res.data.id, label: res.data.name });
+    setEdit(true);
+    flash('Added at the bottom: type the name in the first box');
   }
 
   async function confirmDelete() {
@@ -163,8 +174,45 @@ function PersonnelPage() {
     const { error: err } = await sb().from(table).delete().eq('id', row.id);
     if (err) { flash(err.message, 'err'); return; }
     setterOf(table)((l) => (l || []).filter((x) => x.id !== row.id));
-    flash('Deleted');
+    remember({ type: 'delete', table, id: row.id, row, label: row.name });
+    flash('Deleted. ↶ Undo brings it back');
   }
+  /* ＋ Add company: a new pill next to the others (Personnel only; Office Expense keeps its 3 companies) */
+  async function saveCompany() {
+    const short = (addCo.short || '').trim();
+    const name = (addCo.name || '').trim() || short;
+    if (!short) { flash('Type the company name', 'err'); return; }
+    if (allCos.some((c) => c.short.toLowerCase() === short.toLowerCase())) { flash('This company is already there', 'err'); return; }
+    const key = `${short.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'company'}-${Date.now().toString(36).slice(-4)}`;
+    const { data, error: err } = await sb().from('personnel_companies').insert({ key, short, name, sort: extraCos.length + 1 }).select().single();
+    if (err) { flash(err.message, 'err'); return; }
+    setExtraCos((l) => [...l, data]);
+    setAddCo(null);
+    setCo(data.key);
+    flash(`${short} added`);
+  }
+
+  /* ↶ Undo: last change, add or delete (up to 50 steps) */
+  async function doUndo() {
+    const step = undo[undo.length - 1];
+    if (!step) { flash('Nothing to undo'); return; }
+    const s = sb();
+    let err = null;
+    if (step.type === 'patch') {
+      ({ error: err } = await s.from(step.table).update(step.before).eq('id', step.id));
+      if (!err) setterOf(step.table)((l) => (l || []).map((x) => (x.id === step.id ? { ...x, ...step.before } : x)));
+    } else if (step.type === 'add') {
+      ({ error: err } = await s.from(step.table).delete().eq('id', step.id));
+      if (!err) setterOf(step.table)((l) => (l || []).filter((x) => x.id !== step.id));
+    } else if (step.type === 'delete') {
+      ({ error: err } = await s.from(step.table).insert(step.row));
+      if (!err) setterOf(step.table)((l) => [...(l || []), step.row]);
+    }
+    if (err) { flash(`Could not undo: ${err.message}`, 'err'); return; }
+    setUndo((u) => u.slice(0, -1));
+    flash(step.type === 'patch' ? `Undone: change of ${step.label}` : step.type === 'add' ? `Undone: ${step.label} removed again` : `Undone: ${step.label} is back${step.table === 'exp_staff' ? ' (attendance marks of that person were deleted with him)' : ''}`);
+  }
+
 
   /* ---------- cells ---------- */
   const docCell = (table, doc, label, text) => (row) => (
@@ -189,7 +237,7 @@ function PersonnelPage() {
     </div>
   );
   const money = (k) => ({ key: k, label: '', type: 'number', width: 105, render: (r) => (n(r[k]) ? fmtAmt(r[k]) : <span className="muted">–</span>) });
-  const companyCol = { key: 'company', label: 'Company', type: 'select', width: 135, options: COMPANIES.map((c) => c.short), raw: (r) => CO_SHORT[r.company] || r.company || '', render: (r) => CO_SHORT[r.company] || r.company || <span className="muted">–</span> };
+  const companyCol = { key: 'company', label: 'Company', type: 'select', width: 135, options: allCos.map((c) => c.short), raw: (r) => CO_SHORT[r.company] || r.company || '', render: (r) => CO_SHORT[r.company] || r.company || <span className="muted">–</span> };
   const attCol = {
     key: 'att', label: `Attendance · ${monthLabel(month)}`, type: 'calc', width: 190,
     render: (r) => {
@@ -296,9 +344,9 @@ function PersonnelPage() {
       <DataGrid columns={cols} groups={salaryGroups(cols)} rows={rows} canEdit={edit && isAdmin} flash={flash}
         onSave={(row, key, value) => onSave('exp_staff', row, key, value)}
         onAdd={edit && isAdmin ? addRow : undefined} addLabel={`+ Add ${tab === 'site' ? 'site' : 'office'} employee${co ? ` (${CO_SHORT[co]})` : ' (Sumptuosity)'}`}
-        onDelete={edit && canDel ? (row) => setDel({ table: 'exp_staff', row }) : undefined}
+        onDelete={delMode && canDel ? (row) => setDel({ table: 'exp_staff', row }) : undefined}
         footer={sumFoot(rows, 'basic')}
-        emptyText={tab === 'site' ? 'No site employees yet. Press ✏️ Edit, then + Add, or change a person to Site on the Attendance page.' : 'No office employees yet.'} />
+        emptyText={tab === 'site' ? 'No site employees yet. Press ✏️ Edit, then ＋ Add new, or change a person to Site on the Attendance page.' : 'No office employees yet.'} />
     );
   } else if (tab === 'drivers') {
     grid = (
@@ -312,8 +360,8 @@ function PersonnelPage() {
       <DataGrid columns={subColumns} rows={subRows} canEdit={edit && isAdmin} flash={flash}
         onSave={(row, key, value) => onSave('personnel_subcontractors', row, key, value)}
         onAdd={edit && isAdmin ? addRow : undefined} addLabel="+ Add subcontractor"
-        onDelete={edit && canDel ? (row) => setDel({ table: 'personnel_subcontractors', row }) : undefined}
-        emptyText="No subcontractors yet. Press ✏️ Edit, then + Add subcontractor." />
+        onDelete={delMode && canDel ? (row) => setDel({ table: 'personnel_subcontractors', row }) : undefined}
+        emptyText="No subcontractors yet. Press ✏️ Edit, then ＋ Add new." />
     );
   }
 
@@ -330,7 +378,6 @@ function PersonnelPage() {
             </div>
           ) : null}
           {tab !== 'attendance' && <input className="pn-search" type="search" placeholder="Search name, passport, mobile..." value={q} onChange={(e) => setQ(e.target.value)} />}
-          {tab !== 'attendance' && <EditToggle on={edit} onClick={() => setEdit((v) => !v)} show={isAdmin} />}
           <button type="button" className="btn ghost" onClick={doExcel}>📗 Excel</button>
         </div>
       </div>
@@ -347,7 +394,8 @@ function PersonnelPage() {
       {showCo && (
         <div className="pn-chips no-print">
           <button type="button" className={!co ? 'on' : ''} onClick={() => setCo('')}>All companies</button>
-          {COMPANIES.map((c) => <button key={c.key} type="button" className={co === c.key ? 'on' : ''} onClick={() => setCo(c.key)}>{c.short}</button>)}
+          {allCos.map((c) => <button key={c.key} type="button" className={co === c.key ? 'on' : ''} onClick={() => setCo(c.key)} title={c.name || c.short}>{c.short}</button>)}
+          {isAdmin && <button type="button" className="pn-addco" onClick={() => setAddCo({ short: '', name: '' })}>＋ Add company</button>}
         </div>
       )}
 
@@ -361,12 +409,44 @@ function PersonnelPage() {
       )}
       {tab === 'drivers' && <p className="muted pn-note no-print">Same drivers as Transport &gt; Drivers. Monthly driver salaries stay in the Transport salary sheets.</p>}
 
+      {/* Two buttons just above the table: ✏️ Edit (menu: Edit cells, Add new, Delete, Undo) and 🖨 Print */}
+      <div className="pn-bar no-print">
+        {tab !== 'attendance' && isAdmin && (
+          <EditMenu
+            edit={edit} delMode={delMode} undoCount={undo.length}
+            canDel={canDel && tab !== 'drivers'}
+            delNote={tab === 'drivers' ? 'Drivers are deleted from Transport > Drivers' : !canDel ? 'Only Full access and Administrator can delete' : ''}
+            onEdit={() => setEdit((v) => !v)}
+            onAdd={addRow}
+            onDelete={() => setDelMode((v) => !v)}
+            onUndo={doUndo}
+            onDone={() => { setEdit(false); setDelMode(false); }}
+          />
+        )}
+        <button type="button" className="btn pn-print" onClick={() => window.print()}>🖨 Print</button>
+        {(edit || delMode) && <span className="pn-mode">{[edit && '✏️ Editing: tap a box to change it', delMode && '🗑 Delete buttons are on'].filter(Boolean).join(' · ')}</span>}
+      </div>
+
       {tab === 'attendance' ? (
-        <AttendanceTab staff={(staff || []).filter((r) => r.active !== false)} statOf={statOf} month={month} />
+        <AttendanceTab companies={allCos} staff={(staff || []).filter((r) => r.active !== false)} statOf={statOf} month={month} />
       ) : grid}
 
       {send && <SendModal table={send.table} row={(send.table === 'exp_staff' ? staff : drivers).find((x) => x.id === send.row.id) || send.row} onClose={() => setSend(null)} onToggle={(row, on) => patchRow(send.table, row, { slip_link_on: on })} flash={flash} />}
 
+      {addCo && (
+        <Modal title="＋ Add company" onClose={() => setAddCo(null)}>
+          <label className="dfl-label">Short name (on the button)
+            <input className="drv-input" autoFocus value={addCo.short} placeholder="e.g. Tudo Tech" onChange={(e) => setAddCo({ ...addCo, short: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') saveCompany(); }} />
+          </label>
+          <label className="dfl-label" style={{ marginTop: 10 }}>Full company name (optional)
+            <input className="drv-input" value={addCo.name} placeholder="e.g. TUDO TECH L.L.C" onChange={(e) => setAddCo({ ...addCo, name: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') saveCompany(); }} />
+          </label>
+          <div className="modal-actions">
+            <button type="button" className="btn ghost" onClick={() => setAddCo(null)}>Cancel</button>
+            <button type="button" className="btn in" onClick={saveCompany}>Add company</button>
+          </div>
+        </Modal>
+      )}
       {del && (
         <Modal title="Delete?" onClose={() => setDel(null)}>
           <p style={{ margin: 0 }}>Delete <b>{del.row.name}</b>?{del.table === 'exp_staff' ? ' This person is also removed from the Office Expense salary sheet and attendance.' : ''}</p>
@@ -381,14 +461,46 @@ function PersonnelPage() {
   );
 }
 
+/* ✏️ Edit button with its menu: Edit cells, ＋ Add new, 🗑 Delete, ↶ Undo, ✓ Done */
+function EditMenu({ edit, delMode, undoCount, canDel, delNote, onEdit, onAdd, onDelete, onUndo, onDone }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = (e) => { if (box.current && !box.current.contains(e.target)) setOpen(false); };
+    const esc = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('pointerdown', close);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('pointerdown', close); document.removeEventListener('keydown', esc); };
+  }, [open]);
+  const act = (fn) => () => { setOpen(false); fn(); };
+  const on = edit || delMode;
+  return (
+    <div className="pn-edit" ref={box}>
+      <button type="button" className={`btn${on ? ' in' : ''}`} aria-pressed={on} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        ✏️ Edit <span aria-hidden="true">▾</span>
+      </button>
+      {open && (
+        <div className="pn-menu" role="menu">
+          <button type="button" role="menuitem" className={edit ? 'on' : ''} onClick={act(onEdit)}>✏️ {edit ? 'Stop editing' : 'Edit table'}<small>tap a box to change it</small></button>
+          <button type="button" role="menuitem" onClick={act(onAdd)}>＋ Add new<small>new row at the bottom</small></button>
+          <button type="button" role="menuitem" className={delMode ? 'on' : ''} onClick={act(onDelete)} disabled={!canDel}>🗑 {delMode ? 'Hide Delete buttons' : 'Delete'}<small>{delNote || 'shows a Delete button on each row'}</small></button>
+          <button type="button" role="menuitem" onClick={act(onUndo)} disabled={!undoCount}>↶ Undo{undoCount ? ` (${undoCount})` : ''}<small>last change, add or delete</small></button>
+          {on && <button type="button" role="menuitem" className="done" onClick={act(onDone)}>✓ Done</button>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* Attendance tab: every office and site employee for the month, straight from the attendance sheets */
-function AttendanceTab({ staff, statOf, month }) {
+function AttendanceTab({ companies, staff, statOf, month }) {
   return (
     <>
       <div className="pn-att-open no-print">
         {COMPANIES.map((c) => <Link key={c.key} className="btn" href={`/expenses/attendance?co=${c.key}&m=${month}`}>🗓 {c.short} attendance sheet</Link>)}
       </div>
-      {COMPANIES.map((c) => {
+      {companies.map((c) => {
         const list = staff.filter((p) => p.company === c.key);
         if (!list.length) return null;
         return (
