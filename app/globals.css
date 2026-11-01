@@ -3969,3 +3969,16 @@ html.desk-on-phone .al-sheet-back { position: fixed; inset: 0; z-index: 1000; ba
 .is-sc-road { font: 700 10px 'Work Sans', system-ui, sans-serif; fill: #fff; letter-spacing: .04em; }
 .is-sc-sign { font: 800 12px 'Work Sans', system-ui, sans-serif; letter-spacing: .14em; fill: #13836b; }
 .is-veh .is-sc-wheel { animation-duration: .8s; }
+
+/* Powered by, one at a time (2 Nov 2026): "Powered by" fades in big and clear, zooms out and away,
+   then "KS TECH LLC" builds letter by letter in the same place with a glowing line. Own white strip under the road. */
+.intro-splash .is-powered { bottom: 0; height: 56px; gap: 0; display: grid; place-items: center; background: linear-gradient(to bottom, rgba(255, 255, 255, 0), #fff 30%); }
+.intro-splash .is-powered > * { grid-area: 1 / 1; }
+.intro-splash .is-pw-small { font-size: clamp(13px, 3.4vw, 16px); font-weight: 600; letter-spacing: .4em; padding-left: .4em; color: #4d5d6c;
+  animation: is-pw-in .7s cubic-bezier(.16, 1, .3, 1) 3.2s both, is-pw-zoom .75s cubic-bezier(.7, 0, .84, 0) 4.35s forwards; }
+@keyframes is-pw-in { from { opacity: 0; transform: scale(.85); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes is-pw-zoom { to { opacity: 0; transform: scale(2.2); filter: blur(8px); letter-spacing: .6em; } }
+.intro-splash .is-pw-name { font-size: clamp(18px, 4.6vw, 24px); letter-spacing: .22em; }
+.intro-splash .is-pw-name .is-ch { animation: is-pw-ch2 .7s cubic-bezier(.16, 1, .3, 1) both; }
+@keyframes is-pw-ch2 { from { opacity: 0; transform: translateY(16px) scale(1.4); filter: blur(8px); } to { opacity: 1; transform: none; filter: none; } }
+.intro-splash .is-pw-glow { align-self: end; margin-bottom: 8px; width: 170px; animation: is-line-in .9s cubic-bezier(.16, 1, .3, 1) 5.6s both, is-pulse 1.6s ease-in-out 6.5s infinite; }

@@ -16,7 +16,7 @@ import { useEffect, useRef, useState } from 'react';
 import { INTRO_REPLAY } from '@/lib/intro';
 import IntroScene from '@/components/IntroScene';
 
-const OUT_AT = 8000;   // ms after open when the fade out starts (all done by ~5s, then holds 3 s)
+const OUT_AT = 8800;   // ms after open when the fade out starts (KS TECH LLC done by ~5.8s, then holds 3 s)
 const OUT_MS = 900;    // length of the fade out
 
 function Letters({ text, start, step, glint, className }) {
@@ -117,7 +117,7 @@ export default function IntroSplash() {
 
       <div className="is-powered" aria-label="Powered by KS TECH LLC">
         <span className="is-pw-small">Powered by</span>
-        <Letters text="KS TECH LLC" start={3650} step={45} className="is-pw-name" />
+        <Letters text="KS TECH LLC" start={4950} step={55} className="is-pw-name" />
         <span className="is-pw-glow" aria-hidden="true" />
       </div>
 
