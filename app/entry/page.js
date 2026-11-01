@@ -242,7 +242,7 @@ function EntryPage() {
   const sections = isOffice ? (
     <div className="co-switch ent-sections no-print" role="tablist" aria-label="Data entry">
       <button type="button" role="tab" aria-selected={section === 'drivers'} className={section === 'drivers' ? 'on' : ''} onClick={() => setSection('drivers')}>🚚 Drivers</button>
-      <button type="button" role="tab" aria-selected={section === 'other'} className={section === 'other' ? 'on' : ''} onClick={() => setSection('other')}>👤 Non-drivers</button>
+      <button type="button" role="tab" aria-selected={section === 'other'} className={section === 'other' ? 'on' : ''} onClick={() => setSection('other')}>👤 Staff</button>
       {me.isOwner && <button type="button" role="tab" aria-selected={section === 'users'} className={section === 'users' ? 'on' : ''} onClick={() => setSection('users')}>🔑 Create users</button>}
     </div>
   ) : null;

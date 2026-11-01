@@ -7,9 +7,9 @@ import { sb } from '@/lib/supabase';
 import { COMPANIES } from '@/lib/expenses';
 
 /*
-  Data entry > 👤 Non-drivers (1 Nov 2026). Empty for now (the forms for non-drivers come later).
+  Data entry > 👤 Staff (1 Nov 2026). Empty for now (the forms for non-drivers come later).
   Shows the non-driver employees from Personnel (exp_staff, Office / Site) and lets the office add one
-  (＋ Add non-driver → added to Personnel and the salary sheet).
+  (＋ Add staff → added to Personnel and the salary sheet).
 */
 export default function NonDrivers({ flash, canAdd }) {
   const [staff, setStaff] = useState(null);
@@ -35,8 +35,8 @@ export default function NonDrivers({ flash, canAdd }) {
   return (
     <section className="panel">
       <div className="section-head">
-        <h2>👤 Non-drivers</h2>
-        {canAdd && <button type="button" className="ent-new" onClick={() => setAddP({ name: '', company: 'sumptuosity', type: 'Office', designation: '' })}><span aria-hidden="true">＋</span> Add non-driver</button>}
+        <h2>👤 Staff</h2>
+        {canAdd && <button type="button" className="ent-new" onClick={() => setAddP({ name: '', company: 'sumptuosity', type: 'Office', designation: '' })}><span aria-hidden="true">＋</span> Add staff</button>}
       </div>
       <div className="ent-drivers" role="list">
         {(staff || []).map((p) => (
@@ -45,13 +45,13 @@ export default function NonDrivers({ flash, canAdd }) {
             <span><b>{p.name}</b><small>{[short(p.company), p.staff_type || 'Office', p.designation || p.department].filter(Boolean).join(' · ')}</small></span>
           </div>
         ))}
-        {staff && !staff.length && <p className="muted">No non-drivers yet.</p>}
+        {staff && !staff.length && <p className="muted">No staff yet.</p>}
         {!staff && <p className="muted">Loading...</p>}
       </div>
-      <p className="muted" style={{ marginBottom: 0 }}>The forms for non-drivers will come here. The list comes from <Link href="/personnel?tab=office">Personnel</Link>.</p>
+      <p className="muted" style={{ marginBottom: 0 }}>The forms for staff will come here. The list comes from <Link href="/personnel?tab=office">Personnel</Link>.</p>
 
       {addP && (
-        <Modal title="＋ Add non-driver" onClose={() => setAddP(null)}>
+        <Modal title="＋ Add staff" onClose={() => setAddP(null)}>
           <form onSubmit={add} style={{ display: 'grid', gap: 12 }}>
             <div className="field"><label htmlFor="nd2-name">Name</label><input id="nd2-name" autoFocus required value={addP.name} onChange={(e) => setAddP({ ...addP, name: e.target.value })} /></div>
             <div className="field"><label htmlFor="nd2-co">Company</label>

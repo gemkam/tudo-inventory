@@ -12,7 +12,7 @@ import { logAction } from '@/lib/activity';
   Data entry > 🔑 Create users (Administrator only, 1 Nov 2026).
   1. Driver or Non-driver.
   2. Pick the person from Personnel (drivers = transport_drivers, non-drivers = exp_staff Office / Site). A person added
-     in Personnel shows here by himself. ＋ Add non-driver / ＋ Add driver adds him to Personnel first.
+     in Personnel shows here by himself. ＋ Add staff / ＋ Add driver adds him to Personnel first.
   3. Username, password, access level (Driver = only his trip form; Data entry, View only, Full access, Administrator).
   Creates the login (RPC admin_create_user) and links it: transport_drivers.user_id or exp_staff.user_id.
 */
@@ -75,7 +75,7 @@ export default function CreateUsers({ flash, onChanged }) {
     if (err) { setBusy(false); setError(err.message); return; }
     const { error: lErr } = await sb().from(kind === 'driver' ? 'transport_drivers' : 'exp_staff').update({ user_id: newId }).eq('id', p.id);
     setBusy(false);
-    logAction(`Created user "${form.username.trim().toLowerCase()}" (${kind === 'driver' ? 'Driver' : 'Non-driver'} ${p.name}) with ${ROLES[form.role]?.label}`);
+    logAction(`Created user "${form.username.trim().toLowerCase()}" (${kind === 'driver' ? 'Driver' : 'Staff'} ${p.name}) with ${ROLES[form.role]?.label}`);
     flash(`Login "${form.username.trim().toLowerCase()}" made for ${p.name} (${ROLES[form.role]?.label}).${lErr ? ` Could not link: ${lErr.message}` : ''}`);
     setForm({ person: '', username: '', password: '', role: kind === 'driver' ? 'driver' : 'entry' });
     load(); onChanged?.();
@@ -102,9 +102,9 @@ export default function CreateUsers({ flash, onChanged }) {
   return (
     <section className="panel cu">
       <div className="section-head"><h2>🔑 Create users</h2></div>
-      <div className="co-switch cu-kind" role="tablist" aria-label="Driver or non-driver">
+      <div className="co-switch cu-kind" role="tablist" aria-label="Driver or staff">
         <button type="button" role="tab" aria-selected={kind === 'driver'} className={kind === 'driver' ? 'on' : ''} onClick={() => pickKind('driver')}>🚚 Driver</button>
-        <button type="button" role="tab" aria-selected={kind === 'other'} className={kind === 'other' ? 'on' : ''} onClick={() => pickKind('other')}>👤 Non-driver</button>
+        <button type="button" role="tab" aria-selected={kind === 'other'} className={kind === 'other' ? 'on' : ''} onClick={() => pickKind('other')}>👤 Staff</button>
       </div>
 
       <form onSubmit={create} className="cu-form">
@@ -115,7 +115,7 @@ export default function CreateUsers({ flash, onChanged }) {
               <option value="">{free.length ? '– choose –' : 'Everyone already has a login'}</option>
               {free.map((p) => <option key={p.id} value={p.id}>{p.name}{p.company ? ` · ${short(p.company)}` : ''}{kind === 'driver' ? (p.vehicle_no ? ` · ${p.vehicle_no}` : '') : ` · ${p.staff_type || 'Office'}`}</option>)}
             </select>
-            <button type="button" className="btn" onClick={() => setAddP({ name: '', company: kind === 'driver' ? 'modern-city' : 'sumptuosity', type: 'Office', designation: '', vehicle: '' })}>＋ Add {kind === 'driver' ? 'driver' : 'non-driver'}</button>
+            <button type="button" className="btn" onClick={() => setAddP({ name: '', company: kind === 'driver' ? 'modern-city' : 'sumptuosity', type: 'Office', designation: '', vehicle: '' })}>＋ Add {kind === 'driver' ? 'driver' : 'staff'}</button>
           </div>
           <small className="muted">The list comes from <Link href={`/personnel?tab=${kind === 'driver' ? 'drivers' : 'office'}`}>Personnel</Link>. Someone added there shows here by himself.</small>
         </div>
@@ -140,7 +140,7 @@ export default function CreateUsers({ flash, onChanged }) {
         </div>
       </form>
 
-      <h3 className="ent-sub">{kind === 'driver' ? '🚚 Drivers with a login' : '👤 Non-drivers with a login'} ({linked.length})</h3>
+      <h3 className="ent-sub">{kind === 'driver' ? '🚚 Drivers with a login' : '👤 Staff with a login'} ({linked.length})</h3>
       {!linked.length && <p className="muted" style={{ margin: 0 }}>None yet.</p>}
       <div className="cu-list">
         {linked.map((p) => {
@@ -156,7 +156,7 @@ export default function CreateUsers({ flash, onChanged }) {
       <p className="muted" style={{ marginBottom: 0 }}>Change a password or access later in <Link href="/users">Admin › Users</Link>.</p>
 
       {addP && (
-        <Modal title={kind === 'driver' ? '＋ Add driver' : '＋ Add non-driver'} onClose={() => setAddP(null)}>
+        <Modal title={kind === 'driver' ? '＋ Add driver' : '＋ Add staff'} onClose={() => setAddP(null)}>
           <form onSubmit={addPerson} style={{ display: 'grid', gap: 12 }}>
             <div className="field"><label htmlFor="ap-name">Name</label><input id="ap-name" autoFocus required value={addP.name} onChange={(e) => setAddP({ ...addP, name: e.target.value })} /></div>
             <div className="field"><label htmlFor="ap-co">Company</label>
