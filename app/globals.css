@@ -3582,3 +3582,19 @@ body:has(.ent-page.ur) .modal, body:has(.ent-page.ur) .dfv { font-family: 'Noto 
 /* "Are you sure?" warning before everyone is notified (1 Nov 2026) */
 .sure-warn { padding: 10px 12px; border-radius: 10px; background: #fff4e0; border: 1.5px solid #e0a100; color: #5c3b00; font-size: 14px; }
 .sure-names { font-size: 13px; max-height: 20vh; overflow: auto; margin: 0; }
+/* Data entry: Drivers / Non-drivers / Create users (1 Nov 2026) */
+.ent-sections { margin-bottom: 12px; }
+.cu-kind { margin-bottom: 12px; width: auto; }
+.cu-form { display: grid; gap: 12px; }
+.cu-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.cu-row select { flex: 1 1 260px; }
+.cu-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.cu-roles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; }
+.field label.cu-role, .cu-role { display: grid; gap: 2px; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 12px; cursor: pointer; text-transform: none; letter-spacing: 0; color: var(--ink); font-size: 14px; }
+.cu-role input { width: auto; justify-self: start; }
+.cu-role small { color: var(--muted); font-size: 12px; font-weight: 500; }
+.cu-role.on { border-color: var(--brown); background: var(--tint); }
+.cu-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; margin: 6px 0 10px; }
+.cu-item { display: grid; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; }
+.cu-item small { color: var(--muted); font-size: 12px; }
+.field label.cu-role { font-size: 14px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--ink); }

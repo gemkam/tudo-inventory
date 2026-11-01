@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AuthGate, { useUser } from '@/components/AuthGate';
+import CreateUsers from '@/components/CreateUsers';
+import NonDrivers from '@/components/NonDrivers';
 import { sb } from '@/lib/supabase';
 import Modal from '@/components/Modal';
 import DriverTripForm from '@/components/DriverTripForm';
@@ -161,6 +163,7 @@ function EntryPage() {
   const [current, setCurrent] = useState(null); // the trip open in the form (kept even if it leaves the list)
   const [renaming, setRenaming] = useState(false);
   const [addDrv, setAddDrv] = useState(null);
+  const [section, setSection] = useState('drivers'); // office: drivers | other (non-drivers) | users (Create users)
   const [error, setError] = useState('');
   const [toast, setToast] = useState(null);
   const timer = useRef(null);
@@ -235,8 +238,27 @@ function EntryPage() {
     </button>
   );
 
+  /* Office: three buttons on top (1 Nov 2026). 🚚 Drivers = the driver trip form below; 👤 Non-drivers; 🔑 Create users (Administrator) */
+  const sections = isOffice ? (
+    <div className="co-switch ent-sections no-print" role="tablist" aria-label="Data entry">
+      <button type="button" role="tab" aria-selected={section === 'drivers'} className={section === 'drivers' ? 'on' : ''} onClick={() => setSection('drivers')}>🚚 Drivers</button>
+      <button type="button" role="tab" aria-selected={section === 'other'} className={section === 'other' ? 'on' : ''} onClick={() => setSection('other')}>👤 Non-drivers</button>
+      {me.isOwner && <button type="button" role="tab" aria-selected={section === 'users'} className={section === 'users' ? 'on' : ''} onClick={() => setSection('users')}>🔑 Create users</button>}
+    </div>
+  ) : null;
+  if (isOffice && section !== 'drivers') {
+    return (
+      <div className="ent-page office">
+        {sections}
+        {section === 'other' ? <NonDrivers flash={flash} canAdd={isOffice} /> : <CreateUsers flash={flash} onChanged={() => loadDrivers()} />}
+        {toast && <div className={`toast ${toast.kind}`} role="status">{toast.text}</div>}
+      </div>
+    );
+  }
+
   return (
     <div className={`ent-page${isOffice ? ' office' : ' driver'}${tripId !== null ? ' in-trip' : ''}${ur ? ' ur' : ''}`} dir={ur ? 'rtl' : 'ltr'}>
+      {sections}
       <div className="page-tools ent-head">
         <h1 style={{ margin: 0 }}>🚚 {t('Driver trip form')}</h1>
         <LangSwitch />

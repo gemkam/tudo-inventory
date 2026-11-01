@@ -34,3 +34,4 @@ create policy personnel_co_write on public.personnel_companies for all using (pu
 alter table public.personnel_companies add column if not exists cr text, add column if not exists address text;
 -- salary_slips, slip_push_subs, salary_credits, public_save_push, push_private_key: migrations salary_slips_monthly and salary_credits
 alter table public.personnel_subcontractors add column if not exists company text; -- company the subcontractor works for (1 Nov 2026)
+alter table public.exp_staff add column if not exists user_id uuid; -- login of a non-driver (Data entry > Create users)
