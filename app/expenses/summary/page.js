@@ -204,6 +204,12 @@ function SummaryPage() {
 
   return (
     <>
+      <div className="company-head ch-top">
+        <span className="company-name">Tudo Num Group</span>
+        <h1>Group Summary</h1>
+        <p className="sub">{periodLabel} · {G.chosen.length ? G.chosen.map((s) => s.label).join(', ') : 'Nothing selected'} · OMR</p>
+      </div>
+
       <div className="page-tools">
         <Link href="/expenses" className="crumb">← All Companies</Link>
         <div className="tools">
@@ -234,11 +240,6 @@ function SummaryPage() {
         <Link href="/expenses/vat" className="co-tab co-sum co-vat">🧾 VAT return</Link>
       </div>
 
-      <div className="company-head">
-        <span className="company-name">Tudo Num Group</span>
-        <h1>Group Summary</h1>
-        <p className="sub">{periodLabel} · {G.chosen.length ? G.chosen.map((s) => s.label).join(', ') : 'Nothing selected'} · OMR</p>
-      </div>
 
       <div className="sum-controls no-print">
         <div className="sum-dd" ref={ddRef}>

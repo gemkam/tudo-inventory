@@ -3491,3 +3491,5 @@ body:has(.ent-page.ur) .modal, body:has(.ent-page.ur) .dfv { font-family: 'Noto 
 .pc-home { display: flex; justify-content: flex-end; margin: -4px 0 8px; }
 .pc-home:empty { display: none; }
 .pc-slot { display: contents; }
+/* company heading card first on the page, toolbar and tabs under it (1 Nov 2026) */
+.company-head.ch-top { margin: 0 0 12px; }

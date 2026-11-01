@@ -241,6 +241,12 @@ function AttendancePage() {
 
   return (
     <>
+      <div className="company-head ch-top">
+        <span className="company-name">{C.name}</span>
+        <h1>🗓 Attendance</h1>
+        <p className="sub">{monthLabel(month)} · Office staff Friday and Saturday off · Site staff Friday off · Working days go to the salary sheet</p>
+      </div>
+
       <div className="page-tools no-print">
         <Link href={`/expenses?co=${co}`} className="crumb">← All Companies</Link>
         <div className="tools">
@@ -272,11 +278,6 @@ function AttendancePage() {
         </div>
       )}
 
-      <div className="company-head">
-        <span className="company-name">{C.name}</span>
-        <h1>🗓 Attendance</h1>
-        <p className="sub">{monthLabel(month)} · Office staff Friday and Saturday off · Site staff Friday off · Working days go to the salary sheet</p>
-      </div>
 
       {noTable && (
         <div className="panel at-warn">

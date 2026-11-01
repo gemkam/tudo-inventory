@@ -293,6 +293,12 @@ function ExpensesPage() {
 
   return (
     <>
+      <div className="company-head ch-top">
+        <span className="company-name">{EXP_COMPANY}</span>
+        <h1>All Companies</h1>
+        <p className="sub">{month === 'all' ? 'All months' : monthLabel(month)} · Expense (bills) entries · Currency: OMR</p>
+      </div>
+
       <div className="page-tools">
         <Link href="/" className="crumb">← Home</Link>
         <div className="tools">
@@ -327,11 +333,6 @@ function ExpensesPage() {
         </div>
       )}
 
-      <div className="company-head">
-        <span className="company-name">{EXP_COMPANY}</span>
-        <h1>All Companies</h1>
-        <p className="sub">{month === 'all' ? 'All months' : monthLabel(month)} · Expense (bills) entries · Currency: OMR</p>
-      </div>
 
       <div className="kpi-row">
         <div className="kpi hero"><span>Total paid</span><strong><Omr v={TM.paid} /></strong><small>{monthRows.length} bills</small></div>
