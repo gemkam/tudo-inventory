@@ -47,7 +47,6 @@ function SalaryPage() {
       <button type="button" role="tab" aria-selected={!co} className={!co ? 'on' : ''} onClick={() => pick('')}>All</button>
       {COMPANIES.map((c) => <button key={c.key} type="button" role="tab" aria-selected={co === c.key} className={co === c.key ? 'on' : ''} onClick={() => pick(c.key)}>{c.short}</button>)}
       <Link href="/transport" className="co-tab co-tr">🚚 Transport</Link>
-      <Link href="/expenses/summary" className="co-tab co-sum">📊 Group Summary</Link>
       <Link href="/docs" className="co-tab co-sum">📋 Checklist</Link>
       <Link href={`/expenses/docs?${co ? `co=${co}&` : ''}kind=invoice`} className="co-tab">🧾 Invoices</Link>
       <span className="co-tab on" role="tab" aria-selected="true">💰 Salary</span>

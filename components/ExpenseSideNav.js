@@ -50,11 +50,10 @@ export default function ExpenseSideNav({ isAdmin = false }) {
   return (
     <aside className={`tsn no-print${phoneOpen ? ' phone-open' : ''}`} aria-label="All Companies menu">
       <button type="button" className="tsn-phone" onClick={() => setPhoneOpen((v) => !v)} aria-expanded={phoneOpen}>
-        🧾 All Companies menu{onSummary ? ' · Group Summary' : here ? ` · ${here.short}` : ''} <span aria-hidden="true">{phoneOpen ? '▴' : '▾'}</span>
+        🧾 All Companies menu{onSummary ? ' · Reports & Summary' : here ? ` · ${here.short}` : ''} <span aria-hidden="true">{phoneOpen ? '▴' : '▾'}</span>
       </button>
       <nav className="tsn-list">
         <div className="tsn-title">🧾 All Companies</div>
-        <Btn href="/expenses/summary" on={onSummary} icon="📊">Group Summary</Btn>
         <Btn href="/docs" on={false} icon="📋">Documents Checklist</Btn>
         <Btn href="/expenses/salary" on={path === '/expenses/salary'} icon="💰">Salary</Btn>
         <Btn href="/expenses/vat" on={path === '/expenses/vat'} icon="🧾">VAT return</Btn>

@@ -175,7 +175,6 @@ function ExpensesPage() {
         <button key={c.key} type="button" role="tab" aria-selected={co === c.key} className={co === c.key ? 'on' : ''} onClick={() => switchCo(c.key)}>{c.short}</button>
       ))}
       <Link href="/transport" className="co-tab co-tr">🚚 Transport</Link>
-      <Link href="/expenses/summary" className="co-tab co-sum">📊 Group Summary</Link>
       <Link href="/docs" className="co-tab co-sum">📋 Checklist</Link>
       <Link href={`/expenses/docs?co=${co}&kind=invoice`} className="co-tab">🧾 Invoices</Link>
       <Link href={`/expenses/salary?co=${co}`} className="co-tab">💰 Salary</Link>

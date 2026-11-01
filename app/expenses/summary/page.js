@@ -175,7 +175,7 @@ function SummaryPage() {
 
   function share() {
     const t = [
-      `Group Summary · ${periodLabel}`,
+      `Reports & Summary · ${periodLabel}`,
       ...G.perSource.map((s) => `${s.label}: ${fmtAmt(s.spent)} OMR${s.kind === 'transport' ? ` (work ${fmtAmt(s.work)}, profit ${fmtAmt(s.profit)})` : ''}`),
       `Total spent: ${fmtAmt(G.grand.spent)} OMR`,
       G.grand.unpaid ? `Unpaid: ${fmtAmt(G.grand.unpaid)} OMR` : '',
@@ -185,7 +185,7 @@ function SummaryPage() {
       'Top heads:',
       ...G.heads.slice(0, 6).map((h) => `${h.head}: ${fmtAmt(h.total)} OMR`)
     ].filter((x, i, a) => x !== '' || a[i - 1] !== '');
-    openShare({ title: `Group Summary ${periodLabel}`, text: t.join('\n') });
+    openShare({ title: `Reports & Summary ${periodLabel}`, text: t.join('\n') });
   }
 
   async function downloadPdf() {
@@ -198,7 +198,7 @@ function SummaryPage() {
         logo = await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(blob); });
       } catch { /* no logo */ }
       const doc = buildGroupPdf(G, { periodLabel, monthLabel, logo, extraAlerts: [...vehicleAlerts, ...attAlerts], att: ATT });
-      doc.save(`Group Summary ${periodLabel}.pdf`);
+      doc.save(`Reports & Summary ${periodLabel}.pdf`);
     } finally { setBusy(false); }
   }
 
@@ -206,7 +206,7 @@ function SummaryPage() {
     <>
       <div className="company-head ch-top">
         <span className="company-name">Tudo Num Group</span>
-        <h1>Group Summary</h1>
+        <h1>Reports & Summary</h1>
         <p className="sub">{periodLabel} · {G.chosen.length ? G.chosen.map((s) => s.label).join(', ') : 'Nothing selected'} · OMR</p>
       </div>
 
@@ -235,7 +235,6 @@ function SummaryPage() {
       <div className="co-switch no-print" role="tablist" aria-label="Company">
         {COMPANIES.map((c) => <Link key={c.key} href={`/expenses?co=${c.key}`} role="tab" className="co-tab">{c.short}</Link>)}
         <Link href="/transport" className="co-tab co-tr">🚚 Transport</Link>
-        <span className="co-tab on" role="tab" aria-selected="true">📊 Group Summary</span>
         <Link href="/docs" className="co-tab co-sum">📋 Checklist</Link>
         <Link href="/expenses/docs?kind=invoice" className="co-tab">🧾 Invoices</Link>
         <Link href="/expenses/salary" className="co-tab">💰 Salary</Link>

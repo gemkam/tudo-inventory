@@ -27,7 +27,7 @@ const PAGES = [
   ['💼 All Companies: Modern City', '/expenses?co=modern-city', 'office expense all companies modern city bills'],
   ['💼 All Companies: Abu Wasif', '/expenses?co=abu-wasif', 'office expense all companies abu wasif bills'],
   ['💼 All Companies: Sumptuosity', '/expenses?co=sumptuosity', 'office expense all companies sumptuosity bills'],
-  ['📈 Group Summary', '/expenses/summary', 'group summary budget cash flow unpaid'],
+  ['📈 Reports & Summary', '/expenses/summary', 'reports summary group summary budget cash flow unpaid'],
   ['🧾 Invoices and Receipts', '/expenses/docs', 'invoice receipt payment'],
   ['📦 Inventory', '/inventory', 'inventory stock office supplies kitchen sanitary'],
   ['📦 Inventory Reports', '/inventory/reports', 'inventory reports'],

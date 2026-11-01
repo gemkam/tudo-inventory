@@ -138,6 +138,8 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
   if (user.isAdmin) quick.push(['/entry', 'Data entry', 'entry']);
   // 👥 Personnel (1 Nov 2026): Employees (Office, Drivers, Site, Subcontractors, Attendance), just before Admin
   if (user.canRead) quick.push(['/personnel', 'Personnel', 'users']);
+  // 📊 Reports & Summary (was the Group Summary tab of All Companies), 1 Nov 2026
+  if (user.canRead) quick.push(['/expenses/summary', 'Reports & Summary', 'chart']);
   if (user.isOwner) quick.push(['/admin', 'Admin', 'shield']);
 
   let blocked = '';
@@ -171,7 +173,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
             ))}
             {quick.length > 0 && <i className="tbx-sep" aria-hidden="true" />}
             {quick.map(([href, label, ico]) => (
-              <Link key={href} href={href} className={path === href || (href === '/admin' && ['/settings', '/users', '/activity'].some((x) => path.startsWith(x))) || path.startsWith(`${href}/`) || (href === '/expenses' && (path.startsWith('/transport') || path === '/docs')) ? 'active' : ''}>
+              <Link key={href} href={href} className={path === href || (href === '/admin' && ['/settings', '/users', '/activity'].some((x) => path.startsWith(x))) || (path.startsWith(`${href}/`) && !(href === '/expenses' && path.startsWith('/expenses/summary'))) || (href === '/expenses' && (path.startsWith('/transport') || path === '/docs')) ? 'active' : ''}>
                 <Ico name={ico} /><span>{label}</span>
               </Link>
             ))}
@@ -223,6 +225,7 @@ const ICONS = {
   receipt: <><path d="M6 3h12v18l-2.5-1.5L13 21l-2.5-1.5L8 21l-2-1.5z" /><path d="M9 8h6M9 12h6M9 16h3" /></>,
   entry: <><path d="M8 4h8v3H8z" /><path d="M16 5.5h2.5V21h-13V5.5H8" /><path d="M9 12h6M9 16h4" /></>,
   invoice: <><path d="M6 3h9l3 3v15H6z" /><path d="M15 3v3h3" /><path d="M9 11h6M9 15h6M9 7h3" /></>,
+  chart: <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></>,
   shield: <><path d="M12 3 4 6v6c0 4.5 3.4 8.2 8 9 4.6-.8 8-4.5 8-9V6z" /><path d="m9 12 2 2 4-4" /></>,
   gear: <><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1" /></>,
   users: <><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5" /><circle cx="17" cy="9" r="2.5" /><path d="M17 14.5c2.4 0 4 1.5 4.5 4.5" /></>,

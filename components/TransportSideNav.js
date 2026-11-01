@@ -99,7 +99,7 @@ export default function TransportSideNav({ isAdmin = false }) {
         <div className="tsn-title">🚚 Transport Expense</div>
         <TransportMenu isAdmin={isAdmin} />
         <div className="tsn-sep" />
-        <Link href="/expenses/summary" className="tsn-btn"><span className="tsn-ic" aria-hidden="true">🏢</span><span className="tsn-tx">Group Summary</span></Link>
+        <Link href="/expenses/summary" className="tsn-btn"><span className="tsn-ic" aria-hidden="true">🏢</span><span className="tsn-tx">Reports & Summary</span></Link>
       </nav>
     </aside>
   );

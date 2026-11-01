@@ -16,7 +16,7 @@ import { quarterOf, quarterMonths, quarterLabel, addDays, dmy } from '@/lib/grou
   Output VAT = VAT inside sales: trips with "VAT 5% added" (Transport) and company invoices with VAT (company_docs kind invoice).
   Input VAT  = VAT typed on company bills (exp_entries.vat). Auto rows copied from Transport trips/salary/extras are left out
   (they are Transport costs, not company purchases). Quarter or one month. 🖨 Print options chooses the parts and columns
-  (saved on this device, localStorage tudo-vat-print). The Group Summary keeps its own VAT return tab unchanged.
+  (saved on this device, localStorage tudo-vat-print). The Reports & Summary keeps its own VAT return tab unchanged.
 */
 
 const n = (v) => Number(v || 0);
@@ -167,7 +167,7 @@ function VatReturnPage() {
       </header>
 
       <div className="page-tools">
-        <Link href="/expenses/summary" className="crumb">← Group Summary</Link>
+        <Link href="/expenses/summary" className="crumb">← Reports & Summary</Link>
         <div className="tools">
           <div className="month-select">
             <label htmlFor="vat-p">Period</label>

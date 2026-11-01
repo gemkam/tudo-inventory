@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect } from 'react';
 
 /*
   Rauf (the AI assistant) lives in AuthGate, so he is on every page.
-  A page can hand him extra text about what is on screen (Group Summary does) with useRaufPage().
+  A page can hand him extra text about what is on screen (Reports & Summary does) with useRaufPage().
 */
 export const RaufCtx = createContext({ setPageAi: () => {} });
 

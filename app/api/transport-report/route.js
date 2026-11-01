@@ -74,10 +74,10 @@ async function send(note) {
       } catch { /* no logo */ }
     }
     const gdoc = buildGroupPdf(G, { periodLabel: mlabel(period), monthLabel: mlabel, logo });
-    attachments.push({ filename: `Group Summary ${mlabel(period)}.pdf`, content: Buffer.from(gdoc.output('arraybuffer')), contentType: 'application/pdf' });
+    attachments.push({ filename: `Reports & Summary ${mlabel(period)}.pdf`, content: Buffer.from(gdoc.output('arraybuffer')), contentType: 'application/pdf' });
     groupText = [
       '',
-      `Group Summary ${mlabel(period)} (OMR, attached):`,
+      `Reports & Summary ${mlabel(period)} (OMR, attached):`,
       `Total spent: ${gfmt(G.grand.spent)}`,
       G.grand.unpaid ? `Unpaid: ${gfmt(G.grand.unpaid)}` : '',
       G.budgetTotal.budget ? `Budget used: ${Math.round((G.budgetTotal.actual / G.budgetTotal.budget) * 100)}%` : '',
@@ -91,7 +91,7 @@ async function send(note) {
   await mailer.sendMail({
     from: `Tudo Num Office Systems <${user}>`,
     to,
-    subject: `${groupText ? "Transport Expense Report and Group Summary" : "Transport Expense Report"} · ${stamp}`,
+    subject: `${groupText ? "Transport Expense Report and Reports & Summary" : "Transport Expense Report"} · ${stamp}`,
     text: groupText ? text.replace('\nThis email is sent automatically', `${groupText}\n\nThis email is sent automatically`) : text,
     attachments
   });

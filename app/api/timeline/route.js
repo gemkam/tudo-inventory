@@ -14,7 +14,7 @@ const SINCE = '2026-10-21T00:00:00Z';
 const MODULES = [
   ['🎨 Look and layout', /\b(phone|top bar|layout|theme|dark|night|colou?r|font|watermark|design|look)\b/i, ''],
   ['🧭 Navigation', /\b(timeline|sitemap)\b/i, '/timeline'],
-  ['📊 Group Summary', /\b(group summary|p&l|profit and loss|vat return|cash forecast)\b/i, '/expenses/summary'],
+  ['📊 Reports & Summary', /\b(group summary|p&l|profit and loss|vat return|cash forecast)\b/i, '/expenses/summary'],
   ['🚚 Transport', /\b(transport|trip|diesel|driver|vehicle|truck|toll|maintenance|salary|attendance)\b/i, '/transport'],
   ['📦 Inventory', /\b(inventory|stock|stationery|kitchen|sanitary|badge|flyer|shield|stand)\b/i, '/inventory'],
   ['🧾 All Companies', /\b(office expense|expense|bill|invoice|receipt|petrol|utility)\b/i, '/expenses'],

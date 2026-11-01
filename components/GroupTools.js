@@ -7,7 +7,7 @@ import { fmtAmt, monthLabel, exportStamp, exportExcel } from '@/lib/sheet';
 import { vatReturn, quarterOf, quarterLabel, cashForecast, checks, dmy } from '@/lib/groupTools';
 
 /*
-  Top of the Group Summary (29 Oct 2026): tabs 💰 Sales · 🧾 VAT return · 💵 Cash forecast · 🔍 Checks.
+  Top of the Reports & Summary (29 Oct 2026): tabs 💰 Sales · 🧾 VAT return · 💵 Cash forecast · 🔍 Checks.
   Toolbar buttons send window event 'gs-tab' with the tab key (and scroll here).
 */
 export const TABS = [
