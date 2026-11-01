@@ -3927,14 +3927,14 @@ html.desk-on-phone .al-sheet-back { position: fixed; inset: 0; z-index: 1000; ba
 
 /* trucks driving */
 .is-sc-drive { will-change: transform; }
-.is-sc-drive.t1 { transform: translateX(-340px); animation: is-sc-drive1 6.6s cubic-bezier(.3, .05, .7, .95) .5s forwards; }
-.is-sc-drive.t2 { transform: translateX(1900px); animation: is-sc-drive2 7.6s linear .9s forwards; }
-.is-sc-drive.t3 { transform: translateX(-130px); animation: is-sc-drive3 5.4s cubic-bezier(.3, .05, .7, .95) 3.3s forwards; }
+.is-sc-drive.t1 { transform: translateX(-340px); animation: is-sc-drive1 12s linear .3s forwards; } /* slower (1 Nov 2026): calm to watch */
+.is-sc-drive.t2 { transform: translateX(1900px); animation: is-sc-drive2 14s linear .6s forwards; }
+.is-sc-drive.t3 { transform: translateX(-130px); animation: is-sc-drive3 11s linear 2.2s forwards; }
 @keyframes is-sc-drive1 { to { transform: translateX(1700px); } }
 @keyframes is-sc-drive2 { to { transform: translateX(-80px); } }
 @keyframes is-sc-drive3 { to { transform: translateX(1700px); } }
-.is-sc-wheel { transform-box: fill-box; transform-origin: center; animation: is-spin .45s linear infinite; }
-.is-sc-bounce { animation: is-sc-bounce .3s ease-in-out infinite alternate; }
+.is-sc-wheel { transform-box: fill-box; transform-origin: center; animation: is-spin 1s linear infinite; }
+.is-sc-bounce { animation: is-sc-bounce .6s ease-in-out infinite alternate; }
 @keyframes is-sc-bounce { to { transform: translateY(-1.4px); } }
 .is-sc-light { animation: is-sc-blink 1.2s steps(2) infinite; }
 @keyframes is-sc-blink { 50% { fill: #fff3cf; } }
