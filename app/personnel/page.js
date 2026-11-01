@@ -113,6 +113,13 @@ function PersonnelPage() {
     try { window.history.replaceState(null, '', `/personnel?tab=attendance&co=${company}&m=${month}`); } catch { /* ignore */ }
     setTab('attendance'); setEdit(false); setDelMode(false);
   }
+  /* Side menu (components/PersonnelSideNav.js): its buttons switch the tab, and it is told which tab is open */
+  useEffect(() => {
+    const on = (e) => { if (e.detail) goTab(e.detail); };
+    window.addEventListener('personnel-tab', on);
+    return () => window.removeEventListener('personnel-tab', on);
+  });
+  useEffect(() => { window.dispatchEvent(new CustomEvent('personnel-tab-now', { detail: tab })); }, [tab]);
   function goTab(k) {
     if (k === 'attendance') { openAttendance(co || (staff || [])[0]?.company || 'sumptuosity'); return; }
     setTab(k); setEdit(false); setDelMode(false);

@@ -4,6 +4,7 @@ import TableCards, { ViewSwitch } from '@/components/TableCards';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import TransportSideNav, { showTransportSide } from '@/components/TransportSideNav';
 import ExpenseSideNav, { showExpenseSide } from '@/components/ExpenseSideNav';
+import PersonnelSideNav, { showPersonnelSide } from '@/components/PersonnelSideNav';
 import PrintColumns from '@/components/PrintColumns';
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -194,9 +195,9 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
           <button type="button" onClick={switchUser}>Logout</button>
         </div>
       )}
-      {!blocked && !user.isEntry && (showTransportSide(path) || showExpenseSide(path)) ? (
+      {!blocked && !user.isEntry && (showTransportSide(path) || showExpenseSide(path) || showPersonnelSide(path)) ? (
         <main className="page wide has-side">
-          {showTransportSide(path) ? <TransportSideNav isAdmin={user.isAdmin} /> : <ExpenseSideNav isAdmin={user.isAdmin} />}
+          {showTransportSide(path) ? <TransportSideNav isAdmin={user.isAdmin} /> : showPersonnelSide(path) ? <PersonnelSideNav /> : <ExpenseSideNav isAdmin={user.isAdmin} />}
           <div className="side-main"><Breadcrumbs /><div className="pc-home no-print" />{showTransportSide(path) && <OfficeTabs />}{children}</div>
         </main>
       ) : (
