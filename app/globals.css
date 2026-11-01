@@ -3579,3 +3579,6 @@ body:has(.ent-page.ur) .modal, body:has(.ent-page.ur) .dfv { font-family: 'Noto 
 /* All Companies pages: toolbar close under the heading card, tabs close under the toolbar (page gap is 28px) */
 .company-head.ch-top:has(+ .page-tools) { margin-bottom: -20px; }
 .company-head.ch-top + .page-tools { margin-bottom: -16px; }
+/* "Are you sure?" warning before everyone is notified (1 Nov 2026) */
+.sure-warn { padding: 10px 12px; border-radius: 10px; background: #fff4e0; border: 1.5px solid #e0a100; color: #5c3b00; font-size: 14px; }
+.sure-names { font-size: 13px; max-height: 20vh; overflow: auto; margin: 0; }

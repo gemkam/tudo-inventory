@@ -489,12 +489,14 @@ function PersonnelPage() {
         const kind = tab === 'drivers' ? 'driver' : 'staff';
         const todo = list.filter((r) => !credits[creditKey(kind, r.id)]);
         return (
-          <Modal title={`💵 Salary paid · ${monthLabel(month)}`} onClose={() => setPayAll(false)}>
-            <p style={{ marginTop: 0 }}>Mark <b>{todo.length}</b> {tab === 'office' ? 'office employee' : tab === 'site' ? 'site employee' : 'driver'}{todo.length === 1 ? '' : 's'}{co ? ` of ${CO_SHORT[co]}` : ''} as paid for {monthLabel(month)}? Their draft salary slips are approved and show in their app.</p>
+          <Modal title="⚠ Are you sure?" onClose={() => setPayAll(false)}>
+            <p style={{ marginTop: 0 }}>Mark <b>{todo.length}</b> {tab === 'office' ? 'office employee' : tab === 'site' ? 'site employee' : 'driver'}{todo.length === 1 ? '' : 's'}{co ? ` of ${CO_SHORT[co]}` : ''} as <b>salary paid</b> for <b>{monthLabel(month)}</b>?</p>
+            {todo.length > 0 && <div className="sure-warn">📱 Every one of them gets a notification on his mobile: <b>“Salary slip ready”</b>, and his slip shows in his app. This cannot be taken back from their phones.</div>}
+            {todo.length > 0 && <p className="muted sure-names">{todo.map((r) => r.name).join(' · ')}</p>}
             {!todo.length && <p className="ok">Everyone here is already paid.</p>}
             <div className="modal-actions">
-              <button type="button" className="btn ghost" onClick={() => setPayAll(false)}>Cancel</button>
-              <button type="button" className="btn in" disabled={!todo.length} onClick={() => payPeople(todo.map((r) => ({ kind, id: r.id, name: r.name })))}>Yes, all paid</button>
+              <button type="button" className="btn ghost" autoFocus onClick={() => setPayAll(false)}>No, cancel</button>
+              <button type="button" className="btn in" disabled={!todo.length} onClick={() => payPeople(todo.map((r) => ({ kind, id: r.id, name: r.name })))}>Yes, I am sure</button>
             </div>
           </Modal>
         );

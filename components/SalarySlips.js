@@ -458,19 +458,22 @@ export default function SalarySlips({ staff, drivers, me, isAdmin, flash, onSend
       )}
 
       {payAll && (
-        <Modal title={`💵 All Employees Salary Paid · ${monthName(month)}${co ? ` · ${short(co)}` : ''}`} onClose={() => setPayAll(false)}>
-          <p style={{ marginTop: 0 }}>Mark <b>{unpaid.length}</b> employee{unpaid.length === 1 ? '' : 's'} as paid (total Net <b>OMR {m3(unpaid.reduce((t, r) => t + (r.s ? Number(r.s.net) : 0), 0))}</b>). Their draft slips are approved and show in their app.</p>
+        <Modal title="⚠ Are you sure?" onClose={() => setPayAll(false)}>
+          <p style={{ marginTop: 0 }}>Mark <b>{unpaid.length}</b> employee{unpaid.length === 1 ? '' : 's'}{co ? ` of ${short(co)}` : ''} as <b>salary paid</b> for <b>{monthName(month)}</b> (total Net <b>OMR {m3(unpaid.reduce((t, r) => t + (r.s ? Number(r.s.net) : 0), 0))}</b>)?</p>
+          <div className="sure-warn">📱 Every one of them gets a notification on his mobile: <b>“Salary slip ready”</b>, and his slip shows in his app. This cannot be taken back from their phones.</div>
+          <p className="muted sure-names">{unpaid.map((r) => r.x.p.name).join(' · ')}</p>
           {unpaid.some((r) => !r.s) && <p className="bad">⚠ No slip yet for: {unpaid.filter((r) => !r.s).map((r) => r.x.p.name).join(', ')} (press ⚙ Generate drafts first).</p>}
           <div className="modal-actions">
-            <button type="button" className="btn ghost" onClick={() => setPayAll(false)}>Cancel</button>
-            <button type="button" className="btn in" onClick={() => pay(unpaid)} disabled={busy === 'pay'}>{busy === 'pay' ? 'Saving...' : 'Yes, all paid'}</button>
+            <button type="button" className="btn ghost" autoFocus onClick={() => setPayAll(false)}>No, cancel</button>
+            <button type="button" className="btn in" onClick={() => pay(unpaid)} disabled={busy === 'pay'}>{busy === 'pay' ? 'Saving...' : 'Yes, I am sure'}</button>
           </div>
         </Modal>
       )}
 
       {approveAll && (
         <Modal title={`✅ Approve ${drafts.length} slip${drafts.length === 1 ? '' : 's'} · ${monthName(month)}`} onClose={() => setApproveAll(false)}>
-          <p style={{ marginTop: 0 }}>Total Net pay <b>OMR {m3(drafts.reduce((t, r) => t + Number(r.s.net), 0))}</b>. After approving, each employee sees his slip in his shortcut and gets a notification.</p>
+          <p style={{ marginTop: 0 }}>Total Net pay <b>OMR {m3(drafts.reduce((t, r) => t + Number(r.s.net), 0))}</b>.</p>
+          <div className="sure-warn">📱 Every one of them gets a notification on his mobile: <b>“Salary slip ready”</b>, and his slip shows in his app.</div>
           {(() => {
             const warn = [
               ...drafts.filter((r) => r.big).map((r) => `${r.s.name}: Net ${r.diff > 0 ? 'up' : 'down'} ${m3(Math.abs(r.diff))} from last month`),
@@ -481,7 +484,7 @@ export default function SalarySlips({ staff, drivers, me, isAdmin, flash, onSend
             return warn.length ? <ul className="ssl-warn">{warn.map((w) => <li key={w}>⚠ {w}</li>)}</ul> : <p className="ok">✓ Nothing unusual found.</p>;
           })()}
           <div className="modal-actions">
-            <button type="button" className="btn ghost" onClick={() => setApproveAll(false)}>Cancel</button>
+            <button type="button" className="btn ghost" autoFocus onClick={() => setApproveAll(false)}>No, cancel</button>
             <button type="button" className="btn in" onClick={() => approve(drafts.map((r) => r.s))} disabled={busy === 'approve'}>{busy === 'approve' ? 'Approving...' : 'Everything is OK · Approve'}</button>
           </div>
         </Modal>
