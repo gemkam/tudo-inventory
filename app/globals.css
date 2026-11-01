@@ -3548,3 +3548,7 @@ body:has(.ent-page.ur) .modal, body:has(.ent-page.ur) .dfv { font-family: 'Noto 
 .ss-months button { flex: none; font: inherit; font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); color: inherit; cursor: pointer; }
 .ss-months button.on { background: #13836b; border-color: #13836b; color: #fff; }
 .ss-small { font-size: 13px; }
+/* toolbar right under the heading card, starting from the left (1 Nov 2026); the old "← back" link is not needed (breadcrumbs) */
+.company-head.ch-top + .page-tools, .vat-head + .page-tools { justify-content: flex-start; margin: 0 0 12px; }
+.company-head.ch-top + .page-tools > .crumb, .vat-head + .page-tools > .crumb { display: none; }
+.company-head.ch-top + .page-tools + .co-switch, .company-head.ch-top + .page-tools + .office-tabs { margin-bottom: 12px; }

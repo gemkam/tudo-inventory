@@ -384,7 +384,7 @@ function DocsPage() {
         <h1>📋 Documents Checklist</h1>
         <p className="sub">Issue date and expiry of every document. Status is worked out from the expiry date. Alerts show on Home 30 days before.</p>
       </div>
-      <OfficeTabs active="docs" />
+
       <div className="page-tools">
         <Link href="/expenses" className="crumb">← All Companies</Link>
         <div className="tools">
@@ -394,6 +394,7 @@ function DocsPage() {
           <button type="button" className="btn ghost" onClick={doExcel}>📗 Excel</button>
         </div>
       </div>
+      <OfficeTabs active="docs" />
 
       <div className="kpi-row">
         <div className="kpi"><span>Documents</span><strong>{rows.length}</strong><small>{SECTIONS.length} sections</small></div>

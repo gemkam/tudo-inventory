@@ -322,13 +322,6 @@ function DocsPage() {
         <p className="sub">{kind === 'receipt' ? 'Each receipt is added to All Companies by itself' : 'S.No, description and amount'}</p>
       </div>
 
-      {switcher}
-      <div className="head-chips no-print" style={{ marginTop: 10 }}>
-        {Object.entries(KINDS).map(([k, v]) => (
-          <button key={k} type="button" className={`rp-chip ${kind === k ? 'active' : ''}`} onClick={() => setKind(k)}>{k === 'invoice' ? '🧾' : '💵'} {v.label}</button>
-        ))}
-      </div>
-
       <div className="page-tools">
         <Link href={`/expenses?co=${co}`} className="crumb">← All Companies</Link>
         <div className="tools">
@@ -336,6 +329,14 @@ function DocsPage() {
           {isAdmin && <button type="button" className="btn" onClick={newDoc}>+ New {K.one.toLowerCase()}</button>}
         </div>
       </div>
+
+      {switcher}
+      <div className="head-chips no-print" style={{ marginTop: 10 }}>
+        {Object.entries(KINDS).map(([k, v]) => (
+          <button key={k} type="button" className={`rp-chip ${kind === k ? 'active' : ''}`} onClick={() => setKind(k)}>{k === 'invoice' ? '🧾' : '💵'} {v.label}</button>
+        ))}
+      </div>
+
 
       {list === null ? <div className="loading">Loading...</div> : shown.length === 0 ? (
         <div className="iv-empty">

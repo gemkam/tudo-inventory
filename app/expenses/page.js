@@ -300,8 +300,6 @@ function ExpensesPage() {
         <p className="sub">{month === 'all' ? 'All months' : monthLabel(month)} · Expense (bills) entries · Currency: OMR</p>
       </div>
 
-      {switcher}
-
       <div className="page-tools">
         <Link href="/" className="crumb">← Home</Link>
         <div className="tools">
@@ -322,6 +320,9 @@ function ExpensesPage() {
           <PrintColumns className="btn ghost" />
         </div>
       </div>
+
+      {switcher}
+
 
 
       {companyOf(co).logo && (
