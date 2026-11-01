@@ -156,8 +156,6 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
                 <small>Office Systems</small>
               </span>
             </Link>
-            {/* 🖨 Print with column choice, next to the company name (moved here from bottom-left, 31 Oct 2026) */}
-            {user.canRead && !blocked && <PrintColumns top />}
             <div className="tbx-tools">
               {user.canRead && !user.isEntry && <span className="tbx-view"><ViewSwitch /></span>}
               <ThemeMenu />
@@ -189,14 +187,15 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
       {!blocked && !user.isEntry && (showTransportSide(path) || showExpenseSide(path)) ? (
         <main className="page wide has-side">
           {showTransportSide(path) ? <TransportSideNav isAdmin={user.isAdmin} /> : <ExpenseSideNav isAdmin={user.isAdmin} />}
-          <div className="side-main"><Breadcrumbs />{showTransportSide(path) && <OfficeTabs />}{children}</div>
+          <div className="side-main"><Breadcrumbs /><div className="pc-home no-print" />{showTransportSide(path) && <OfficeTabs />}{children}</div>
         </main>
       ) : (
         <main className={`page${wide ? ' wide' : ''}`}>
-          {blocked ? <div className="error">{blocked}</div> : <><Breadcrumbs />{children}</>}
+          {blocked ? <div className="error">{blocked}</div> : <><Breadcrumbs /><div className="pc-home no-print" />{children}</>}
         </main>
       )}
-      {/* 🖨 Print with column choice now sits in the top bar next to the company name (PrintColumns top). */}
+      {/* 🖨 Print with column choice (1 Nov 2026): in each page's toolbar, not in the top bar */}
+      {user.canRead && !blocked && !user.isEntry && <PrintColumns auto />}
       <BackToTop />
       {user.canRead && !blocked && <TableCards />}
       {user.canRead && (

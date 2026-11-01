@@ -3487,3 +3487,7 @@ body:has(.ent-page.ur) .modal, body:has(.ent-page.ur) .dfv { font-family: 'Noto 
 .pn-menu button[disabled] { opacity: .45; cursor: not-allowed; }
 .pn-mode { font-size: 13px; font-weight: 600; color: var(--brown); }
 .pn-chips .pn-addco { margin-left: auto; } /* same pill as the companies, on the extreme right */
+/* 🖨 Print (column choice) in page toolbars, 1 Nov 2026. Pages without a toolbar: top right of the page */
+.pc-home { display: flex; justify-content: flex-end; margin: -4px 0 8px; }
+.pc-home:empty { display: none; }
+.pc-slot { display: contents; }

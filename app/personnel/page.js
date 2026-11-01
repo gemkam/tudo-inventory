@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import PrintColumns from '@/components/PrintColumns';
 import AuthGate, { useUser } from '@/components/AuthGate';
 import DataGrid from '@/components/DataGrid';
 import DocFiles from '@/components/DocFiles';
@@ -423,7 +424,7 @@ function PersonnelPage() {
             onDone={() => { setEdit(false); setDelMode(false); }}
           />
         )}
-        <button type="button" className="btn pn-print" onClick={() => window.print()}>🖨 Print</button>
+        <PrintColumns className="btn" />
         {(edit || delMode) && <span className="pn-mode">{[edit && '✏️ Editing: tap a box to change it', delMode && '🗑 Delete buttons are on'].filter(Boolean).join(' · ')}</span>}
       </div>
 

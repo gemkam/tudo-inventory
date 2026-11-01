@@ -4,6 +4,7 @@ import RangeReport from '@/components/RangeReport';
 import { attendanceReport } from '@/lib/rangeReports';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import PrintColumns from '@/components/PrintColumns';
 import AuthGate, { useUser } from '@/components/AuthGate';
 import EditToggle from '@/components/EditToggle';
 import { sb } from '@/lib/supabase';
@@ -258,7 +259,7 @@ function AttendancePage() {
               return attendanceReport({ staff: staff || [], att: data || [], from, to });
             }} label="🖨 Report by dates" />
           <button type="button" className="btn ghost" onClick={doExcel} disabled={!staff.length}>📗 Excel</button>
-          <button type="button" className="btn ghost" onClick={() => window.print()}>🖨 Print</button>
+          <PrintColumns className="btn ghost" />
         </div>
       </div>
 

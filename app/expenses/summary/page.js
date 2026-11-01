@@ -4,6 +4,7 @@ import RangeReport from '@/components/RangeReport';
 import { groupReport } from '@/lib/rangeReports';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import PrintColumns from '@/components/PrintColumns';
 import AuthGate, { useUser } from '@/components/AuthGate';
 import Omr from '@/components/Omr';
 import Modal from '@/components/Modal';
@@ -221,7 +222,7 @@ function SummaryPage() {
           <button type="button" className="btn" onClick={share}>📤 Share</button>
           <RangeReport title="Group expense report" company="Tudo Num Group" landscape
             build={(from, to) => groupReport({ lines, pick, labelOf, from, to })} label="🖨 Report by dates" />
-          <button type="button" className="btn" onClick={() => window.print()}>🖨 Print</button>
+          <PrintColumns className="btn" />
         </div>
       </div>
 

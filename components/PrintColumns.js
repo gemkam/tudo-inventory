@@ -1,11 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { usePathname } from 'next/navigation';
 import Modal from '@/components/Modal';
 
 /*
-  🖨 Print with column choice, on every page (shown by AuthGate in the top bar next to the company name, prop top).
+  🖨 Print with column choice.
+  1 Nov 2026: no longer in the top bar. It sits in each page's own toolbar, in the place of the old plain Print:
+    - <PrintColumns className="btn ghost" /> placed by a page (inline), or
+    - <PrintColumns auto /> (rendered once by AuthGate): puts itself at the end of the page toolbar (.page-tools .tools)
+      when the page has no Print button of its own; pages without a toolbar get it at the top right of the page.
   Reads the tables on the page, lets the user tick columns per table (and leave a table out),
   then builds a clean print copy (.pc-sheet) with only those columns and prints it.
   Choice is remembered per page on this device (localStorage "tudo-print:<path>").
@@ -92,7 +97,7 @@ function cleanCopy(t, keep) {
   return copy;
 }
 
-export default function PrintColumns({ top = false }) {
+export default function PrintColumns({ top = false, auto = false, className = 'btn ghost' }) {
   const path = usePathname() || '/';
   const [open, setOpen] = useState(false);
   const [tables, setTables] = useState([]);
@@ -176,11 +181,38 @@ export default function PrintColumns({ top = false }) {
     setTimeout(() => { window.print(); setTimeout(() => { if (document.body.contains(sheet)) done(); }, 1500); }, 120);
   }
 
-  if (hidden) return null;
+  /* auto: find the page toolbar (pages load their data first, so keep looking for a few seconds) */
+  const [slot, setSlot] = useState(null);
+  useEffect(() => {
+    if (!auto || hidden) { setSlot(null); return undefined; }
+    let el = null;
+    let tries = 0;
+    const ownPrint = () => [...document.querySelectorAll('main.page [data-print-inline]')].some((b) => !b.closest('.pc-slot')) || [...document.querySelectorAll('main.page .page-tools button, main.page .page-tools a, main.page .tools button')]
+      .some((b) => !b.closest('.pc-slot') && /(^|\s)Print(\s|$)/.test((b.textContent || '').replace(/[^\w ]/g, ' ').trim()));
+    const place = () => {
+      tries += 1;
+      if (ownPrint()) { if (el) { el.remove(); el = null; setSlot(null); } return; }
+      if (el && document.body.contains(el)) return;
+      const bar = document.querySelector('main.page .page-tools .tools') || (tries > 6 ? document.querySelector('main.page .pc-home') : null);
+      if (!bar) return;
+      el = document.createElement('span');
+      el.className = 'pc-slot';
+      bar.appendChild(el);
+      setSlot(el);
+    };
+    place();
+    const t = setInterval(() => { place(); if (tries > 20) clearInterval(t); }, 400);
+    return () => { clearInterval(t); if (el) el.remove(); setSlot(null); };
+  }, [auto, hidden, path]);
+
+  if (auto && (hidden || !slot)) return null;
+  if (!auto && !top && className === 'pc-float' && hidden) return null;
+
+  const button = <button type="button" className={top ? 'tbx-print' : auto ? 'btn ghost' : className} onClick={openPicker} data-print-inline="1" title="Customizable print: choose the tables and columns to print">🖨 Print</button>;
 
   return (
     <>
-      <button type="button" className={top ? 'tbx-print' : 'pc-float'} onClick={openPicker} title="Customizable print: choose the tables and columns to print">🖨 <span>Print</span></button>
+      {auto ? createPortal(button, slot) : button}
       {open && (
         <Modal title="Print: choose columns" onClose={() => setOpen(false)}>
           {!tables.length && <p className="muted" style={{ margin: 0 }}>There is no table on this page. Use the browser print (Ctrl + P) for this page.</p>}

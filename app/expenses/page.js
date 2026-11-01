@@ -4,6 +4,7 @@ import RangeReport from '@/components/RangeReport';
 import { expenseReport, groupReport } from '@/lib/rangeReports';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import PrintColumns from '@/components/PrintColumns';
 import AuthGate, { useUser } from '@/components/AuthGate';
 import DataGrid from '@/components/DataGrid';
 import Modal from '@/components/Modal';
@@ -309,7 +310,7 @@ function ExpensesPage() {
           <button type="button" className="btn ghost" onClick={shareIt}>📤 Share</button>
           <RangeReport title={`Office expense report · ${companyOf(co).short || ''}`} company={EXP_COMPANY} landscape
             build={(from, to) => expenseReport({ rows: rows || [], from, to })} label="🖨 Report by dates" />
-          <button type="button" className="btn ghost" onClick={() => window.print()}>🖨 Print</button>
+          <PrintColumns className="btn ghost" />
         </div>
       </div>
 

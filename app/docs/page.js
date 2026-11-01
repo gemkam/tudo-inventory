@@ -5,6 +5,7 @@ import { docsReport } from '@/lib/rangeReports';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import OfficeTabs from '@/components/OfficeTabs';
+import PrintColumns from '@/components/PrintColumns';
 import AuthGate, { useUser } from '@/components/AuthGate';
 import DataGrid from '@/components/DataGrid';
 import Modal from '@/components/Modal';
@@ -384,7 +385,7 @@ function DocsPage() {
         <div className="tools">
           <RangeReport title="Documents expiring" landscape defaultPreset="All" build={(from, to) => docsReport({ rows: rows || [], sectionLabel: (k) => SECTIONS.find((x) => x.key === k)?.label || k, from, to })} label="🖨 Expiring between dates" />
           <button type="button" className="btn ghost" onClick={() => setColsOpen(true)} title="Choose which columns to show, print and export">☑ Columns</button>
-          <button type="button" className="btn ghost" onClick={() => window.print()}>🖨 Print</button>
+          <PrintColumns className="btn ghost" />
           <button type="button" className="btn ghost" onClick={doExcel}>📗 Excel</button>
         </div>
       </div>
