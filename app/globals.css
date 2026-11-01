@@ -2646,18 +2646,19 @@ a.sm-name { color: var(--brown); } a.sm-name:hover { text-decoration: underline;
 .at-del { border: 0; background: transparent; cursor: pointer; font-size: 13px; padding: 0 4px; opacity: .7; }
 .at-del:hover { opacity: 1; }
 
-/* Side buttons hidden to a thin icon strip; they open when the mouse is on them (desktop only) */
+/* Side buttons hidden to a thin icon strip; they open when the mouse is on them (desktop only).
+   1 Nov 2026: opens on mouse hover or keyboard focus only (was :focus-within, which kept it open over the page after a click) */
 @media (min-width: 981px) and (hover: hover) {
   .page.has-side { grid-template-columns: 54px minmax(0, 1fr); }
   .page.has-side > .tsn { width: 54px; max-width: none; padding: 8px 6px; overflow: hidden; z-index: 40; transition: width .18s ease, box-shadow .18s ease; }
-  .page.has-side > .tsn:hover, .page.has-side > .tsn:focus-within { width: 270px; max-width: none; overflow-y: auto; box-shadow: 0 18px 40px -12px rgba(0, 0, 0, .35); }
-  .page.has-side > .tsn:not(:hover):not(:focus-within) .tsn-tx,
-  .page.has-side > .tsn:not(:hover):not(:focus-within) .tsn-car,
-  .page.has-side > .tsn:not(:hover):not(:focus-within) .tsn-kids,
-  .page.has-side > .tsn:not(:hover):not(:focus-within) .tsn-sep { display: none; }
-  .page.has-side > .tsn:not(:hover):not(:focus-within) .tsn-btn { padding: 8px 0; justify-content: center; }
-  .page.has-side > .tsn:not(:hover):not(:focus-within) .tsn-title { font-size: 0; padding: 4px 0 8px; text-align: center; }
-  .page.has-side > .tsn:not(:hover):not(:focus-within) .tsn-title::before { content: '☰'; font-size: 18px; }
+  .page.has-side > .tsn:hover, .page.has-side > .tsn:has(:focus-visible) { width: 270px; max-width: none; overflow-y: auto; box-shadow: 0 18px 40px -12px rgba(0, 0, 0, .35); }
+  .page.has-side > .tsn:not(:hover):not(:has(:focus-visible)) .tsn-tx,
+  .page.has-side > .tsn:not(:hover):not(:has(:focus-visible)) .tsn-car,
+  .page.has-side > .tsn:not(:hover):not(:has(:focus-visible)) .tsn-kids,
+  .page.has-side > .tsn:not(:hover):not(:has(:focus-visible)) .tsn-sep { display: none; }
+  .page.has-side > .tsn:not(:hover):not(:has(:focus-visible)) .tsn-btn { padding: 8px 0; justify-content: center; }
+  .page.has-side > .tsn:not(:hover):not(:has(:focus-visible)) .tsn-title { font-size: 0; padding: 4px 0 8px; text-align: center; }
+  .page.has-side > .tsn:not(:hover):not(:has(:focus-visible)) .tsn-title::before { content: '☰'; font-size: 18px; }
   .page.has-side > .tsn .tsn-btn, .page.has-side > .tsn .tsn-title { white-space: nowrap; }
   .page.has-side > .tsn:hover .tsn-btn .tsn-tx { white-space: normal; }
 }
@@ -3677,3 +3678,8 @@ body:has(.ent-page.ur) .modal, body:has(.ent-page.ur) .dfv { font-family: 'Noto 
 .pn-cell .dfl-more[disabled], .paid-btn[disabled], .pn-bar .btn[disabled] { opacity: .45; cursor: not-allowed; filter: grayscale(.6); }
 .pn-co-sel[disabled] { opacity: 1; cursor: default; background: transparent; border-color: transparent; appearance: none; -webkit-appearance: none; padding-left: 0; color: var(--ink); }
 .dfl.compact .dfl-more[disabled] { opacity: .45; cursor: not-allowed; filter: grayscale(.6); }
+
+/* Side menu tidy (1 Nov 2026): sub items without the pill outline, a clear filled pill only for the page you are on */
+.tsn-btn.sub { border-color: transparent; font-size: 13.5px; }
+.tsn-btn.sub:hover, .tsn-btn.sub:focus-visible { border-color: transparent; background: var(--tint); color: var(--brown); }
+.tsn-btn:focus:not(:focus-visible) { border-color: transparent; }
