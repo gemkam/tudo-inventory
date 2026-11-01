@@ -315,7 +315,7 @@ function PersonnelPage() {
     load();
   }
   const money = (k) => ({ key: k, label: '', type: 'number', width: 105, render: (r) => (n(r[k]) ? fmtAmt(r[k]) : <span className="muted">–</span>) });
-  /* Company: a drop-down in every row (no need to press Edit), so someone put in the wrong company is moved at once */
+  /* Company: a drop-down in every row, locked until ✏️ Edit › Edit table (then someone in the wrong company is moved at once) */
   async function moveCompany(table, row, key) {
     if (!key || key === row.company) return;
     if (!(await patchRow(table, row, { company: key }, true))) return;
@@ -326,7 +326,7 @@ function PersonnelPage() {
   const companyColFor = (table, label = 'Company') => ({
     key: 'company', label, type: 'calc', width: 150,
     render: (r) => (isAdmin ? (
-      <select className="pn-co-sel" value={r.company || ''} aria-label={`Company of ${r.name}`}
+      <select className="pn-co-sel" value={r.company || ''} aria-label={`Company of ${r.name}`} disabled={!edit} title={edit ? '' : 'Locked: ✏️ Edit › Edit table to change the company'}
         onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}
         onChange={(e) => moveCompany(table, r, e.target.value)}>
         {!r.company && <option value="">– choose –</option>}

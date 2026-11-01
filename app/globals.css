@@ -3675,3 +3675,4 @@ body:has(.ent-page.ur) .modal, body:has(.ent-page.ur) .dfv { font-family: 'Noto 
 .pn-co-sel:hover, .pn-co-sel:focus { border-color: var(--brown); outline: none; }
 /* locked salary buttons in Personnel (1 Nov 2026) */
 .pn-cell .dfl-more[disabled], .paid-btn[disabled], .pn-bar .btn[disabled] { opacity: .45; cursor: not-allowed; filter: grayscale(.6); }
+.pn-co-sel[disabled] { opacity: 1; cursor: default; background: transparent; border-color: transparent; appearance: none; -webkit-appearance: none; padding-left: 0; color: var(--ink); }
