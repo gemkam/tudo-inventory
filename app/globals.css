@@ -3946,3 +3946,9 @@ html.desk-on-phone .al-sheet-back { position: fixed; inset: 0; z-index: 1000; ba
 }
 @media (max-height: 820px) and (min-width: 601px) { .intro-splash .is-logo-wrap { width: 230px; } .intro-splash .is-sub { margin-top: 10px; } }
 @media (max-height: 640px) { .intro-splash .is-logo-wrap { width: 190px; } }
+
+/* Data entry: "＋ Add New Driver" card, same look as a driver card, always in the far-right column (1 Nov 2026) */
+.ent-driver-add { grid-column: -2 / -1; grid-row: 1; border-style: dashed; }
+.ent-driver-add .ent-av { background: var(--tint); color: var(--brown); border: 2px solid var(--brown); }
+.ent-driver-add b { color: var(--brown); }
+@media screen and (max-width: 760px) { .ent-page .ent-driver-add { grid-column: auto; grid-row: auto; order: 99; } }

@@ -265,7 +265,6 @@ function EntryPage() {
         <div className="tools">
           <InstallApp isOffice={isOffice} driverLinks={driverLinks} />
           {isOffice && <button type="button" className={`btn${renaming ? ' in' : ''}`} aria-pressed={renaming} onClick={() => setRenaming((v) => !v)}>{renaming ? '✓ Done renaming' : '✏️ Rename boxes'}</button>}
-          {isOffice && <button type="button" className="btn" onClick={() => setAddDrv({ name: '', vehicle: '' })}>➕ Add driver</button>}
         </div>
       </div>
       {error && <div className="error">{error}</div>}
@@ -278,6 +277,13 @@ function EntryPage() {
           </button>
         ))}
         {!drivers.length && <p className="muted">No drivers yet.</p>}
+        {/* ＋ Add New Driver: same card as a driver, at the far right (1 Nov 2026, replaces the toolbar button) */}
+        {isOffice && (
+          <button type="button" className="ent-driver ent-driver-add" onClick={() => setAddDrv({ name: '', vehicle: '' })}>
+            <span className="ent-av" aria-hidden="true">＋</span>
+            <span><b>Add New Driver</b></span>
+          </button>
+        )}
       </div>
 
       {driver && tripId === null && (
