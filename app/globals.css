@@ -3639,3 +3639,4 @@ body:has(.ent-page.ur) .modal, body:has(.ent-page.ur) .dfv { font-family: 'Noto 
 .cd-table .num { text-align: right; font-variant-numeric: tabular-nums; }
 .cd-table .bad { color: #c0392b; }
 .cd-table tfoot td { border-top: 2px solid var(--brown); }
+.arch-undo { border-color: var(--brown) !important; color: var(--brown) !important; font-weight: 700; }

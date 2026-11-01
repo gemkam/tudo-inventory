@@ -519,7 +519,7 @@ function PersonnelPage() {
       {tab === 'attendance' ? <AttendanceSheet /> : tab === 'archives' ? (
         <section className="panel arch">
           <div className="section-head"><h2>🗄 Archives <small className="muted">{archived.filter((a) => coOk(a.row) && match(a.row)).length}</small></h2></div>
-          <p className="muted" style={{ marginTop: 0 }}>Previous employees, drivers and subcontractors. They are hidden from every table, salary, attendance and alert and get no updates. Their data stays here as it was.</p>
+          <p className="muted" style={{ marginTop: 0 }}>Previous employees, drivers and subcontractors. They are hidden from every table, salary, attendance and alert and get no updates. Their data stays here as it was. Deleted someone by mistake? Press <b>↶ Undo delete</b> and he is back everywhere, exactly as before.</p>
           {!archived.length && <p className="muted">Nothing in the Archives.</p>}
           <div className="arch-list">
             {archived.filter((a) => coOk(a.row) && match(a.row)).map(({ table, row }) => (
@@ -531,7 +531,7 @@ function PersonnelPage() {
                 </div>
                 <span className="arch-btns">
                   <button type="button" className="dfl-btn" onClick={() => setViewArch({ table, row })}>👁 View</button>
-                  {isAdmin && <button type="button" className="dfl-btn" onClick={async () => { if (await restore(table, row)) flash(`${row.name} is back in ${table === 'transport_drivers' ? 'Drivers' : table === 'personnel_subcontractors' ? 'Subcontractors' : 'Employees'}`); }}>♻ Restore</button>}
+                  {isAdmin && <button type="button" className="dfl-btn arch-undo" title="Deleted by mistake? Bring him back exactly as he was" onClick={async () => { if (await restore(table, row)) flash(`Undone: ${row.name} is back in ${table === 'transport_drivers' ? 'Drivers' : table === 'personnel_subcontractors' ? 'Subcontractors' : row.staff_type === 'Site' ? 'Site Employees' : 'Office Employees'}, with all his data`); }}>↶ Undo delete</button>}
                 </span>
               </div>
             ))}
@@ -601,7 +601,7 @@ function PersonnelPage() {
             <dl className="arch-dl">{rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{String(v)}</dd></div>)}</dl>
             <div className="modal-actions">
               <button type="button" className="btn ghost" onClick={() => setViewArch(null)}>Close</button>
-              {isAdmin && <button type="button" className="btn in" onClick={async () => { if (await restore(viewArch.table, r)) { flash(`${r.name} restored`); setViewArch(null); } }}>♻ Restore</button>}
+              {isAdmin && <button type="button" className="btn in" onClick={async () => { if (await restore(viewArch.table, r)) { flash(`Undone: ${r.name} is back, with all his data`); setViewArch(null); } }}>↶ Undo delete</button>}
             </div>
           </Modal>
         );
