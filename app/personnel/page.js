@@ -376,10 +376,25 @@ function PersonnelPage() {
   ]);
 
   /* ---------- rows for the tab ---------- */
+  /* 🔍 Search looks in every box of a person (name, company, designation, passport, resident card, mobile, contract,
+     ticket, vehicle, salary figures, file names, archive reason...) */
+  const hay = (r) => {
+    const bits = [];
+    const walk = (v) => {
+      if (v == null || v === '') return;
+      if (Array.isArray(v)) v.forEach(walk);
+      else if (typeof v === 'object') Object.entries(v).forEach(([k, x]) => { if (!/^(path|type|size|at|id)$/.test(k)) walk(x); });
+      else bits.push(String(v));
+    };
+    Object.entries(r).forEach(([k, v]) => { if (!/(^id$|_id$|token|sort|created_at|^user_id$)/.test(k)) walk(v); });
+    bits.push(CO_SHORT[r.company] || '', r.staff_type || '', r.transport_allow ? 'transport yes' : '');
+    if (r.resident_card_expiry) bits.push(String(r.resident_card_expiry).split('-').reverse().join('/'));
+    return bits.join(' ').toLowerCase();
+  };
   const match = (r) => {
     const s = q.trim().toLowerCase();
     if (!s) return true;
-    return [r.name, r.designation, r.department, r.passport, r.mobile, r.phone, r.company_name, r.contact, CO_SHORT[r.company]].some((v) => String(v || '').toLowerCase().includes(s));
+    return s.split(/\s+/).every((w) => hay(r).includes(w));
   };
   const coOk = (r) => !co || r.company === co;
   const officeRows = (staff || []).filter((r) => (r.staff_type || 'Office') !== 'Site' && r.active !== false && coOk(r) && match(r));
@@ -426,7 +441,7 @@ function PersonnelPage() {
         onAdd={edit && isAdmin ? addRow : undefined} addLabel={`+ Add ${tab === 'site' ? 'site' : 'office'} employee${co ? ` (${CO_SHORT[co]})` : ' (Sumptuosity)'}`}
         onDelete={delMode && canDel ? (row) => setDel({ table: 'exp_staff', row }) : undefined} deleting={delMode && canDel}
         footer={sumFoot(rows, 'basic')}
-        emptyText={tab === 'site' ? 'No site employees yet. Press ✏️ Edit, then ＋ Add new, or change a person to Site on the Attendance page.' : 'No office employees yet.'} />
+        emptyText={q.trim() ? `Nothing here matches "${q.trim()}". Look at the 🔍 search list for other tabs.` : tab === 'site' ? 'No site employees yet. Press ✏️ Edit, then ＋ Add new, or change a person to Site on the Attendance page.' : 'No office employees yet.'} />
     );
   } else if (tab === 'drivers') {
     grid = (
@@ -448,19 +463,22 @@ function PersonnelPage() {
 
   return (
     <>
-      <div className="page-tools no-print">
-        <h1 className="pn-title">👥 Personnel <small>Employees</small></h1>
-        <div className="tools">
-          {tab === 'office' || tab === 'site' || tab === 'drivers' ? (
-            <div className="month-select at-month">
-              <button type="button" className="btn ghost sm" onClick={() => setMonth(shiftM(month, -1))} aria-label="Previous month">‹</button>
-              <input type="month" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} aria-label="Month" />
-              <button type="button" className="btn ghost sm" onClick={() => setMonth(shiftM(month, 1))} aria-label="Next month">›</button>
-            </div>
-          ) : null}
-          {!own && <input className="pn-search" type="search" placeholder="Search name, passport, mobile..." value={q} onChange={(e) => setQ(e.target.value)} />}
-          {!own && <button type="button" className="btn ghost" onClick={doExcel}>📗 Excel</button>}
+      <div className="pn-wrap">
+      <div className="company-head ch-top pn-head">
+        <div className="pn-head-txt">
+          <span className="company-name">Tudo Num Group</span>
+          <h1>👥 Personnel</h1>
+          <p className="sub">Employees · {(staff || []).length + (drivers || []).length + (subs || []).length} people · {monthLabel(month)}</p>
         </div>
+        <PeopleSearch q={q} setQ={setQ} hay={hay} coShort={CO_SHORT}
+          groups={[
+            ['office', '🏢 Office', (staff || []).filter((r) => r.staff_type !== 'Site')],
+            ['site', '👷 Site', (staff || []).filter((r) => r.staff_type === 'Site')],
+            ['drivers', '🚚 Drivers', drivers || []],
+            ['sub', '🤝 Subcontractors', subs || []],
+            ['archives', '🗄 Archives', archived.map((a) => a.row)]
+          ]}
+          onOpen={(t) => { setCo(''); setCoDetail(''); goTab(t); }} />
       </div>
 
       <div className="co-switch pn-tabs no-print" role="tablist" aria-label="Employees">
@@ -472,12 +490,22 @@ function PersonnelPage() {
         ))}
       </div>
 
+
       {showCo && (
-        <div className="pn-chips no-print">
+        <div className="pn-row no-print">
+          <div className="pn-chips">
           <CompanyList companies={allCos} staff={staff || []} drivers={drivers || []} active={!co}
             onAll={() => { setCo(''); setCoDetail(''); }}
             onPick={(k) => { setCo(k); setCoDetail(k); }} />
           {allCos.map((c) => <button key={c.key} type="button" className={co === c.key ? 'on' : ''} onClick={() => { setCo(c.key); setCoDetail(''); }} title={c.name || c.short}>{c.short}</button>)}
+          </div>
+          {(tab === 'office' || tab === 'site' || tab === 'drivers') && (
+            <div className="month-select at-month pn-month">
+              <button type="button" className="btn ghost sm" onClick={() => setMonth(shiftM(month, -1))} aria-label="Previous month">‹</button>
+              <input type="month" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} aria-label="Month" />
+              <button type="button" className="btn ghost sm" onClick={() => setMonth(shiftM(month, 1))} aria-label="Next month">›</button>
+            </div>
+          )}
         </div>
       )}
 
@@ -487,15 +515,6 @@ function PersonnelPage() {
       )}
       {error && <div className="error">{error}</div>}
 
-      {(tab === 'office' || tab === 'site') && (
-        <p className="muted pn-note no-print">
-          Same people as the salary sheet in All Companies. The Attendance column comes from the Attendance tab ({monthLabel(month)}); tap it to open the sheet.
-          {edit ? ' Changing House rent or Utilities also changes the Allowance total.' : ''}
-        </p>
-      )}
-      {tab === 'drivers' && <p className="muted pn-note no-print">Same drivers as Transport &gt; Drivers. Monthly driver salaries stay in the Transport salary sheets.</p>}
-
-      {/* Two buttons just above the table: ✏️ Edit (menu: Edit cells, Add new, Delete, Undo) and 🖨 Print */}
       {!own && <div className="pn-bar no-print">
         {tab !== 'attendance' && isAdmin && (
           <EditMenu
@@ -513,8 +532,14 @@ function PersonnelPage() {
           <button type="button" className="btn" onClick={() => setPayAll(true)}>💵 All {tab === 'office' ? 'Office Employees' : tab === 'site' ? 'Site Employees' : 'Drivers'} Salary Paid</button>
         )}
         <PrintColumns className="btn" />
+        {!own && <button type="button" className="btn" onClick={doExcel}>📗 Excel</button>}
         {(edit || delMode) && <span className="pn-mode">{[edit && '✏️ Editing: tap a box to change it', delMode && '🗑 Tap the red 🗑 at the start of a row to delete (moves to Archives)'].filter(Boolean).join(' · ')}</span>}
       </div>}
+
+
+      {(tab === 'office' || tab === 'site') && <p className="muted pn-note no-print">Same people as the All Companies salary sheet · Attendance column from the Attendance tab{edit ? ' · House rent and Utilities also change the Allowance total' : ''}</p>}
+      {tab === 'drivers' && <p className="muted pn-note no-print">Same drivers as Transport › Drivers · monthly driver salaries stay in the Transport salary sheets</p>}
+      </div>
 
       {tab === 'attendance' ? <AttendanceSheet /> : tab === 'archives' ? (
         <section className="panel arch">
@@ -729,6 +754,46 @@ function CompanyDetail({ company, staff, drivers, credits, month, onClose, onOpe
         </table>
       </div>
     </section>
+  );
+}
+
+/* 🔍 Search in the Personnel heading: looks through every person (all tabs, Archives too) in every box.
+   Shows how many found per tab and the first names; tap one to open that tab filtered by the search. */
+function PeopleSearch({ q, setQ, hay, groups, coShort, onOpen }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = (e) => { if (box.current && !box.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, [open]);
+  const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const found = words.length ? groups.map(([k, label, list]) => [k, label, list.filter((r) => words.every((w) => hay(r).includes(w)))]) : [];
+  const total = found.reduce((t, g) => t + g[2].length, 0);
+  return (
+    <div className="ps" ref={box}>
+      <span className="ps-ico" aria-hidden="true">🔍</span>
+      <input type="search" value={q} placeholder="Search everything in Personnel" aria-label="Search Personnel"
+        onChange={(e) => { setQ(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)}
+        onKeyDown={(e) => { if (e.key === 'Escape') { setOpen(false); e.currentTarget.blur(); } if (e.key === 'Enter') { const g = found.find((x) => x[2].length); if (g) { onOpen(g[0]); setOpen(false); } } }} />
+      {open && words.length > 0 && (
+        <div className="ps-menu">
+          <div className="ps-sum">{total ? `${total} found` : 'Nothing found'}{total ? <span> · {found.filter((g) => g[2].length).map((g) => `${g[1].split(' ').slice(1).join(' ')} ${g[2].length}`).join(' · ')}</span> : null}</div>
+          {found.filter((g) => g[2].length).map(([k, label, list]) => (
+            <div key={k} className="ps-grp">
+              <button type="button" className="ps-head" onClick={() => { onOpen(k); setOpen(false); }}>{label} <b>{list.length}</b><span>Open ›</span></button>
+              {list.slice(0, 6).map((r) => (
+                <button key={r.id} type="button" className="ps-item" onClick={() => { setQ(r.name); onOpen(k); setOpen(false); }}>
+                  <span>{r.name}</span><small>{[coShort[r.company] || r.company_name, r.designation || r.department || r.vehicle_no, r.passport, r.mobile || r.phone || r.contact].filter(Boolean).join(' · ')}</small>
+                </button>
+              ))}
+              {list.length > 6 && <small className="ps-more">+ {list.length - 6} more: tap {label.split(' ').slice(1).join(' ')}</small>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
