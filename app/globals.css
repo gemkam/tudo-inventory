@@ -3908,7 +3908,7 @@ html.desk-on-phone .al-sheet-back { position: fixed; inset: 0; z-index: 1000; ba
 .is-sc-sign { font: 800 15px 'Work Sans', system-ui, sans-serif; letter-spacing: .14em; fill: #13836b; }
 .is-sc-tr-label { font: 800 19px 'Work Sans', system-ui, sans-serif; letter-spacing: .12em; }
 .is-sc-van-label { font: 800 11px 'Work Sans', system-ui, sans-serif; letter-spacing: .1em; }
-.is-sc-win.on { animation: is-sc-light-on .5s ease-out both; }
+.is-sc-win { animation: is-stage-in .6s ease-out both; }
 @keyframes is-sc-light-on { from { fill: #eef6fc; } to { fill: #ffeeb8; } }
 .is-sc-screen { animation: is-sc-glow 2.4s ease-in-out infinite; }
 @keyframes is-sc-glow { 50% { fill: #d7ebff; } }
@@ -3954,9 +3954,18 @@ html.desk-on-phone .al-sheet-back { position: fixed; inset: 0; z-index: 1000; ba
 .is-stage-bg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .is-veh { position: absolute; left: 0; will-change: transform; backface-visibility: hidden; }
 .is-veh svg { display: block; width: 100%; height: auto; overflow: visible; }
-.is-veh.t1 { top: 67.37%; width: 18.04%; transform: translate3d(-21cqw, 0, 0); animation: is-veh-r 12s linear .3s forwards; --to: 106cqw; }
-.is-veh.t2 { top: 63.68%; width: 13.64%; transform: translate3d(106cqw, 0, 0); animation: is-veh-l 14s linear .6s forwards; }
-.is-veh.t3 { top: 75.79%; width: 6.2%; transform: translate3d(-8cqw, 0, 0); animation: is-veh-r3 11s linear 2.2s forwards; }
+.is-veh.t1 { top: 65.42%; width: 22.5%; transform: translate3d(-23cqw, 0, 0); animation: is-veh-r 12s linear .3s forwards; }
+.is-veh.t2 { top: 62.2%; width: 15%; transform: translate3d(104cqw, 0, 0); animation: is-veh-l 14s linear .6s forwards; }
+.is-veh.t3 { top: 75.16%; width: 7.95%; transform: translate3d(-9cqw, 0, 0); animation: is-veh-r3 8s linear 1.4s forwards; } /* pickup overtakes the truck */
 @keyframes is-veh-r { to { transform: translate3d(106cqw, 0, 0); } }
 @keyframes is-veh-l { to { transform: translate3d(-16cqw, 0, 0); } }
 @keyframes is-veh-r3 { to { transform: translate3d(106cqw, 0, 0); } }
+
+/* Realistic scene text (1 Nov 2026) */
+.is-veh-big { font: 800 25px 'Work Sans', system-ui, sans-serif; letter-spacing: .02em; }
+.is-veh-big.ctr { font-size: 22px; }
+.is-veh-small { font: 700 10.5px 'Work Sans', system-ui, sans-serif; letter-spacing: .1em; }
+.is-veh-pick { font: 800 10px 'Work Sans', system-ui, sans-serif; letter-spacing: .1em; }
+.is-sc-road { font: 700 10px 'Work Sans', system-ui, sans-serif; fill: #fff; letter-spacing: .04em; }
+.is-sc-sign { font: 800 12px 'Work Sans', system-ui, sans-serif; letter-spacing: .14em; fill: #13836b; }
+.is-veh .is-sc-wheel { animation-duration: .8s; }
