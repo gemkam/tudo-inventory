@@ -183,7 +183,7 @@ function PersonnelPage() {
       res = await s.from('transport_drivers').insert({ name: 'New driver', company: co || 'modern-city', status: 'Active', sort: (drivers || []).length + 1 }).select().single();
       if (!res.error) setDrivers((l) => [...(l || []), res.data]);
     } else {
-      res = await s.from('personnel_subcontractors').insert({ name: 'New subcontractor', sort: (subs || []).length + 1 }).select().single();
+      res = await s.from('personnel_subcontractors').insert({ name: 'New subcontractor', company: co || null, sort: (subs || []).length + 1 }).select().single();
       if (!res.error) setSubs((l) => [...(l || []), res.data]);
     }
     if (res.error) { flash(res.error.message, 'err'); return; }
@@ -332,6 +332,7 @@ function PersonnelPage() {
   ];
   const subColumns = [
     { key: 'name', label: 'Name', type: 'text', width: 200 },
+    { ...companyCol, label: 'Works for' },
     { key: 'company_name', label: 'Company name', type: 'text', width: 220 },
     { key: 'contract', label: 'Contract', type: 'text', width: 240, placeholder: 'Work / period / amount', render: docCell('personnel_subcontractors', 'contract', 'Contract', (r) => r.contract) },
     { key: 'contact', label: 'Contact', type: 'text', width: 170, placeholder: 'Mobile / email' }
@@ -352,7 +353,7 @@ function PersonnelPage() {
   const officeRows = (staff || []).filter((r) => (r.staff_type || 'Office') !== 'Site' && r.active !== false && coOk(r) && match(r));
   const siteRows = (staff || []).filter((r) => r.staff_type === 'Site' && r.active !== false && coOk(r) && match(r));
   const driverRows = (drivers || []).filter((r) => coOk(r) && match(r));
-  const subRows = (subs || []).filter(match);
+  const subRows = (subs || []).filter((r) => coOk(r) && match(r));
 
   const sumFoot = (rows, basicKey) => ({
     name: `${rows.length} ${rows.length === 1 ? 'person' : 'people'}`,
@@ -374,13 +375,13 @@ function PersonnelPage() {
       staffSheet('Office Employees', officeRows),
       { name: 'Drivers', title: 'Drivers · Tudo Num', subtitle: exportStamp(), head: ['Name', 'Company', 'Contract', 'Resident card expiry', 'Passport', 'Basic', 'Allowance total', 'House rent', 'Utilities', 'Ticket'], rows: driverRows.map((r) => [r.name, tCo(r), r.contract || '', r.resident_card_expiry || '', r.passport || '', n(r.salary), n(r.allowances), n(r.house_rent), n(r.utilities), r.ticket || '']), numCols: [5, 6, 7, 8] },
       staffSheet('Site Employees', siteRows),
-      { name: 'Subcontractors', title: 'Subcontractors · Tudo Num', subtitle: exportStamp(), head: ['Name', 'Company name', 'Contract', 'Contact'], rows: subRows.map((r) => [r.name, r.company_name || '', r.contract || '', r.contact || '']), numCols: [] }
+      { name: 'Subcontractors', title: 'Subcontractors · Tudo Num', subtitle: exportStamp(), head: ['Name', 'Works for', 'Company name', 'Contract', 'Contact'], rows: subRows.map((r) => [r.name, tCo(r), r.company_name || '', r.contract || '', r.contact || '']), numCols: [] }
     ]);
   }
 
   if (staff === null) return <div className="loading">Loading...</div>;
 
-  const showCo = tab !== 'sub' && tab !== 'attendance';
+  const showCo = tab !== 'attendance';
   const own = tab === 'attendance'; // tab with its own toolbar
   const canDel = isAdmin && canDelete;
   let grid = null;
@@ -433,7 +434,7 @@ function PersonnelPage() {
         {TABS.map(([k, label]) => (
           <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => goTab(k)}>
             {label}
-            <small className="pn-count">{k === 'office' ? (staff || []).filter((r) => (r.staff_type || 'Office') !== 'Site' && r.active !== false).length : k === 'site' ? (staff || []).filter((r) => r.staff_type === 'Site' && r.active !== false).length : k === 'drivers' ? (drivers || []).length : k === 'sub' ? (subs || []).length : ''}</small>
+            <small className="pn-count">{k === 'office' ? (staff || []).filter((r) => (r.staff_type || 'Office') !== 'Site' && r.active !== false && coOk(r)).length : k === 'site' ? (staff || []).filter((r) => r.staff_type === 'Site' && r.active !== false && coOk(r)).length : k === 'drivers' ? (drivers || []).filter(coOk).length : k === 'sub' ? (subs || []).filter(coOk).length : ''}</small>
           </button>
         ))}
       </div>
