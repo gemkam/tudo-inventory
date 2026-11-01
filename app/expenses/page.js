@@ -311,7 +311,7 @@ function ExpensesPage() {
               <option value="all">All months</option>
             </select>
           </div>
-          <Link href={`/expenses/attendance?co=${co}`} className="btn">🗓 Attendance</Link>
+          <Link href={`/personnel?tab=attendance&co=${co}`} className="btn">🗓 Attendance</Link>
           <Link href={`/expenses/docs?co=${co}`} className="btn">🧾 Invoice / Receipt</Link>
           <button type="button" className="btn ghost" onClick={doExcel}>📗 Excel</button>
           <button type="button" className="btn ghost" onClick={doPdf}>📕 PDF</button>
@@ -412,7 +412,7 @@ function ExpensesPage() {
         </div>
         <p className="note" style={{ margin: '0 0 10px' }}>
           Total gross = (Basic + Allowances) ÷ 30 × Working days. Net pay = Gross − Deductions. Unpaid balance = Previous unpaid + Net pay − Paid.
-          {' '}Working days are filled from <Link href={`/expenses/attendance?co=${co}${staffAttMonth ? `&m=${staffAttMonth}` : ''}`}>🗓 Attendance</Link>
+          {' '}Working days are filled from <Link href={`/personnel?tab=attendance&co=${co}${staffAttMonth ? `&m=${staffAttMonth}` : ''}`}>🗓 Attendance</Link>
           {staffAttMonth ? ` (${monthLabel(staffAttMonth)})` : ''} when it is marked; you can still change them here.
         </p>
         {view === 'cards' ? (

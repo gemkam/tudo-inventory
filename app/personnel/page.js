@@ -8,6 +8,7 @@ import DataGrid from '@/components/DataGrid';
 import DocFiles from '@/components/DocFiles';
 import Modal from '@/components/Modal';
 import Expiry from '@/components/Expiry';
+import AttendanceSheet from '@/components/AttendanceSheet';
 import { sb } from '@/lib/supabase';
 import { COMPANIES, n, r3 } from '@/lib/expenses';
 import { daysOfMonth, marksByStaff, personMonth } from '@/lib/attendance';
@@ -17,7 +18,7 @@ import { fmtAmt, monthLabel, todayISO, exportExcel, exportStamp } from '@/lib/sh
   Personnel (top bar button before Admin, 1 Nov 2026) > Employees:
     Office Employees · Drivers · Site Employees · Subcontractors · Attendance  (tabs, ?tab=office|drivers|site|sub|attendance)
   Office / Site employees = the same people as the All Companies salary sheets (exp_staff, staff_type Office / Site),
-  so the Attendance sheet (/expenses/attendance) and the salary sheet stay connected to them.
+  so the Attendance sheet (Attendance tab = components/AttendanceSheet.js) and the salary sheet stay connected to them.
   Drivers = Transport drivers (transport_drivers). Subcontractors = personnel_subcontractors.
   Salary > Allowance > House rent, Utilities (+ Transport Yes/No for office and site). Changing House rent or Utilities
   also changes the Allowance total that the salary sheet uses.
@@ -86,7 +87,12 @@ function PersonnelPage() {
   useEffect(() => {
     try { const t = new URLSearchParams(window.location.search).get('tab'); if (TABS.some(([k]) => k === t)) setTab(t); } catch { /* ignore */ }
   }, []);
+  function openAttendance(company) {
+    try { window.history.replaceState(null, '', `/personnel?tab=attendance&co=${company}&m=${month}`); } catch { /* ignore */ }
+    setTab('attendance'); setEdit(false); setDelMode(false);
+  }
   function goTab(k) {
+    if (k === 'attendance') { openAttendance(co || (staff || [])[0]?.company || 'sumptuosity'); return; }
     setTab(k); setEdit(false); setDelMode(false);
     try { window.history.replaceState(null, '', `/personnel?tab=${k}`); } catch { /* ignore */ }
   }
@@ -244,7 +250,7 @@ function PersonnelPage() {
     render: (r) => {
       const x = statOf(r);
       return (
-        <Link className="pn-att" href={`/expenses/attendance?co=${r.company}&m=${month}`} onClick={(e) => e.stopPropagation()} title="Open the attendance sheet">
+        <Link className="pn-att" href={`/personnel?tab=attendance&co=${r.company}&m=${month}`} onClick={(e) => { e.stopPropagation(); e.preventDefault(); openAttendance(r.company); }} title="Open the attendance sheet">
           <b className="ok">P {x.present}</b> <b className="bad">A {x.absent}</b> <b>L {x.leave}</b> <b>H {x.half}</b>
         </Link>
       );
@@ -371,7 +377,7 @@ function PersonnelPage() {
       <div className="page-tools no-print">
         <h1 className="pn-title">👥 Personnel <small>Employees</small></h1>
         <div className="tools">
-          {tab === 'attendance' || tab === 'office' || tab === 'site' ? (
+          {tab === 'office' || tab === 'site' ? (
             <div className="month-select at-month">
               <button type="button" className="btn ghost sm" onClick={() => setMonth(shiftM(month, -1))} aria-label="Previous month">‹</button>
               <input type="month" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} aria-label="Month" />
@@ -379,7 +385,7 @@ function PersonnelPage() {
             </div>
           ) : null}
           {tab !== 'attendance' && <input className="pn-search" type="search" placeholder="Search name, passport, mobile..." value={q} onChange={(e) => setQ(e.target.value)} />}
-          <button type="button" className="btn ghost" onClick={doExcel}>📗 Excel</button>
+          {tab !== 'attendance' && <button type="button" className="btn ghost" onClick={doExcel}>📗 Excel</button>}
         </div>
       </div>
 
@@ -404,14 +410,14 @@ function PersonnelPage() {
 
       {(tab === 'office' || tab === 'site') && (
         <p className="muted pn-note no-print">
-          Same people as the salary sheet in All Companies. The Attendance column comes from the attendance sheet ({monthLabel(month)}); tap it to open the sheet.
+          Same people as the salary sheet in All Companies. The Attendance column comes from the Attendance tab ({monthLabel(month)}); tap it to open the sheet.
           {edit ? ' Changing House rent or Utilities also changes the Allowance total.' : ''}
         </p>
       )}
       {tab === 'drivers' && <p className="muted pn-note no-print">Same drivers as Transport &gt; Drivers. Monthly driver salaries stay in the Transport salary sheets.</p>}
 
       {/* Two buttons just above the table: ✏️ Edit (menu: Edit cells, Add new, Delete, Undo) and 🖨 Print */}
-      <div className="pn-bar no-print">
+      {tab !== 'attendance' && <div className="pn-bar no-print">
         {tab !== 'attendance' && isAdmin && (
           <EditMenu
             edit={edit} delMode={delMode} undoCount={undo.length}
@@ -426,10 +432,10 @@ function PersonnelPage() {
         )}
         <PrintColumns className="btn" />
         {(edit || delMode) && <span className="pn-mode">{[edit && '✏️ Editing: tap a box to change it', delMode && '🗑 Delete buttons are on'].filter(Boolean).join(' · ')}</span>}
-      </div>
+      </div>}
 
       {tab === 'attendance' ? (
-        <AttendanceTab companies={allCos} staff={(staff || []).filter((r) => r.active !== false)} statOf={statOf} month={month} />
+        <AttendanceSheet />
       ) : grid}
 
       {send && <SendModal table={send.table} row={(send.table === 'exp_staff' ? staff : drivers).find((x) => x.id === send.row.id) || send.row} onClose={() => setSend(null)} onToggle={(row, on) => patchRow(send.table, row, { slip_link_on: on })} flash={flash} />}
@@ -491,43 +497,6 @@ function EditMenu({ edit, delMode, undoCount, canDel, delNote, onEdit, onAdd, on
         </div>
       )}
     </div>
-  );
-}
-
-/* Attendance tab: every office and site employee for the month, straight from the attendance sheets */
-function AttendanceTab({ companies, staff, statOf, month }) {
-  return (
-    <>
-      <div className="pn-att-open no-print">
-        {COMPANIES.map((c) => <Link key={c.key} className="btn" href={`/expenses/attendance?co=${c.key}&m=${month}`}>🗓 {c.short} attendance sheet</Link>)}
-      </div>
-      {companies.map((c) => {
-        const list = staff.filter((p) => p.company === c.key);
-        if (!list.length) return null;
-        return (
-          <section key={c.key} className="pn-att-sec">
-            <h2>{c.short} <small>{monthLabel(month)}</small></h2>
-            <div className="grid-wrap">
-              <table className="summary-table pn-att-table">
-                <thead><tr><th>Name</th><th>Type</th><th>Present</th><th>Absent</th><th>Leave</th><th>Half day</th><th>Pay days</th></tr></thead>
-                <tbody>
-                  {list.map((p) => {
-                    const x = statOf(p);
-                    return (
-                      <tr key={p.id}>
-                        <td><Link href={`/expenses/attendance?co=${c.key}&m=${month}`}>{p.name}</Link><small className="muted"> {p.designation || p.department || ''}</small></td>
-                        <td>{p.staff_type || 'Office'}</td>
-                        <td className="ok">{x.present}</td><td className="bad">{x.absent}</td><td>{x.leave}</td><td>{x.half}</td><td><b>{x.payDays}</b></td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        );
-      })}
-    </>
   );
 }
 

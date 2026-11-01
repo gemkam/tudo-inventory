@@ -65,7 +65,7 @@ export default function ExpenseSideNav({ isAdmin = false }) {
             {open[c.key] && (
               <div className="tsn-kids">
                 <Btn href={`/expenses?co=${c.key}`} on={isOn('/expenses', c.key)} sub>Bills &amp; salary</Btn>
-                <Btn href={`/expenses/attendance?co=${c.key}`} on={isOn('/expenses/attendance', c.key)} sub>Attendance</Btn>
+                <Btn href={`/personnel?tab=attendance&co=${c.key}`} on={isOn('/expenses/attendance', c.key)} sub>Attendance</Btn>
                 <Btn href={`/expenses/docs?co=${c.key}&kind=invoice`} on={isOn('/expenses/docs', c.key, 'invoice')} sub>Invoice</Btn>
                 <Btn href={`/expenses/docs?co=${c.key}&kind=receipt`} on={isOn('/expenses/docs', c.key, 'receipt')} sub>Payment receipt</Btn>
               </div>

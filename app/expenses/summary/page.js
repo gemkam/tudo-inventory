@@ -104,7 +104,7 @@ function SummaryPage() {
   const attAlerts = useMemo(() => (ATT && ATT.marked ? ATT.topAbsent.filter((p) => p.absent >= 3).map((p) => ({
     level: p.absent >= 5 ? 'bad' : 'warn', icon: '🗓',
     text: `${p.name} (${p.companyLabel}) was absent ${p.absent} day${p.absent === 1 ? '' : 's'}${p.half ? ` and ${p.half} half day${p.half === 1 ? '' : 's'}` : ''}.`,
-    link: `/expenses/attendance?co=${p.company}${period && period.length === 7 ? `&m=${period}` : ''}`
+    link: `/personnel?tab=attendance&co=${p.company}${period && period.length === 7 ? `&m=${period}` : ''}`
   })) : []), [ATT, period]);
 
   // vehicle reminders (VOC, Mulkiya, PDC) join the alerts when Transport is chosen
@@ -389,7 +389,7 @@ function SummaryPage() {
                               <td>{r.label}</td><td className="num">{r.staff}</td><td className="num">{r.present}</td>
                               <td className={`num ${r.absent ? 'neg' : ''}`}>{r.absent}</td><td className="num">{r.leave}</td><td className="num">{r.half}</td>
                               <td className="num">{r.unmarked}</td><td className="num"><b>{r.rate == null ? '–' : `${r.rate}%`}</b></td>
-                              <td className="no-print"><Link href={`/expenses/attendance?co=${r.key}${period.length === 7 ? `&m=${period}` : ''}`}>Open ›</Link></td>
+                              <td className="no-print"><Link href={`/personnel?tab=attendance&co=${r.key}${period.length === 7 ? `&m=${period}` : ''}`}>Open ›</Link></td>
                             </tr>
                           ))}
                         </tbody>
@@ -403,7 +403,7 @@ function SummaryPage() {
                     </>
                   );
                 })() : (
-                  <div className="rp-empty">No attendance marked for {periodLabel}. Open {ATT.rows.map((r, i) => <span key={r.key}>{i ? ', ' : ''}<Link href={`/expenses/attendance?co=${r.key}`}>{r.label}</Link></span>)} to mark it.</div>
+                  <div className="rp-empty">No attendance marked for {periodLabel}. Open {ATT.rows.map((r, i) => <span key={r.key}>{i ? ', ' : ''}<Link href={`/personnel?tab=attendance&co=${r.key}`}>{r.label}</Link></span>)} to mark it.</div>
                 )}
               </div>
             )}
