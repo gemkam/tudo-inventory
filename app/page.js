@@ -86,7 +86,7 @@ function Home() {
             <img className="ba-arrow" src="/brand-arrow.png" alt="" />
           </span>
           <span className="hub-kicker">Modern City · Abu Wasif · Sumptuosity · Transport</span>
-          <span className="hub-title">Office Expense</span>
+          <span className="hub-title">All Companies</span>
           <span className="hub-sub">Bills · Salary · Petrol · Utility · VAT · 🚚 Trips &amp; Diesel</span>
           <span className="hub-meta">
             {ex ? (ex.bills ? <>{ex.bills} bills · {ex.month ? new Date(`${ex.month}-01T00:00:00`).toLocaleString('en-GB', { month: 'long' }) : ''}: {ex.paid.toFixed(3)} OMR</> : 'No bills yet') : ' '}

@@ -11,7 +11,7 @@ import { fmtAmt, monthLabel, exportStamp, exportExcel, exportPdf } from '@/lib/s
 import { quarterOf, quarterMonths, quarterLabel, addDays, dmy } from '@/lib/groupTools';
 
 /*
-  VAT return only (/expenses/vat): opened by the 🧾 VAT return tab next to 📋 Checklist and the Office Expense side menu.
+  VAT return only (/expenses/vat): opened by the 🧾 VAT return tab next to 📋 Checklist and the All Companies side menu.
   Per source: Modern City, Abu Wasif, Sumptuosity, Transport (Modern City Transport Division).
   Output VAT = VAT inside sales: trips with "VAT 5% added" (Transport) and company invoices with VAT (company_docs kind invoice).
   Input VAT  = VAT typed on company bills (exp_entries.vat). Auto rows copied from Transport trips/salary/extras are left out

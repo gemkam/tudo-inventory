@@ -204,7 +204,7 @@ function SummaryPage() {
   return (
     <>
       <div className="page-tools">
-        <Link href="/expenses" className="crumb">← Office Expense</Link>
+        <Link href="/expenses" className="crumb">← All Companies</Link>
         <div className="tools">
           <button type="button" className="btn" onClick={() => openTab('sales')} title="Sales: everything earned">💰 Sales</button>
           <button type="button" className="btn" onClick={() => {

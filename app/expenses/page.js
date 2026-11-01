@@ -238,7 +238,7 @@ function ExpensesPage() {
   function shareIt() {
     const label = month === 'all' ? 'All months' : monthLabel(month);
     const text = [
-      `${companyOf(co).short} · Office Expense · ${label}`,
+      `${companyOf(co).short} · All Companies · ${label}`,
       `Total paid: ${fmtAmt(TM.paid)} OMR (${monthRows.length} bills)`,
       TM.unpaid ? `Unpaid: ${fmtAmt(TM.unpaid)} OMR` : '',
       TM.vat ? `VAT: ${fmtAmt(TM.vat)} OMR` : '',
@@ -269,7 +269,7 @@ function ExpensesPage() {
           numCols: [2, 3, 4, 5, 6, 7, 8, 9, 10], widths: [30, 20, 12, 12, 12, 14, 14, 14, 14, 12, 14]
         });
       }
-      await exportExcel(`Office Expense ${month === 'all' ? 'All' : monthLabel(month)}.xlsx`, sheets);
+      await exportExcel(`All Companies ${month === 'all' ? 'All' : monthLabel(month)}.xlsx`, sheets);
       flash('Excel file downloaded');
     } catch { flash('Could not create the Excel file.', 'err'); }
   }
@@ -277,7 +277,7 @@ function ExpensesPage() {
     try {
       const t = entryTable(shown);
       const f = (row) => row.map((v, i) => (t.numCols.includes(i) && typeof v === 'number' ? fmtAmt(v) : v));
-      await exportPdf(`Office Expense ${month === 'all' ? 'All' : monthLabel(month)}.pdf`, {
+      await exportPdf(`All Companies ${month === 'all' ? 'All' : monthLabel(month)}.pdf`, {
         title: `${month === 'all' ? 'All months' : monthLabel(month)} · Expense (bills) entries${dept ? ` · ${dept}` : ''}${head ? ` · ${head}` : ''}`,
         subtitle: `${EXP_COMPANY}  |  Exported ${exportStamp()}  |  OMR`,
         sections: [
@@ -328,7 +328,7 @@ function ExpensesPage() {
 
       <div className="company-head">
         <span className="company-name">{EXP_COMPANY}</span>
-        <h1>Office Expense</h1>
+        <h1>All Companies</h1>
         <p className="sub">{month === 'all' ? 'All months' : monthLabel(month)} · Expense (bills) entries · Currency: OMR</p>
       </div>
 

@@ -9,7 +9,7 @@ import { monthLabel, todayISO } from '@/lib/sheet';
 import { fmtD } from '@/lib/reminders';
 
 /*
-  Office staff salary sheet of one company (Office Expense page), VERTICAL: one card per staff member.
+  Office staff salary sheet of one company (All Companies page), VERTICAL: one card per staff member.
   View: details, salary rows top to bottom, net pay, paid, UNPAID BALANCE (previous balance + net − paid).
   Edit (✏️ Edit on): every field becomes a box, + Add staff, Delete.
   Paid can be typed by Administrator / Full access any time (needs supabase/salary-paid.sql).

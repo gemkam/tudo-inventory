@@ -25,7 +25,7 @@ const TABLES = {
   transport_vehicles: 'Vehicle',
   transport_invoices: 'Transport invoice',
   vehicle_maintenance: 'Vehicle maintenance',
-  exp_entries: 'Office Expense bill',
+  exp_entries: 'All Companies bill',
   exp_staff: 'Office staff salary',
   exp_budgets: 'Budget',
   company_docs: 'Company invoice / receipt',

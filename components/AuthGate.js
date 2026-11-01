@@ -130,7 +130,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
   const nav = user.isEntry ? [['/entry', 'Data entry', 'entry']] : [['/', 'Home', 'home'], ['/sitemap', 'Sitemap', 'map'], ['/timeline', 'Timeline', 'clock']];
   // Phone / tablet: quick buttons next to Home (on Home the alerts list pushes the tiles far down)
   // Transport lives inside Office Expense (4th tab), so it has no top bar button of its own
-  const quick = user.canRead ? [['/inventory', 'Inventory', 'box'], ['/expenses', 'Office Expense', 'receipt']] : [];
+  const quick = user.canRead ? [['/inventory', 'Inventory', 'box'], ['/expenses', 'All Companies', 'receipt']] : [];
   // Buttons that used to sit at the bottom of Home (31 Oct 2026): now in the top bar
   // Settings, Users and Activity live inside Admin (/admin) since 31 Oct 2026
   // Full access (editor): everything except the Admin panel; only the Administrator gets the Admin button (31 Oct 2026)

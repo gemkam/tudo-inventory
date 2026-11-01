@@ -9,13 +9,13 @@ import { COMPANIES } from '@/lib/expenses';
 /*
   "Where am I" map on top of every page (rendered by components/AuthGate.js), every step clickable:
   e.g. Home › Transport › Drivers › All Drivers Trip Sheets.  Driver names come from the drivers table,
-  Office Expense company from ?co. Add new pages to trail() below (and to lib/sitemap.js).
+  All Companies company from ?co. Add new pages to trail() below (and to lib/sitemap.js).
 */
 
 const HOME = ['Home', '/'];
 const TRANSPORT = ['Transport', '/transport'];
 const DRIVERS = ['Drivers', '/transport/drivers'];
-const OFFICE = ['Office Expense', '/expenses'];
+const OFFICE = ['All Companies', '/expenses'];
 const INVENTORY = ['Inventory', '/inventory'];
 const ADMIN = ['Admin', '/admin'];
 const UUID = /^[0-9a-f-]{20,}$/i;

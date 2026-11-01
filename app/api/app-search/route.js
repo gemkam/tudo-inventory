@@ -55,7 +55,7 @@ export async function POST(req) {
     ...drivers.map((d) => [`Trip sheet of ${d.name}`, `/transport/${d.id}`]),
     ...drivers.map((d) => [`Salary slip of ${d.name}`, `/transport/salary/${d.id}`]),
     ...drivers.map((d) => [`Salary sheet of ${d.name} (salary detail every month + his other expenses)`, `/transport/salary-sheet/${d.id}`]),
-    ['Office Expense: Modern City', '/expenses?co=modern-city'], ['Office Expense: Abu Wasif', '/expenses?co=abu-wasif'], ['Office Expense: Sumptuosity', '/expenses?co=sumptuosity'],
+    ['All Companies: Modern City', '/expenses?co=modern-city'], ['All Companies: Abu Wasif', '/expenses?co=abu-wasif'], ['All Companies: Sumptuosity', '/expenses?co=sumptuosity'],
     ['Group Summary (budgets, cash flow, unpaid bills)', '/expenses/summary'], ['Company Invoices and Payment Receipts', '/expenses/docs'],
     ['Inventory', '/inventory'], ['Inventory Reports', '/inventory/reports'], ['Utility Bills', '/bills'], ['Stock log', '/log'],
     ...cats.map((c) => [`Inventory section: ${c.name}`, `/c/${c.id}`])

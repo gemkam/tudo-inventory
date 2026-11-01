@@ -15,7 +15,7 @@ import { fmtAmt, monthLabel, todayISO, exportExcel, exportStamp } from '@/lib/sh
 /*
   Personnel (top bar button before Admin, 1 Nov 2026) > Employees:
     Office Employees · Drivers · Site Employees · Subcontractors · Attendance  (tabs, ?tab=office|drivers|site|sub|attendance)
-  Office / Site employees = the same people as the Office Expense salary sheets (exp_staff, staff_type Office / Site),
+  Office / Site employees = the same people as the All Companies salary sheets (exp_staff, staff_type Office / Site),
   so the Attendance sheet (/expenses/attendance) and the salary sheet stay connected to them.
   Drivers = Transport drivers (transport_drivers). Subcontractors = personnel_subcontractors.
   Salary > Allowance > House rent, Utilities (+ Transport Yes/No for office and site). Changing House rent or Utilities
@@ -403,7 +403,7 @@ function PersonnelPage() {
 
       {(tab === 'office' || tab === 'site') && (
         <p className="muted pn-note no-print">
-          Same people as the salary sheet in Office Expense. The Attendance column comes from the attendance sheet ({monthLabel(month)}); tap it to open the sheet.
+          Same people as the salary sheet in All Companies. The Attendance column comes from the attendance sheet ({monthLabel(month)}); tap it to open the sheet.
           {edit ? ' Changing House rent or Utilities also changes the Allowance total.' : ''}
         </p>
       )}
@@ -449,7 +449,7 @@ function PersonnelPage() {
       )}
       {del && (
         <Modal title="Delete?" onClose={() => setDel(null)}>
-          <p style={{ margin: 0 }}>Delete <b>{del.row.name}</b>?{del.table === 'exp_staff' ? ' This person is also removed from the Office Expense salary sheet and attendance.' : ''}</p>
+          <p style={{ margin: 0 }}>Delete <b>{del.row.name}</b>?{del.table === 'exp_staff' ? ' This person is also removed from the All Companies salary sheet and attendance.' : ''}</p>
           <div className="modal-actions">
             <button type="button" className="btn ghost" onClick={() => setDel(null)}>Cancel</button>
             <button type="button" className="btn danger" onClick={confirmDelete}>Delete</button>

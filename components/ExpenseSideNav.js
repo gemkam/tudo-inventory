@@ -7,7 +7,7 @@ import { COMPANIES } from '@/lib/expenses';
 import { TransportMenu } from '@/components/TransportSideNav';
 
 /*
-  Side buttons for Office Expense (rendered by components/AuthGate.js on every /expenses page), same look as the
+  Side buttons for All Companies (rendered by components/AuthGate.js on every /expenses page), same look as the
   Transport side buttons (tsn-* CSS). Each company opens like a folder: Bills & salary, Attendance, Invoice,
   Payment receipt. Transport opens the same way with all Transport items (TransportMenu). The company and page you are on are filled. Stays in view while you scroll (sticky).
 */
@@ -48,12 +48,12 @@ export default function ExpenseSideNav({ isAdmin = false }) {
   const here = COMPANIES.find((c) => c.key === co);
 
   return (
-    <aside className={`tsn no-print${phoneOpen ? ' phone-open' : ''}`} aria-label="Office Expense menu">
+    <aside className={`tsn no-print${phoneOpen ? ' phone-open' : ''}`} aria-label="All Companies menu">
       <button type="button" className="tsn-phone" onClick={() => setPhoneOpen((v) => !v)} aria-expanded={phoneOpen}>
-        🧾 Office Expense menu{onSummary ? ' · Group Summary' : here ? ` · ${here.short}` : ''} <span aria-hidden="true">{phoneOpen ? '▴' : '▾'}</span>
+        🧾 All Companies menu{onSummary ? ' · Group Summary' : here ? ` · ${here.short}` : ''} <span aria-hidden="true">{phoneOpen ? '▴' : '▾'}</span>
       </button>
       <nav className="tsn-list">
-        <div className="tsn-title">🧾 Office Expense</div>
+        <div className="tsn-title">🧾 All Companies</div>
         <Btn href="/expenses/summary" on={onSummary} icon="📊">Group Summary</Btn>
         <Btn href="/docs" on={false} icon="📋">Documents Checklist</Btn>
         <Btn href="/expenses/vat" on={path === '/expenses/vat'} icon="🧾">VAT return</Btn>

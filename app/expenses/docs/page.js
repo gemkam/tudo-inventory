@@ -13,7 +13,7 @@ import { COMPANIES, companyOf, DEPARTMENTS, HEADS, CATEGORIES, PAY_METHODS, n, r
 
 /*
   Simple invoice and payment receipt for the 3 companies (Modern City, Abu Wasif, Sumptuosity).
-  Table company_docs. A saved PAYMENT RECEIPT is added to that company's Office Expense by a DB trigger
+  Table company_docs. A saved PAYMENT RECEIPT is added to that company's expenses (All Companies) by a DB trigger
   (sync_transport_exp): change or delete the receipt and the expense line follows.
 */
 
@@ -149,14 +149,14 @@ function DocsPage() {
     setDoc({ ...res.data, items: res.data.items.length ? res.data.items : blankItems() });
     setDirty(false);
     load();
-    flash(kind === 'receipt' ? `Saved. Added to ${C.short} Office Expense.` : 'Saved');
+    flash(kind === 'receipt' ? `Saved. Added to ${C.short} expenses (All Companies).` : 'Saved');
   }
 
   async function deleteDoc() {
     const { error } = await sb().from('company_docs').delete().eq('id', doc.id);
     if (error) { flash(error.message, 'err'); return; }
     setDel(false); setDoc(null); setDirty(false); load();
-    flash(kind === 'receipt' ? 'Deleted. Removed from Office Expense too.' : 'Deleted');
+    flash(kind === 'receipt' ? 'Deleted. Removed from All Companies too.' : 'Deleted');
   }
 
   function printDoc() {
@@ -193,7 +193,7 @@ function DocsPage() {
             {isAdmin && doc.id && <button type="button" className="btn ghost danger-text" onClick={() => setDel(true)}>Delete</button>}
           </div>
         </div>
-        {kind === 'receipt' && <p className="cd-hint no-print">When you save, this receipt is added to <b>{C.short}</b> Office Expense{doc.department ? <> (department <b>{doc.department}</b>)</> : ''} by itself. Change or delete it here and the expense follows.</p>}
+        {kind === 'receipt' && <p className="cd-hint no-print">When you save, this receipt is added to <b>{C.short}</b> expenses in All Companies{doc.department ? <> (department <b>{doc.department}</b>)</> : ''} by itself. Change or delete it here and the expense follows.</p>}
 
         <article className={`cd-paper k-${kind}${ro ? ' ro' : ''}`}>
           <header className="cd-head">
@@ -294,7 +294,7 @@ function DocsPage() {
 
         {del && (
           <Modal title={`Delete ${K.one.toLowerCase()}?`} onClose={() => setDel(false)}>
-            <p style={{ margin: 0 }}>Delete <b>{doc.doc_no}</b> ({doc.party})?{kind === 'receipt' && ' Its line in Office Expense is removed too.'}</p>
+            <p style={{ margin: 0 }}>Delete <b>{doc.doc_no}</b> ({doc.party})?{kind === 'receipt' && ' Its line in All Companies is removed too.'}</p>
             <div className="modal-actions">
               <button className="btn ghost" onClick={() => setDel(false)}>Cancel</button>
               <button className="btn danger" onClick={deleteDoc}>Delete</button>
@@ -313,7 +313,7 @@ function DocsPage() {
   return (
     <>
       <div className="page-tools">
-        <Link href={`/expenses?co=${co}`} className="crumb">← Office Expense</Link>
+        <Link href={`/expenses?co=${co}`} className="crumb">← All Companies</Link>
         <div className="tools">
           <input className="iv-search" type="search" placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} />
           {isAdmin && <button type="button" className="btn" onClick={newDoc}>+ New {K.one.toLowerCase()}</button>}
@@ -328,7 +328,7 @@ function DocsPage() {
 
       <div className="iv-list-head">
         <h1>{K.label}</h1>
-        <p>{C.name}{kind === 'receipt' ? ' · each receipt is added to Office Expense by itself' : ' · S.No, description and amount'}</p>
+        <p>{C.name}{kind === 'receipt' ? ' · each receipt is added to All Companies by itself' : ' · S.No, description and amount'}</p>
       </div>
 
       {list === null ? <div className="loading">Loading...</div> : shown.length === 0 ? (

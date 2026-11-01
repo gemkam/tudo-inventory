@@ -10,7 +10,7 @@ import { runTransportAction } from '@/lib/transportActions';
   Side buttons for Transport Expense (rendered by components/AuthGate.js on every /transport page except the salary slip).
   Groups open like folders: Trip sheets and Salary sheets list every driver as its own button (from the drivers table,
   so a new driver appears by himself). The button of the page you are on is filled. On phones it folds into one bar.
-  The same list (TransportMenu) is also shown inside the Office Expense side menu under "Transport".
+  The same list (TransportMenu) is also shown inside the All Companies side menu under "Transport".
   Action buttons (Report by dates, Excel, PDF, Email report) run the same buttons as the /transport toolbar
   (lib/transportActions.js); from another page they open /transport and run there.
   CSS: tsn-* at the end of app/globals.css.

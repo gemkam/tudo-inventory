@@ -17,7 +17,7 @@ const MODULES = [
   ['📊 Group Summary', /\b(group summary|p&l|profit and loss|vat return|cash forecast)\b/i, '/expenses/summary'],
   ['🚚 Transport', /\b(transport|trip|diesel|driver|vehicle|truck|toll|maintenance|salary|attendance)\b/i, '/transport'],
   ['📦 Inventory', /\b(inventory|stock|stationery|kitchen|sanitary|badge|flyer|shield|stand)\b/i, '/inventory'],
-  ['🧾 Office Expense', /\b(office expense|expense|bill|invoice|receipt|petrol|utility)\b/i, '/expenses'],
+  ['🧾 All Companies', /\b(office expense|expense|bill|invoice|receipt|petrol|utility)\b/i, '/expenses'],
   ['📋 Documents', /\b(document|licen[cs]e|expiry|expire)\b/i, '/docs'],
   ['🤖 Rauf and AI', /\b(rauf|ai|assistant|search)\b/i, ''],
   ['👥 Users', /\b(user|login|logout|role|activity)\b/i, '']

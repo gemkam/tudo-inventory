@@ -12,7 +12,7 @@ import { COMPANIES, companyOf } from '@/lib/expenses';
 import { MARKS, MARK, WD_SHORT, LEAVE_REASONS, STAFF_TYPES, daysOfMonth, personMonth, marksByStaff, notesByStaff, offDaysFor, weekendText } from '@/lib/attendance';
 
 /*
-  Attendance (/expenses/attendance?co=&m=): office staff of each company (Office Expense salary sheet).
+  Attendance (/expenses/attendance?co=&m=): office staff of each company (All Companies salary sheet).
   Table exp_attendance (one row per staff per day). Weekend: Office staff Fri + Sat off, Site staff Fri off
   (exp_staff.staff_type, tap the Office / Site tag in Edit). All leave is paid; reason (Sick, Marketing,
   Outside meeting, Personal) saved in note. No leave on a weekend day.
@@ -241,7 +241,7 @@ function AttendancePage() {
   return (
     <>
       <div className="page-tools no-print">
-        <Link href={`/expenses?co=${co}`} className="crumb">← Office Expense</Link>
+        <Link href={`/expenses?co=${co}`} className="crumb">← All Companies</Link>
         <div className="tools">
           <div className="month-select at-month">
             <button type="button" className="btn ghost sm" onClick={() => setMonth(shiftM(month, -1))} aria-label="Previous month">‹</button>
@@ -323,7 +323,7 @@ function AttendancePage() {
         {!canChange && isAdmin && !noTable && <p className="note no-print" style={{ margin: 0 }}>Press ✏️ Edit to mark, change, undo or delete attendance.</p>}
 
         {!staff.length ? (
-          <p className="empty">No staff for {C.short}. Add them on the <Link href={`/expenses?co=${co}`}>Office Expense salary sheet</Link>.</p>
+          <p className="empty">No staff for {C.short}. Add them on the <Link href={`/expenses?co=${co}`}>All Companies salary sheet</Link>.</p>
         ) : (
           <div className="table-wrap at-wrap">
             <table className="at-table">

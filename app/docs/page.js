@@ -28,7 +28,7 @@ import { SECTIONS, SECTION, STATES, docStatus } from '@/lib/docChecklist';
   Below the grid "All employees" = one row per person from THREE places, joined by name:
     1. every employee typed in the checklist above (Resident Card / Visa lines),
     2. Drivers page (transport_drivers), sponsor Modern City,
-    3. Office Expense staff sheet (exp_staff), sponsor = their company.
+    3. All Companies staff sheet (exp_staff), sponsor = their company.
   Columns: Employee, Company Sponsor, Resident Card No., Resident Card expiry, Visa expiry, Status, Change on.
 */
 
@@ -380,7 +380,7 @@ function DocsPage() {
     <>
       <OfficeTabs active="docs" />
       <div className="page-tools">
-        <Link href="/expenses" className="crumb">← Office Expense</Link>
+        <Link href="/expenses" className="crumb">← All Companies</Link>
         <div className="tools">
           <RangeReport title="Documents expiring" landscape defaultPreset="All" build={(from, to) => docsReport({ rows: rows || [], sectionLabel: (k) => SECTIONS.find((x) => x.key === k)?.label || k, from, to })} label="🖨 Expiring between dates" />
           <button type="button" className="btn ghost" onClick={() => setColsOpen(true)} title="Choose which columns to show, print and export">☑ Columns</button>

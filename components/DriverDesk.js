@@ -19,7 +19,7 @@ import { useSalaryLabels } from '@/lib/labels';
      - earlier months still not Paid must be marked Paid first (button here), then the receipt can be made
      - earlier months paid now show as their own line, e.g. "Sep 2026 trip allowance 25.000 paid in Oct 2026"
   2. Trip sheet: trips of the chosen month with totals, and a link to the full trip sheet.
-  Saving a salary also goes to Modern City Office Expense by the database trigger.
+  Saving a salary also goes to Modern City expenses (All Companies) by the database trigger.
 */
 
 const n = (v) => Number(v || 0);

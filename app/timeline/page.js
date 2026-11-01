@@ -29,7 +29,7 @@ const plain = (mod) => mod.replace(/^[^A-Za-z]+/, '');
 const TBL = {
   transport_entries: ['Trip sheet', '/transport'], transport_salaries: ['Driver salary', '/transport/salary-sheet'], transport_extras: ['Transport other expense', '/transport'],
   transport_drivers: ['Driver', '/transport/drivers'], transport_vehicles: ['Vehicle', '/transport/vehicles'], transport_invoices: ['Transport invoice', '/transport/invoice'],
-  vehicle_maintenance: ['Vehicle maintenance', '/transport/vehicles'], transport_profit_taken: ['Profit taken', '/transport'], exp_entries: ['Office Expense bill', '/expenses'],
+  vehicle_maintenance: ['Vehicle maintenance', '/transport/vehicles'], transport_profit_taken: ['Profit taken', '/transport'], exp_entries: ['All Companies bill', '/expenses'],
   exp_staff: ['Office staff salary', '/expenses'], exp_budgets: ['Budget', '/expenses/summary'], exp_attendance: ['Attendance', '/expenses/attendance'],
   company_docs: ['Company invoice / receipt', '/expenses/docs'], doc_checklist: ['Documents Checklist', '/docs'], items: ['Inventory item', '/inventory'],
   stock_moves: ['Stock movement', '/log'], categories: ['Inventory section', '/inventory'], bill_accounts: ['Bill account', '/bills'], bill_payments: ['Bill payment', '/bills'],
