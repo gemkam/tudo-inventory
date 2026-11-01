@@ -313,7 +313,25 @@ function PersonnelPage() {
     load();
   }
   const money = (k) => ({ key: k, label: '', type: 'number', width: 105, render: (r) => (n(r[k]) ? fmtAmt(r[k]) : <span className="muted">–</span>) });
-  const companyCol = { key: 'company', label: 'Company', type: 'select', width: 135, options: allCos.map((c) => c.short), raw: (r) => CO_SHORT[r.company] || r.company || '', render: (r) => CO_SHORT[r.company] || r.company || <span className="muted">–</span> };
+  /* Company: a drop-down in every row (no need to press Edit), so someone put in the wrong company is moved at once */
+  async function moveCompany(table, row, key) {
+    if (!key || key === row.company) return;
+    if (!(await patchRow(table, row, { company: key }, true))) return;
+    // his attendance marks move with him (the attendance sheet is per company)
+    if (table === 'exp_staff') await sb().from('exp_attendance').update({ company: key }).eq('staff_id', row.id);
+    flash(`${row.name} moved to ${CO_SHORT[key] || key}`);
+  }
+  const companyColFor = (table, label = 'Company') => ({
+    key: 'company', label, type: 'calc', width: 150,
+    render: (r) => (isAdmin ? (
+      <select className="pn-co-sel" value={r.company || ''} aria-label={`Company of ${r.name}`}
+        onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}
+        onChange={(e) => moveCompany(table, r, e.target.value)}>
+        {!r.company && <option value="">– choose –</option>}
+        {allCos.map((c) => <option key={c.key} value={c.key}>{c.short}</option>)}
+      </select>
+    ) : (CO_SHORT[r.company] || r.company || <span className="muted">–</span>))
+  });
   const attCol = {
     key: 'att', label: `Attendance · ${monthLabel(month)}`, type: 'calc', width: 190,
     render: (r) => {
@@ -330,7 +348,7 @@ function PersonnelPage() {
     const T = 'exp_staff';
     return [
       { key: 'name', label: 'Name', type: 'text', width: 200 },
-      companyCol,
+      companyColFor('exp_staff'),
       { key: 'designation', label: 'Designation', type: 'text', width: 160, raw: (r) => r.designation || r.department || '', render: (r) => r.designation || r.department || <span className="muted">–</span> },
       { key: 'contract', label: 'Contract', type: 'text', width: 210, placeholder: 'e.g. 2 years, ends 03/2027', render: docCell(T, 'contract', 'Contract', (r) => r.contract) },
       { key: 'resident_card_expiry', label: 'Resident Card Expiry', type: 'date', width: 210, render: docCell(T, 'resident', 'Resident card', (r) => (r.resident_card_expiry ? <Expiry date={r.resident_card_expiry} /> : '')) },
@@ -350,7 +368,7 @@ function PersonnelPage() {
   }
   const driverColumns = [
     { key: 'name', label: 'Name', type: 'text', width: 180 },
-    companyCol,
+    companyColFor('transport_drivers'),
     { key: 'contract', label: 'Contract', type: 'text', width: 210, placeholder: 'e.g. 2 years, ends 03/2027', render: docCell('transport_drivers', 'contract', 'Contract', (r) => r.contract) },
     { key: 'resident_card_expiry', label: 'Resident Card Expiry', type: 'date', width: 210, render: docCell('transport_drivers', 'resident', 'Resident card', (r) => (r.resident_card_expiry ? <Expiry date={r.resident_card_expiry} /> : '')) },
     { key: 'passport', label: 'Passport', type: 'text', width: 190, placeholder: 'Passport No.', render: docCell('transport_drivers', 'passport', 'Passport', (r) => r.passport) },
@@ -364,7 +382,7 @@ function PersonnelPage() {
   ];
   const subColumns = [
     { key: 'name', label: 'Name', type: 'text', width: 200 },
-    { ...companyCol, label: 'Works for' },
+    companyColFor('personnel_subcontractors', 'Works for'),
     { key: 'company_name', label: 'Company name', type: 'text', width: 220 },
     { key: 'contract', label: 'Contract', type: 'text', width: 240, placeholder: 'Work / period / amount', render: docCell('personnel_subcontractors', 'contract', 'Contract', (r) => r.contract) },
     { key: 'contact', label: 'Contact', type: 'text', width: 170, placeholder: 'Mobile / email' }
