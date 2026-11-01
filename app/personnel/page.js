@@ -81,6 +81,7 @@ function PersonnelPage() {
   const [month, setMonth] = useState(thisMonth());
   const [send, setSend] = useState(null); // { table, row }
   const [archived, setArchived] = useState([]); // [{ table, row }]
+  const [coDetail, setCoDetail] = useState(''); // company shown as a full table (from All companies ▾)
   const [viewArch, setViewArch] = useState(null);
   const [delReason, setDelReason] = useState('');
   const [slipsAll, setSlipsAll] = useState([]);
@@ -423,7 +424,7 @@ function PersonnelPage() {
       <DataGrid columns={cols} groups={salaryGroups(cols)} rows={rows} canEdit={edit && isAdmin} flash={flash}
         onSave={(row, key, value) => onSave('exp_staff', row, key, value)}
         onAdd={edit && isAdmin ? addRow : undefined} addLabel={`+ Add ${tab === 'site' ? 'site' : 'office'} employee${co ? ` (${CO_SHORT[co]})` : ' (Sumptuosity)'}`}
-        onDelete={delMode && canDel ? (row) => setDel({ table: 'exp_staff', row }) : undefined}
+        onDelete={delMode && canDel ? (row) => setDel({ table: 'exp_staff', row }) : undefined} deleting={delMode && canDel}
         footer={sumFoot(rows, 'basic')}
         emptyText={tab === 'site' ? 'No site employees yet. Press ✏️ Edit, then ＋ Add new, or change a person to Site on the Attendance page.' : 'No office employees yet.'} />
     );
@@ -432,7 +433,7 @@ function PersonnelPage() {
       <DataGrid columns={driverColumns} groups={salaryGroups(driverColumns)} rows={driverRows} canEdit={edit && isAdmin} flash={flash}
         onSave={(row, key, value) => onSave('transport_drivers', row, key, value)}
         onAdd={edit && isAdmin ? addRow : undefined} addLabel="+ Add driver"
-        onDelete={delMode && canDel ? (row) => setDel({ table: 'transport_drivers', row }) : undefined}
+        onDelete={delMode && canDel ? (row) => setDel({ table: 'transport_drivers', row }) : undefined} deleting={delMode && canDel}
         footer={sumFoot(driverRows, 'salary')} />
     );
   } else if (tab === 'sub') {
@@ -440,7 +441,7 @@ function PersonnelPage() {
       <DataGrid columns={subColumns} rows={subRows} canEdit={edit && isAdmin} flash={flash}
         onSave={(row, key, value) => onSave('personnel_subcontractors', row, key, value)}
         onAdd={edit && isAdmin ? addRow : undefined} addLabel="+ Add subcontractor"
-        onDelete={delMode && canDel ? (row) => setDel({ table: 'personnel_subcontractors', row }) : undefined}
+        onDelete={delMode && canDel ? (row) => setDel({ table: 'personnel_subcontractors', row }) : undefined} deleting={delMode && canDel}
         emptyText="No subcontractors yet. Press ✏️ Edit, then ＋ Add new." />
     );
   }
@@ -474,13 +475,16 @@ function PersonnelPage() {
       {showCo && (
         <div className="pn-chips no-print">
           <CompanyList companies={allCos} staff={staff || []} drivers={drivers || []} active={!co}
-            onAll={() => setCo('')}
-            onPick={(k) => setCo(k)}
-            onPerson={(k, tabKey, name) => { setCo(k); goTab(tabKey); setQ(name); }} />
-          {allCos.map((c) => <button key={c.key} type="button" className={co === c.key ? 'on' : ''} onClick={() => setCo(c.key)} title={c.name || c.short}>{c.short}</button>)}
+            onAll={() => { setCo(''); setCoDetail(''); }}
+            onPick={(k) => { setCo(k); setCoDetail(k); }} />
+          {allCos.map((c) => <button key={c.key} type="button" className={co === c.key ? 'on' : ''} onClick={() => { setCo(c.key); setCoDetail(''); }} title={c.name || c.short}>{c.short}</button>)}
         </div>
       )}
 
+      {coDetail && allCos.find((c) => c.key === coDetail) && (
+        <CompanyDetail company={allCos.find((c) => c.key === coDetail)} staff={staff || []} drivers={drivers || []} credits={credits} month={month}
+          onClose={() => setCoDetail('')} onOpen={(t, name) => { setCo(coDetail); goTab(t); setQ(name); setCoDetail(''); }} />
+      )}
       {error && <div className="error">{error}</div>}
 
       {(tab === 'office' || tab === 'site') && (
@@ -509,7 +513,7 @@ function PersonnelPage() {
           <button type="button" className="btn" onClick={() => setPayAll(true)}>💵 All {tab === 'office' ? 'Office Employees' : tab === 'site' ? 'Site Employees' : 'Drivers'} Salary Paid</button>
         )}
         <PrintColumns className="btn" />
-        {(edit || delMode) && <span className="pn-mode">{[edit && '✏️ Editing: tap a box to change it', delMode && '🗑 Delete buttons are on'].filter(Boolean).join(' · ')}</span>}
+        {(edit || delMode) && <span className="pn-mode">{[edit && '✏️ Editing: tap a box to change it', delMode && '🗑 Tap the red 🗑 at the start of a row to delete (moves to Archives)'].filter(Boolean).join(' · ')}</span>}
       </div>}
 
       {tab === 'attendance' ? <AttendanceSheet /> : tab === 'archives' ? (
@@ -639,11 +643,10 @@ function EditMenu({ edit, delMode, undoCount, canDel, delNote, onEdit, onAdd, on
   );
 }
 
-/* "All companies ▾": every company with its employees (Office, Site, Drivers). Subcontractors are left out:
-   their visa is not with our companies. Tap a company to filter, tap a name to open him. */
-function CompanyList({ companies, staff, drivers, active, onAll, onPick, onPerson }) {
+/* "All companies ▾": every company with how many employees it has (Office, Site, Drivers). Subcontractors are left
+   out: their visa is not with our companies. Tap a company = filter + detailed table of all its employees. */
+function CompanyList({ companies, staff, drivers, active, onAll, onPick }) {
   const [open, setOpen] = useState(false);
-  const [shut, setShut] = useState({});
   const box = useRef(null);
   useEffect(() => {
     if (!open) return undefined;
@@ -653,11 +656,13 @@ function CompanyList({ companies, staff, drivers, active, onAll, onPick, onPerso
     document.addEventListener('keydown', esc);
     return () => { document.removeEventListener('pointerdown', close); document.removeEventListener('keydown', esc); };
   }, [open]);
-  const people = (k) => [
-    ...staff.filter((p) => p.company === k && p.active !== false).map((p) => ({ id: p.id, name: p.name, type: p.staff_type === 'Site' ? 'Site' : 'Office', tab: p.staff_type === 'Site' ? 'site' : 'office', job: p.designation || p.department || '' })),
-    ...drivers.filter((p) => (p.company || 'modern-city') === k).map((p) => ({ id: p.id, name: p.name, type: 'Driver', tab: 'drivers', job: p.vehicle_no || '' }))
-  ];
-  const total = companies.reduce((t, c) => t + people(c.key).length, 0);
+  const count = (k) => {
+    const st = staff.filter((p) => p.company === k && p.active !== false);
+    const site = st.filter((p) => p.staff_type === 'Site').length;
+    const drv = drivers.filter((p) => (p.company || 'modern-city') === k).length;
+    return { office: st.length - site, site, drv, all: st.length + drv };
+  };
+  const total = companies.reduce((t, c) => t + count(c.key).all, 0);
   return (
     <div className="cl" ref={box}>
       <button type="button" className={active ? 'on' : ''} aria-haspopup="listbox" aria-expanded={open} onClick={() => { onAll(); setOpen((v) => !v); }}>
@@ -665,34 +670,65 @@ function CompanyList({ companies, staff, drivers, active, onAll, onPick, onPerso
       </button>
       {open && (
         <div className="cl-menu" role="listbox">
-          <div className="cl-note">Employees on our companies' visa (subcontractors not included)</div>
+          <div className="cl-note">Employees on our companies' visa (subcontractors not included). Tap a company for its full table.</div>
           {companies.map((c) => {
-            const list = people(c.key);
-            const n = (t) => list.filter((x) => x.type === t).length;
+            const n = count(c.key);
             return (
-              <div key={c.key} className="cl-co">
-                <div className="cl-head">
-                  <button type="button" className="cl-name" onClick={() => { onPick(c.key); setOpen(false); }} title={c.name}>
-                    <b>{c.short}</b><small>{list.length} · Office {n('Office')} · Site {n('Site')} · Drivers {n('Driver')}</small>
-                  </button>
-                  {list.length > 0 && <button type="button" className="cl-tog" aria-label={shut[c.key] ? 'Show names' : 'Hide names'} onClick={() => setShut((x) => ({ ...x, [c.key]: !x[c.key] }))}>{shut[c.key] ? '▸' : '▾'}</button>}
-                </div>
-                {!shut[c.key] && (
-                  <div className="cl-people">
-                    {list.map((p) => (
-                      <button key={p.id} type="button" className="cl-p" onClick={() => { onPerson(c.key, p.tab, p.name); setOpen(false); }}>
-                        <span>{p.name}</span><small>{[p.type, p.job].filter(Boolean).join(' · ')}</small>
-                      </button>
-                    ))}
-                    {!list.length && <small className="muted">No employees yet</small>}
-                  </div>
-                )}
-              </div>
+              <button key={c.key} type="button" role="option" aria-selected={false} className="cl-name cl-co" onClick={() => { onPick(c.key); setOpen(false); }} title={c.name}>
+                <b>{c.short} <span className="cl-n">{n.all}</span></b><small>Office {n.office} · Site {n.site} · Drivers {n.drv}</small>
+              </button>
             );
           })}
         </div>
       )}
     </div>
+  );
+}
+
+/* Detailed table of one company's employees (from "All companies ▾") */
+function CompanyDetail({ company, staff, drivers, credits, month, onClose, onOpen }) {
+  const list = [
+    ...staff.filter((p) => p.company === company.key && p.active !== false).map((p) => ({ ...p, kind: 'staff', type: p.staff_type === 'Site' ? 'Site' : 'Office', job: p.designation || p.department || '', pay: Number(p.basic || 0), tab: p.staff_type === 'Site' ? 'site' : 'office' })),
+    ...drivers.filter((p) => (p.company || 'modern-city') === company.key).map((p) => ({ ...p, kind: 'driver', type: 'Driver', job: p.vehicle_no || '', pay: Number(p.salary || 0), tab: 'drivers' }))
+  ];
+  const sum = (k) => list.reduce((t, p) => t + Number(p[k] || 0), 0);
+  return (
+    <section className="panel cd">
+      <div className="section-head">
+        <h2>🏢 {company.short} <small className="muted">{company.name} · {list.length} employee{list.length === 1 ? '' : 's'}</small></h2>
+        <button type="button" className="btn ghost small no-print" onClick={onClose}>✕ Close</button>
+      </div>
+      <div className="grid-wrap">
+        <table className="summary-table cd-table">
+          <thead><tr><th>#</th><th>Name</th><th>Type</th><th>Designation / Vehicle</th><th>Mobile</th><th>Passport</th><th>Resident card expiry</th><th className="num">Basic</th><th className="num">Allowance</th><th className="num">Monthly</th><th>Salary · {monthLabel(month)}</th></tr></thead>
+          <tbody>
+            {list.map((p, i) => {
+              const paid = credits[creditKey(p.kind, p.id)];
+              return (
+                <tr key={p.id}>
+                  <td>{i + 1}</td>
+                  <td><button type="button" className="al-link" onClick={() => onOpen(p.tab, p.name)}>{p.name}</button></td>
+                  <td>{p.type}</td>
+                  <td>{p.job || '–'}</td>
+                  <td>{p.mobile || p.phone || <span className="bad">missing</span>}</td>
+                  <td>{p.passport || '–'}</td>
+                  <td>{p.resident_card_expiry ? <Expiry date={p.resident_card_expiry} /> : '–'}</td>
+                  <td className="num">{fmtAmt(p.pay)}</td>
+                  <td className="num">{fmtAmt(p.allowances)}</td>
+                  <td className="num"><b>{fmtAmt(p.pay + Number(p.allowances || 0))}</b></td>
+                  <td>{paid ? <span className="ssl-st ok">✓ Paid</span> : <span className="ssl-st draft">Not paid</span>}</td>
+                </tr>
+              );
+            })}
+            {!list.length && <tr><td colSpan={11} className="muted">No employees in this company yet.</td></tr>}
+          </tbody>
+          {list.length > 0 && (
+            <tfoot><tr><td /><td><b>Total</b></td><td colSpan={5}>Office {list.filter((p) => p.type === 'Office').length} · Site {list.filter((p) => p.type === 'Site').length} · Drivers {list.filter((p) => p.type === 'Driver').length}</td>
+              <td className="num"><b>{fmtAmt(list.reduce((t, p) => t + p.pay, 0))}</b></td><td className="num"><b>{fmtAmt(sum('allowances'))}</b></td><td className="num"><b>{fmtAmt(list.reduce((t, p) => t + p.pay + Number(p.allowances || 0), 0))}</b></td><td /></tr></tfoot>
+          )}
+        </table>
+      </div>
+    </section>
   );
 }
 

@@ -3627,3 +3627,15 @@ body:has(.ent-page.ur) .modal, body:has(.ent-page.ur) .dfv { font-family: 'Noto 
 .arch-dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px 16px; margin: 0; }
 .arch-dl dt { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
 .arch-dl dd { margin: 0; font-weight: 600; }
+/* Delete mode in Personnel: red 🗑 at the start of each row (1 Nov 2026) */
+.grid .dg-del { width: 30px; height: 28px; border-radius: 8px; border: 1.5px solid #c0392b; background: #fdecea; color: #c0392b; cursor: pointer; font-size: 14px; line-height: 1; padding: 0; }
+.grid .dg-del:hover { background: #c0392b; color: #fff; }
+/* All companies ▾ (companies only) + company detail table (1 Nov 2026) */
+.pn-chips .cl-menu .cl-co { display: grid; gap: 2px; width: 100%; text-align: left; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--tint); cursor: pointer; }
+.pn-chips .cl-menu .cl-co:hover { border-color: var(--brown); }
+.cl-co .cl-n { font-size: 12px; color: var(--muted); font-weight: 700; }
+.cd-table { width: 100%; min-width: 980px; }
+.cd-table th, .cd-table td { padding: 8px 10px; text-align: left; }
+.cd-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.cd-table .bad { color: #c0392b; }
+.cd-table tfoot td { border-top: 2px solid var(--brown); }

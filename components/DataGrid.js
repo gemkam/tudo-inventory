@@ -15,6 +15,7 @@ import { evaluate, num } from '@/lib/sheet';
   onDelete(row): shows a Delete button per row in Edit mode
   footer: { [key]: node } shown in a totals row
   groups: optional header rows above the labels (Personnel: Salary > Allowance)
+  deleting: Delete mode without Edit mode: a red 🗑 in place of the row number, at the start of each row (Personnel)
 */
 /* Pick-or-type cell: shows ALL saved choices; typing narrows the list; any new text is kept */
 function ComboEditor({ options, placeholder, value, typed, onChange, onPick, onKeyDown, onBlur }) {
@@ -58,7 +59,7 @@ function ComboEditor({ options, placeholder, value, typed, onChange, onPick, onK
   );
 }
 
-export default function DataGrid({ columns, rows, canEdit, onSave, onAdd, addLabel = '+ Add new row', onDelete, footer, rowClass, emptyText = 'Nothing here yet.', flash, groups }) {
+export default function DataGrid({ columns, rows, canEdit, onSave, onAdd, addLabel = '+ Add new row', onDelete, footer, rowClass, emptyText = 'Nothing here yet.', flash, groups, deleting = false }) {
   const [sel, setSel] = useState({ r: 0, c: 0 });
   const [editing, setEditingState] = useState(null);
   const editingRef = useRef(null);
@@ -246,7 +247,8 @@ export default function DataGrid({ columns, rows, canEdit, onSave, onAdd, addLab
     );
   }
 
-  const showDelete = canEdit && onDelete;
+  const delAtStart = deleting && onDelete;
+  const showDelete = canEdit && onDelete && !delAtStart;
   const showAdd = canEdit && onAdd;
   const span = columns.length + (showDelete ? 1 : 0);
 
@@ -282,7 +284,7 @@ export default function DataGrid({ columns, rows, canEdit, onSave, onAdd, addLab
           )}
           {rows.map((row, r) => (
             <tr key={row.id} className={`${rowClass ? rowClass(row) : ''} ${sel.r === r ? 'sel-row' : ''}`}>
-              <td className="rownum">{r + 1}</td>
+              <td className="rownum">{delAtStart ? <button type="button" className="dg-del" title={`Delete ${row.name || ''}`} aria-label="Delete" onClick={() => onDelete(row)}>🗑</button> : r + 1}</td>
               {columns.map((col, c) => {
                 const isSel = sel.r === r && sel.c === c;
                 const isEd = editing && editing.r === r && editing.c === c;

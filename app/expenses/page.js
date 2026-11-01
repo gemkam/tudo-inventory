@@ -162,11 +162,12 @@ function ExpensesPage() {
     if (err) { flash(err.message, 'err'); return; }
     setStaff((list) => [...list, data]);
   }
+  /* Delete = move to Personnel › 🗄 Archives (hidden everywhere, kept in the database), 1 Nov 2026 */
   async function deleteStaff(s) {
-    const { error: err } = await sb().from('exp_staff').delete().eq('id', s.id);
+    const { error: err } = await sb().from('exp_staff').update({ archived_at: new Date().toISOString(), archived_by: me || null, archive_reason: 'Deleted from the salary sheet', active: false, slip_link_on: false }).eq('id', s.id);
     if (err) { flash(err.message, 'err'); return; }
     setStaff((list) => list.filter((x) => x.id !== s.id));
-    flash('Deleted');
+    flash(`${s.name} moved to Personnel › Archives`);
   }
 
   if (error) return <div className="error">Could not load expenses: {error}</div>;
