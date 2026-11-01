@@ -552,6 +552,7 @@ function PersonnelPage() {
         {isAdmin && (tab === 'office' || tab === 'site' || tab === 'drivers') && (
           <button type="button" className="btn" onClick={() => setPayAll(true)} disabled={!salaryOn} title={salaryOn ? '' : 'Locked: ✏️ Edit › Enable salary buttons'}>💵 All {tab === 'office' ? 'Office Employees' : tab === 'site' ? 'Site Employees' : 'Drivers'} Salary Paid</button>
         )}
+        {tab === 'drivers' && <Link href="/transport/trip-sheets" className="btn">🚚 Trip sheets</Link>}
         <PrintColumns className="btn" />
         {!own && <button type="button" className="btn" onClick={doExcel}>📗 Excel</button>}
         {(edit || delMode || salaryOn) && <span className="pn-mode">{[edit && '✏️ Editing: tap a box to change it', delMode && '🗑 Tap the red 🗑 at the start of a row to delete (moves to Archives)', salaryOn && '🔓 Salary buttons on'].filter(Boolean).join(' · ')}</span>}
