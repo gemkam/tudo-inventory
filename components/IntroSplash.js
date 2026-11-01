@@ -1,6 +1,8 @@
 'use client';
 // Opening animation (1 Nov 2026, white look).
 // Plays every time the MAIN page (/) is opened or refreshed, and again from the "▶ Intro" button on the Home page:
+//   0. at the bottom, the logistics + office scene (components/IntroScene.js): trucks with trailers drive across,
+//      staff work at their desks in the Tudo Num office
 //   1. white stage fades in (soft moving light), the Tudo Num Group logo comes into focus
 //      and its green arrow draws itself up, a shine runs over it
 //   2. "TUDO NUM GROUP" letters rise one by one out of a blur, then a light runs across them
@@ -12,6 +14,7 @@
 // (lib/intro.js, run in app/layout.js <head>) hides it at once on every page except the main page.
 import { useEffect, useRef, useState } from 'react';
 import { INTRO_REPLAY } from '@/lib/intro';
+import IntroScene from '@/components/IntroScene';
 
 const OUT_AT = 8000;   // ms after open when the fade out starts (all done by ~5s, then holds 3 s)
 const OUT_MS = 900;    // length of the fade out
@@ -89,7 +92,7 @@ export default function IntroSplash() {
       <div className="is-aurora" aria-hidden="true">
         <i className="a1" /><i className="a2" /><i className="a3" />
       </div>
-      <div className="is-grid" aria-hidden="true" />
+      <IntroScene />
 
       <div className="is-center">
         <div className="is-logo-wrap">
