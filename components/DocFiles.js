@@ -15,6 +15,7 @@ import { sb } from '@/lib/supabase';
   [{ path, name, size, type, at, by }]. Picking works from a computer or a phone (Files, Photos, Camera).
   Import / Edit / Delete: Administrator and Full access. View / Download / Print: everyone who can read.
   Old text notes (doc_checklist.notes) still show small under the files.
+  Also used by Personnel (app/personnel): bucket="staff-files", compact (only the ⋯ More button), label.
 */
 
 const BUCKET = 'doc-files';
@@ -34,25 +35,25 @@ function Portal({ children }) {
 }
 
 /* the file as a same-site link (blob:), so it can be shown, printed and downloaded inside the app */
-async function getBlobUrl(f) {
-  const { data, error } = await sb().storage.from(BUCKET).download(f.path);
+async function getBlobUrl(f, bucket = BUCKET) {
+  const { data, error } = await sb().storage.from(bucket).download(f.path);
   if (error || !data) throw new Error(error?.message || 'file not found');
   const type = f.type || (isPdf(f) ? 'application/pdf' : data.type);
   return URL.createObjectURL(type && type !== data.type ? new Blob([data], { type }) : data);
 }
 
-function Viewer({ file, onClose, flash }) {
+export function Viewer({ file, onClose, flash, bucket = BUCKET }) {
   const [url, setUrl] = useState('');
   const [err, setErr] = useState('');
   const frameRef = useRef(null);
   useEffect(() => {
     let u = '';
-    getBlobUrl(file).then((x) => { u = x; setUrl(x); }).catch((e) => setErr(e.message));
+    getBlobUrl(file, bucket).then((x) => { u = x; setUrl(x); }).catch((e) => setErr(e.message));
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
     document.body.classList.add('dfv-open');
     return () => { window.removeEventListener('keydown', onKey); document.body.classList.remove('dfv-open'); if (u) URL.revokeObjectURL(u); };
-  }, [file, onClose]);
+  }, [file, onClose, bucket]);
 
   const canShow = isPdf(file) || isImg(file);
   function download() {
@@ -93,7 +94,7 @@ function Viewer({ file, onClose, flash }) {
 }
 
 /* print a PDF or photo without opening a new tab: a hidden frame inside the app */
-function printBlob(url, f, flash) {
+export function printBlob(url, f, flash) {
   const fr = document.createElement('iframe');
   fr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
   document.body.appendChild(fr);
@@ -112,7 +113,7 @@ function printBlob(url, f, flash) {
   }
 }
 
-export default function DocFiles({ row, canEdit, userName, onSave, flash }) {
+export default function DocFiles({ row, canEdit, userName, onSave, flash, bucket = BUCKET, compact = false, label = '' }) {
   const files = Array.isArray(row.files) ? row.files : [];
   const oneRef = useRef(null);
   const manyRef = useRef(null);
@@ -127,7 +128,7 @@ export default function DocFiles({ row, canEdit, userName, onSave, flash }) {
   async function upload(file) {
     if (file.size > MAX) { flash(`${file.name} is bigger than 15 MB. Please send a smaller copy.`, 'err'); return null; }
     const path = `${row.id}/${Date.now()}-${safe(file.name)}`;
-    const { error } = await sb().storage.from(BUCKET).upload(path, file, { contentType: file.type || undefined, upsert: false });
+    const { error } = await sb().storage.from(bucket).upload(path, file, { contentType: file.type || undefined, upsert: false });
     if (error) { flash(`Upload failed: ${error.message}`, 'err'); return null; }
     return { path, name: file.name, size: file.size, type: file.type || '', at: new Date().toISOString(), by: userName || '' };
   }
@@ -147,7 +148,7 @@ export default function DocFiles({ row, canEdit, userName, onSave, flash }) {
   async function download(f) {
     try {
       flash('Downloading...');
-      const url = await getBlobUrl(f);
+      const url = await getBlobUrl(f, bucket);
       const a = document.createElement('a');
       a.href = url; a.download = f.name || 'document'; document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 30000);
@@ -156,7 +157,7 @@ export default function DocFiles({ row, canEdit, userName, onSave, flash }) {
 
   async function print(f) {
     if (!isPdf(f) && !isImg(f)) { flash('Only PDF and photos can be printed here. Download it and print from the file.', 'err'); return; }
-    try { flash('Preparing to print...'); printBlob(await getBlobUrl(f), f, flash); } catch (e) { flash(`Could not print: ${e.message}`, 'err'); }
+    try { flash('Preparing to print...'); printBlob(await getBlobUrl(f, bucket), f, flash); } catch (e) { flash(`Could not print: ${e.message}`, 'err'); }
   }
 
   async function saveEdit() {
@@ -178,7 +179,7 @@ export default function DocFiles({ row, canEdit, userName, onSave, flash }) {
     const old = files[edit.index];
     const name = (edit.name || '').trim() && edit.name !== old.name ? edit.name.trim() : file.name;
     await onSave(files.map((f, i) => (i === edit.index ? { ...x, name } : f)));
-    if (old?.path) await sb().storage.from(BUCKET).remove([old.path]);
+    if (old?.path) await sb().storage.from(bucket).remove([old.path]);
     setEdit(null);
     flash('Document replaced');
   }
@@ -188,28 +189,28 @@ export default function DocFiles({ row, canEdit, userName, onSave, flash }) {
     setDel(null);
     if (!f) return;
     await onSave(files.filter((_, i) => i !== del));
-    const { error } = await sb().storage.from(BUCKET).remove([f.path]);
+    const { error } = await sb().storage.from(bucket).remove([f.path]);
     flash(error ? `Removed from the list (file: ${error.message})` : 'Document deleted', error ? 'err' : 'ok');
   }
 
   const act = (fn) => () => { setMore(false); fn(); };
 
   return (
-    <div className="dfl" onMouseDown={stop} onClick={stop} onDoubleClick={stop} onKeyDown={stop}>
-      {files.map((f, i) => (
+    <div className={`dfl${compact ? ' compact' : ''}`} onMouseDown={stop} onClick={stop} onDoubleClick={stop} onKeyDown={stop}>
+      {!compact && files.map((f, i) => (
         <button key={f.path || i} type="button" className="dfl-name" onClick={() => setViewing(f)}
           title={`View ${f.name}${f.size ? ` · ${sizeText(f.size)}` : ''}${f.by ? ` · by ${f.by}` : ''}`}>
           {iconOf(f)} {f.name}
         </button>
       ))}
-      {!files.length && <span className="muted dfl-none">No document yet</span>}
+      {!compact && !files.length && <span className="muted dfl-none">No document yet</span>}
       <button type="button" className="dfl-more" onClick={() => setMore(true)} disabled={busy}>
-        {busy ? 'Uploading...' : `⋯ More${files.length ? ` (${files.length})` : ''}`}
+        {busy ? 'Uploading...' : `⋯ More${label ? ` · ${label}` : ''}${files.length ? ` (${files.length})` : ''}`}
       </button>
       <input ref={oneRef} type="file" accept={ACCEPT} hidden onChange={onPick} />
       <input ref={manyRef} type="file" accept={ACCEPT} multiple hidden onChange={onPick} />
       <input ref={replaceRef} type="file" accept={ACCEPT} hidden onChange={onReplace} />
-      {row.notes && <small className="dfl-note" title="Old note">{row.notes}</small>}
+      {!compact && row.notes && <small className="dfl-note" title="Old note">{row.notes}</small>}
 
       {more && (
         <Portal>
@@ -240,7 +241,7 @@ export default function DocFiles({ row, canEdit, userName, onSave, flash }) {
         </Portal>
       )}
 
-      {viewing && <Viewer file={viewing} onClose={() => setViewing(null)} flash={flash} />}
+      {viewing && <Viewer file={viewing} onClose={() => setViewing(null)} flash={flash} bucket={bucket} />}
 
       {edit && (
         <Portal>

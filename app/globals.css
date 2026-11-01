@@ -3417,3 +3417,61 @@ body:has(.ent-page.ur) .modal, body:has(.ent-page.ur) .dfv { font-family: 'Noto 
 .drv-who { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px; background: #fff4e0; border-bottom: 1px solid #e0a100; color: #5c3b00; font-size: 14px; }
 .drv-who button { font: inherit; font-weight: 700; padding: 5px 14px; border-radius: 999px; border: 1.5px solid #b07d00; background: #fff; color: #7a5000; cursor: pointer; }
 .drv-who button:hover { background: #b07d00; color: #fff; }
+
+/* ===== Personnel (1 Nov 2026): app/personnel, app/s/[token] ===== */
+.pn-title { margin: 0; font-family: var(--display); font-size: 22px; color: var(--heading); display: flex; align-items: baseline; gap: 8px; }
+.pn-title small { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.pn-search { min-width: 220px; padding: 8px 14px; border-radius: 999px; border: 1.5px solid var(--pill-line, var(--line)); background: var(--surface); color: inherit; font: inherit; }
+.pn-tabs { margin-top: 10px; }
+.pn-tabs .pn-count { margin-left: 6px; font-size: 11px; font-weight: 700; opacity: .7; }
+.pn-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 6px; }
+.pn-chips button { font: inherit; font-size: 13px; font-weight: 600; padding: 5px 14px; border-radius: 999px; border: 1.5px solid var(--pill-line, var(--line)); background: var(--surface); color: inherit; cursor: pointer; }
+.pn-chips button:hover { border-color: var(--brown); }
+.pn-chips button.on { background: var(--brown); border-color: var(--brown); color: #fff; }
+.pn-note { margin: 4px 0 8px; font-size: 13px; }
+.pn-cell { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 4px 0; }
+.pn-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.dfl.compact { display: inline-flex; }
+.pn-send { white-space: nowrap; }
+.pn-yes { color: var(--brown); }
+.pn-att { text-decoration: none; color: inherit; display: inline-flex; gap: 6px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.pn-att b { font-weight: 700; }
+.pn-att .ok, .pn-att-table .ok { color: #13836b; }
+.pn-att .bad, .pn-att-table .bad { color: #c0392b; }
+.pn-att:hover { text-decoration: underline; }
+.pn-att-open { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.pn-att-sec h2 { font-size: 17px; margin: 18px 0 8px; color: var(--heading); }
+.pn-att-sec h2 small { font-size: 13px; color: var(--muted); font-weight: 600; margin-left: 6px; }
+.pn-att-table { width: 100%; }
+.pn-att-table td, .pn-att-table th { padding: 7px 10px; text-align: left; }
+.pn-link { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--tint); }
+.pn-link code { word-break: break-all; font-size: 13px; flex: 1 1 220px; }
+.pn-state { font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 999px; }
+.pn-state.ok { background: #e3f4ee; color: #13836b; }
+.pn-state.bad { background: #fde8e6; color: #c0392b; }
+/* group header rows in DataGrid (Salary > Allowance) */
+.grid thead tr.dg-group th { position: static; height: 26px; padding: 0 10px; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; text-align: center; background: var(--grid-head); color: var(--brown); }
+.grid thead tr.dg-group th.on { background: var(--tint); border-bottom: 2px solid var(--brown); }
+.grid thead tr.dg-group th.dg-gcorner { position: sticky; left: 0; z-index: 5; }
+/* employee slip link page */
+.ss-page { max-width: 640px; }
+.ss-card { padding: 20px; }
+.ss-card h1 { margin: 10px 0 4px; font-size: 22px; color: var(--heading); }
+.ss-card h2 { margin: 18px 0 8px; font-size: 16px; }
+.ss-head { display: flex; gap: 12px; align-items: center; padding-bottom: 12px; border-bottom: 2px solid var(--brown); }
+.ss-head b { display: block; font-size: 14px; }
+.ss-head small { color: var(--muted); font-size: 12px; }
+.ss-logo { background: #fff; border-radius: 10px; padding: 4px; display: inline-flex; border: 1px solid var(--line); }
+.ss-logo img { height: 44px; width: auto; }
+.ss-who { display: grid; gap: 2px; }
+.ss-who b { font-size: 17px; }
+.ss-who span { color: var(--muted); font-size: 14px; }
+.ss-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-variant-numeric: tabular-nums; }
+.ss-table td { padding: 7px 4px; border-bottom: 1px solid var(--line); }
+.ss-table td:last-child { text-align: right; }
+.ss-total td { font-weight: 700; border-bottom: 0; border-top: 2px solid var(--brown); }
+.ss-files { display: grid; gap: 8px; }
+.ss-file { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; }
+.ss-file small { margin-left: 8px; color: var(--muted); font-size: 12px; }
+.ss-btns { display: flex; gap: 6px; }
+@media (max-width: 760px) { .pn-search { min-width: 0; width: 100%; } }

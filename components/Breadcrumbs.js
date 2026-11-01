@@ -55,6 +55,10 @@ function trail(path, q, names) {
   if (seg[0] === 'c') return [HOME, INVENTORY, ['Category', path]];
   if (seg[0] === 'bills') return [HOME, INVENTORY, ['Bills', path]];
   if (seg[0] === 'log') return [HOME, INVENTORY, ['Stock log', path]];
+  if (seg[0] === 'personnel') {
+    const t = { office: 'Office Employees', drivers: 'Drivers', site: 'Site Employees', sub: 'Subcontractors', attendance: 'Attendance' }[q.get('tab') || 'office'];
+    return [HOME, ['Personnel', '/personnel'], ['Employees', '/personnel'], [t || 'Office Employees', path]];
+  }
   if (seg[0] === 'admin') return [HOME, ADMIN];
   if (seg[0] === 'users') return [HOME, ADMIN, ['Users', path]];
   if (seg[0] === 'activity') return [HOME, ADMIN, ['User activity', path]];
@@ -65,7 +69,7 @@ function trail(path, q, names) {
   return null;
 }
 
-export const showBreadcrumbs = (path) => path !== '/' && !/^\/(login|f)(\/|$)/.test(path);
+export const showBreadcrumbs = (path) => path !== '/' && !/^\/(login|f|s)(\/|$)/.test(path);
 
 export default function Breadcrumbs() {
   const path = usePathname();

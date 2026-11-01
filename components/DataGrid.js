@@ -14,6 +14,7 @@ import { evaluate, num } from '@/lib/sheet';
   onAdd(): adds a new row (shows "+ Add new row" line)
   onDelete(row): shows a Delete button per row in Edit mode
   footer: { [key]: node } shown in a totals row
+  groups: optional header rows above the labels (Personnel: Salary > Allowance)
 */
 /* Pick-or-type cell: shows ALL saved choices; typing narrows the list; any new text is kept */
 function ComboEditor({ options, placeholder, value, typed, onChange, onPick, onKeyDown, onBlur }) {
@@ -57,7 +58,7 @@ function ComboEditor({ options, placeholder, value, typed, onChange, onPick, onK
   );
 }
 
-export default function DataGrid({ columns, rows, canEdit, onSave, onAdd, addLabel = '+ Add new row', onDelete, footer, rowClass, emptyText = 'Nothing here yet.', flash }) {
+export default function DataGrid({ columns, rows, canEdit, onSave, onAdd, addLabel = '+ Add new row', onDelete, footer, rowClass, emptyText = 'Nothing here yet.', flash, groups }) {
   const [sel, setSel] = useState({ r: 0, c: 0 });
   const [editing, setEditingState] = useState(null);
   const editingRef = useRef(null);
@@ -261,6 +262,14 @@ export default function DataGrid({ columns, rows, canEdit, onSave, onAdd, addLab
           {showDelete && <col style={{ width: 84 }} />}
         </colgroup>
         <thead>
+          {/* groups (optional): header rows above the labels, e.g. [[{ label: 'Salary', span: 5 }, ...]] (spans add up to columns.length) */}
+          {(groups || []).map((g, gi) => (
+            <tr key={`g${gi}`} className="dg-group">
+              <th className="dg-gcorner" />
+              {g.map((x, xi) => <th key={xi} colSpan={x.span} className={x.label ? 'on' : ''}>{x.label}</th>)}
+              {showDelete && <th />}
+            </tr>
+          ))}
           <tr className="labels">
             <th className="corner" />
             {columns.map((c) => <th key={c.key} className={`a-${c.align || (c.type === 'number' || c.type === 'calc' ? 'right' : 'left')} col-${c.key}`}>{c.label}</th>)}

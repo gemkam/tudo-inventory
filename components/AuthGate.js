@@ -135,6 +135,8 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
   // Settings, Users and Activity live inside Admin (/admin) since 31 Oct 2026
   // Full access (editor): everything except the Admin panel; only the Administrator gets the Admin button (31 Oct 2026)
   if (user.isAdmin) quick.push(['/expenses/docs', 'Invoices', 'invoice'], ['/entry', 'Data entry', 'entry']);
+  // 👥 Personnel (1 Nov 2026): Employees (Office, Drivers, Site, Subcontractors, Attendance), just before Admin
+  if (user.canRead) quick.push(['/personnel', 'Personnel', 'users']);
   if (user.isOwner) quick.push(['/admin', 'Admin', 'shield']);
 
   let blocked = '';
