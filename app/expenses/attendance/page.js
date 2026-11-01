@@ -247,6 +247,8 @@ function AttendancePage() {
         <p className="sub">{monthLabel(month)} · Office staff Friday and Saturday off · Site staff Friday off · Working days go to the salary sheet</p>
       </div>
 
+      {switcher}
+
       <div className="page-tools no-print">
         <Link href={`/expenses?co=${co}`} className="crumb">← All Companies</Link>
         <div className="tools">
@@ -269,7 +271,6 @@ function AttendancePage() {
         </div>
       </div>
 
-      {switcher}
 
       {C.logo && (
         <div className="print-letterhead print-only">
