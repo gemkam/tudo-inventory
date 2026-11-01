@@ -3828,3 +3828,19 @@ html.intro-playing .watermark { opacity: 0; }
 
 /* Home page fills a wide PC screen (1 Nov 2026): no big empty sides when the browser is zoomed out */
 @media (min-width: 1300px) { main.page.wide:has(.home-grid) { max-width: min(96vw, 2400px); } }
+
+/* Phone with Chrome "Desktop site" switched on (html.desk-on-phone, set in app/layout.js), 1 Nov 2026:
+   same as the phone layout above, alerts list hidden, the floating alarm clock opens it as a sheet. */
+html.desk-on-phone .home-main { display: contents; }
+html.desk-on-phone .home-grid { grid-template-columns: 1fr; }
+html.desk-on-phone .home-grid .hub { order: 1; }
+html.desk-on-phone .home-grid .dc-home { order: 2; }
+html.desk-on-phone .home-grid .hub-links { order: 4; margin-top: 4px; }
+html.desk-on-phone .home-grid .alerts-col { display: none; }
+html.desk-on-phone .home-grid .alerts-col.mob-open {
+  display: block; position: fixed; left: 10px; right: 10px; top: 70px; bottom: 16px; z-index: 1001;
+  max-height: none; overflow: auto; order: 0; animation: al-pop .2s ease-out;
+}
+html.desk-on-phone .al-chev { display: inline-flex; align-items: center; justify-content: center; margin-left: auto; width: 34px; height: 34px;
+  border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--ink); font-size: 16px; cursor: pointer; }
+html.desk-on-phone .al-sheet-back { position: fixed; inset: 0; z-index: 1000; background: rgba(0, 0, 0, .35); }

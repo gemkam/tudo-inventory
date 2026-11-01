@@ -20,9 +20,12 @@ import { buildDocReminders } from '@/lib/docChecklist';
 */
 
 const POP_KEY = 'tudo-alarm-seen';
-/* Phones only (same width as the CSS below 760px) */
+/* Phones only (same width as the CSS below 760px). Also a phone with Chrome "Desktop site" switched on
+   (app/layout.js marks it html.desk-on-phone): it is still a phone, so it gets the alarm clock (1 Nov 2026). */
 function isPhone() {
-  try { return window.matchMedia('(max-width: 760px)').matches; } catch { return false; }
+  try {
+    return document.documentElement.classList.contains('desk-on-phone') || window.matchMedia('(max-width: 760px)').matches;
+  } catch { return false; }
 }
 const LOCAL_KEY = 'tudo-closed-alerts';
 const WORDS = /\b(bank\s*transfer|cash|pdc|cheque)\b/i;
@@ -138,9 +141,10 @@ export default function AlertsPanel() {
   const [phone, setPhone] = useState(false);
   useEffect(() => {
     let mq; try { mq = window.matchMedia('(max-width: 760px)'); } catch { return undefined; }
-    const f = () => setPhone(mq.matches); f();
+    const f = () => setPhone(isPhone()); f();
     mq.addEventListener?.('change', f);
-    return () => mq.removeEventListener?.('change', f);
+    window.addEventListener('resize', f);
+    return () => { mq.removeEventListener?.('change', f); window.removeEventListener('resize', f); };
   }, []);
 
   const load = useCallback(async () => {

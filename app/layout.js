@@ -27,8 +27,9 @@ export default function RootLayout({ children }) {
         {/* Opening animation: hide it at once if it already played in this tab (components/IntroSplash.js) */}
         <script dangerouslySetInnerHTML={{ __html: INTRO_BOOT }} />
         {/* Phone with Chrome "Desktop site" switched on: the page is laid out 980px wide and looks tiny.
-            Scale it up to the phone's real width so text stays readable (31 Oct 2026). */}
-        <script dangerouslySetInnerHTML={{ __html: "(function(){try{var d=document.documentElement;var coarse=window.matchMedia&&matchMedia('(pointer: coarse)').matches&&!matchMedia('(any-pointer: fine)').matches;var f=function(){var sw=screen.width;var w=window.innerWidth;if(coarse&&sw&&sw<820&&w>sw*1.4){d.style.zoom=(w/sw).toFixed(3);d.classList.add('desk-on-phone');}else{d.style.zoom='';d.classList.remove('desk-on-phone');}};f();window.addEventListener('resize',f);}catch(e){}})();" }} />
+            Scale it up to the phone's real width so text stays readable (31 Oct 2026).
+            1 Nov 2026: also caught when Chrome reports the desktop width as the screen width (page shown shrunk). */}
+        <script dangerouslySetInnerHTML={{ __html: "(function(){try{var d=document.documentElement;var coarse=window.matchMedia&&matchMedia('(pointer: coarse)').matches&&!matchMedia('(any-pointer: fine)').matches;var f=function(){var sw=screen.width;var w=window.innerWidth;var vv=window.visualViewport;var shrunk=vv&&vv.scale<0.8&&w>=900;if(coarse&&((sw&&sw<820&&w>sw*1.4)||shrunk)){d.style.zoom=((sw&&sw<820&&w>sw*1.4)?w/sw:1/vv.scale).toFixed(3);d.classList.add('desk-on-phone');}else{d.style.zoom='';d.classList.remove('desk-on-phone');}};f();window.addEventListener('resize',f);}catch(e){}})();" }} />
         {/* Speed (31 Oct 2026): open the database connection early, and load the Google fonts WITHOUT holding up the page
             (the page shows at once in the normal font, the nice font swaps in when it arrives). */}
         <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL} crossOrigin="" />
