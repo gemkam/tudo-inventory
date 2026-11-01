@@ -8,10 +8,13 @@ import { sb } from '@/lib/supabase';
 import { COMPANIES } from '@/lib/expenses';
 import { daysOfMonth, marksByStaff } from '@/lib/attendance';
 import { exportExcel, exportStamp, todayISO } from '@/lib/sheet';
+import PaidButton from '@/components/PaidButton';
+import { notifySlips, loadCredits, markPaid, unmarkPaid, creditKey } from '@/lib/salaryCredit';
 import { buildStaffSlip, buildDriverSlip, totals, sameMoney, slipPdf, m3, r3, mKey, monthName, prevMonth } from '@/lib/salarySlips';
 
 /*
-  Personnel > Employees > 🧾 Salary slips (1 Nov 2026). One month at a time:
+  All Companies > 💰 Salary (app/expenses/salary, 1 Nov 2026; first built as a Personnel tab). One month at a time:
+    Salary Credited column (green when paid) + "✅ All Employees Salary Paid": marking paid also approves the draft slip.
     ⚙ Generate drafts: makes / refreshes the draft slip of every active employee (Office, Site) and every driver
       with a Transport salary that month. Approved slips are not touched (use ↻ Regenerate on that person).
     Check: the table shows Net, unpaid days, deductions, change from last month, missing mobile (amber / red).
@@ -25,18 +28,12 @@ const shiftM = (k, d) => { const [y, m] = k.split('-').map(Number); return new D
 const short = (k) => COMPANIES.find((c) => c.key === k)?.short || k || '';
 const keyOf = (kind, id) => `${kind}:${id}`;
 
-async function notify(ids) {
-  try {
-    const { data } = await sb().auth.getSession();
-    const r = await fetch('/api/slip-push', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session?.access_token || ''}` }, body: JSON.stringify({ ids }) });
-    const j = await r.json().catch(() => ({}));
-    return j.sent || 0;
-  } catch { return 0; }
-}
+const notify = notifySlips;
 
-export default function SalarySlips({ staff, drivers, me, isAdmin, flash, onSend }) {
+export default function SalarySlips({ staff, drivers, me, isAdmin, flash, onSend, co = '', tabs = null }) {
   const [month, setMonth] = useState(todayISO().slice(0, 7));
-  const [co, setCo] = useState('');
+  const [credits, setCredits] = useState({});
+  const [payAll, setPayAll] = useState(false);
   const [slips, setSlips] = useState(null);
   const [prev, setPrev] = useState([]);
   const [att, setAtt] = useState([]);
@@ -59,6 +56,7 @@ export default function SalarySlips({ staff, drivers, me, isAdmin, flash, onSend
     if (a.error) { flash(a.error.message, 'err'); setSlips([]); return; }
     setSlips(a.data || []);
     setPrev(b.data || []);
+    setCredits(await loadCredits(month));
     setAtt(c.data || []);
     setSal((d.data || []).filter((x) => mKey(x.month) === month));
   }, [month, flash]);
@@ -147,6 +145,19 @@ export default function SalarySlips({ staff, drivers, me, isAdmin, flash, onSend
     if (error) flash(error.message, 'err'); else { flash(`${slip.name}: back to draft (hidden from his shortcut)`); load(); }
   }
 
+  async function pay(list) {
+    setBusy('pay');
+    const r = await markPaid(list.map(({ x, s }) => ({ kind: x.kind, id: x.p.id, amount: s ? Number(s.net) : null })), month, me);
+    setBusy(''); setPayAll(false);
+    if (r.error) { flash(r.error, 'err'); return; }
+    flash(`Salary paid: ${list.length}${r.approved ? ` · ${r.approved} slip${r.approved === 1 ? '' : 's'} approved` : ''}${r.sent ? ` · ${r.sent} phone${r.sent === 1 ? '' : 's'} told` : ''}`);
+    load();
+  }
+  async function unpay(x) {
+    const err = await unmarkPaid(x.kind, x.p.id, month);
+    if (err) flash(err, 'err'); else { flash(`${x.p.name}: marked not paid`); load(); }
+  }
+
   /* rows */
   const rows = people
     .filter((x) => !co || x.p.company === co)
@@ -163,6 +174,7 @@ export default function SalarySlips({ staff, drivers, me, isAdmin, flash, onSend
   const drafts = rows.filter((r) => r.s && r.s.status === 'draft');
   const approved = rows.filter((r) => r.s && r.s.status === 'approved');
   const missing = rows.filter((r) => !r.s);
+  const unpaid = rows.filter((r) => !credits[creditKey(r.x.kind, r.x.p.id)]);
   const totalNet = rows.reduce((t, r) => t + (r.s ? Number(r.s.net) : 0), 0);
 
   function doExcel() {
@@ -184,19 +196,18 @@ export default function SalarySlips({ staff, drivers, me, isAdmin, flash, onSend
         </div>
         {isAdmin && <button type="button" className="btn" onClick={generate} disabled={!!busy}>{busy === 'gen' ? 'Making...' : '⚙ Generate drafts'}</button>}
         {isAdmin && <button type="button" className="btn in" onClick={() => setApproveAll(true)} disabled={!drafts.length || !!busy}>✅ Approve all ({drafts.length})</button>}
+        {isAdmin && <button type="button" className="btn" onClick={() => setPayAll(true)} disabled={!unpaid.length || !!busy}>💵 All Employees Salary Paid ({unpaid.length})</button>}
         <button type="button" className="btn ghost" onClick={doExcel} disabled={!rows.some((r) => r.s)}>📗 Excel</button>
         <PrintColumns className="btn ghost" />
       </div>
 
-      <div className="pn-chips no-print">
-        <button type="button" className={!co ? 'on' : ''} onClick={() => setCo('')}>All companies</button>
-        {COMPANIES.map((c) => <button key={c.key} type="button" className={co === c.key ? 'on' : ''} onClick={() => setCo(c.key)}>{c.short}</button>)}
-      </div>
+      {tabs}
 
       <div className="kpi-row">
         <div className="kpi hero"><span>Net pay · {monthName(month)}</span><strong>{m3(totalNet)}</strong><small>OMR · {rows.filter((r) => r.s).length} slips</small></div>
         <div className="kpi"><span>Draft (to check)</span><strong>{drafts.length}</strong><small>not seen by employees</small></div>
         <div className="kpi"><span>Approved</span><strong>{approved.length}</strong><small>in their shortcut</small></div>
+        <div className="kpi"><span>Salary paid</span><strong>{rows.length - unpaid.length}/{rows.length}</strong><small>{unpaid.length ? `${unpaid.length} not paid yet` : 'everyone paid'}</small></div>
         <div className={`kpi ${missing.length ? 'kpi-bad' : ''}`}><span>No slip yet</span><strong>{missing.length}</strong><small>{missing.length ? 'press ⚙ Generate drafts' : 'everyone has one'}</small></div>
       </div>
 
@@ -204,7 +215,7 @@ export default function SalarySlips({ staff, drivers, me, isAdmin, flash, onSend
         <div className="grid-wrap">
           <table className="summary-table ssl-table">
             <thead>
-              <tr><th>Name</th><th>Company</th><th>Type</th><th className="num">Monthly</th><th className="num">Pay days</th><th className="num">Deductions</th><th className="num">Net pay</th><th className="num">vs last month</th><th>Mobile</th><th>Status</th><th className="no-print">Actions</th></tr>
+              <tr><th>Name</th><th>Company</th><th>Type</th><th className="num">Monthly</th><th className="num">Pay days</th><th className="num">Deductions</th><th className="num">Net pay</th><th className="num">vs last month</th><th>Mobile</th><th>Salary Credited</th><th>Slip</th><th className="no-print">Actions</th></tr>
             </thead>
             <tbody>
               {rows.map(({ x, s, diff, big, mobile, stale }) => (
@@ -218,6 +229,7 @@ export default function SalarySlips({ staff, drivers, me, isAdmin, flash, onSend
                   <td className="num"><b>{s ? m3(s.net) : '–'}</b></td>
                   <td className={`num ${big ? 'ssl-big' : ''}`}>{diff === null ? <span className="muted">new</span> : diff === 0 ? 'same' : `${diff > 0 ? '+' : ''}${m3(diff)}`}</td>
                   <td>{mobile || <span className="bad">missing</span>}</td>
+                  <td><PaidButton credit={credits[creditKey(x.kind, x.p.id)]} canEdit={isAdmin} onPay={() => pay([{ x, s }])} onUndo={() => unpay(x)} /></td>
                   <td>
                     {!s ? <span className="muted">No slip</span> : s.status === 'approved'
                       ? <span className="ssl-st ok">✅ Approved{s.version > 1 ? ` · v${s.version}` : ''}</span>
@@ -234,7 +246,7 @@ export default function SalarySlips({ staff, drivers, me, isAdmin, flash, onSend
                   </td>
                 </tr>
               ))}
-              {!rows.length && <tr><td colSpan={11} className="muted">No employees for this company.</td></tr>}
+              {!rows.length && <tr><td colSpan={12} className="muted">No employees for this company.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -290,6 +302,17 @@ export default function SalarySlips({ staff, drivers, me, isAdmin, flash, onSend
           <div className="modal-actions">
             <button type="button" className="btn ghost" onClick={() => setRevise(null)}>Cancel</button>
             <button type="button" className="btn in" disabled={!revise.reason.trim()} onClick={async () => { if (await saveSlip(revise.slip, revise.changes, revise.reason.trim())) setRevise(null); }}>Save revision</button>
+          </div>
+        </Modal>
+      )}
+
+      {payAll && (
+        <Modal title={`💵 All Employees Salary Paid · ${monthName(month)}${co ? ` · ${short(co)}` : ''}`} onClose={() => setPayAll(false)}>
+          <p style={{ marginTop: 0 }}>Mark <b>{unpaid.length}</b> employee{unpaid.length === 1 ? '' : 's'} as paid (total Net <b>OMR {m3(unpaid.reduce((t, r) => t + (r.s ? Number(r.s.net) : 0), 0))}</b>). Their draft slips are approved and show in their app.</p>
+          {unpaid.some((r) => !r.s) && <p className="bad">⚠ No slip yet for: {unpaid.filter((r) => !r.s).map((r) => r.x.p.name).join(', ')} (press ⚙ Generate drafts first).</p>}
+          <div className="modal-actions">
+            <button type="button" className="btn ghost" onClick={() => setPayAll(false)}>Cancel</button>
+            <button type="button" className="btn in" onClick={() => pay(unpaid)} disabled={busy === 'pay'}>{busy === 'pay' ? 'Saving...' : 'Yes, all paid'}</button>
           </div>
         </Modal>
       )}

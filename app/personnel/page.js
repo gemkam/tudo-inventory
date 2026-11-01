@@ -9,7 +9,10 @@ import DocFiles from '@/components/DocFiles';
 import Modal from '@/components/Modal';
 import Expiry from '@/components/Expiry';
 import AttendanceSheet from '@/components/AttendanceSheet';
-import SalarySlips from '@/components/SalarySlips';
+import SendSlipLink from '@/components/SendSlipLink';
+import SlipViewer from '@/components/SlipViewer';
+import PaidButton from '@/components/PaidButton';
+import { loadCredits, markPaid, unmarkPaid, creditKey } from '@/lib/salaryCredit';
 import { sb } from '@/lib/supabase';
 import { COMPANIES, n, r3 } from '@/lib/expenses';
 import { daysOfMonth, marksByStaff, personMonth } from '@/lib/attendance';
@@ -25,7 +28,9 @@ import { fmtAmt, monthLabel, todayISO, exportExcel, exportStamp } from '@/lib/sh
   also changes the Allowance total that the salary sheet uses.
   ⋯ More (same box as the Documents Checklist) for Contract, Passport, Resident card and Salary slip: private bucket
   staff-files, list in <table>.files { contract: [], passport: [], resident: [], slip: [] }.
-  📤 Send To Employee: the employee's own link /s/<slip_token> (no login) shows his salary slips (files under slip/<token>/).
+  📤 Send To Employee: the employee's own link /s/<slip_token> (made once, never changes) shows his approved monthly slips.
+  👁 Slip: his monthly slips (made in All Companies > 💰 Salary). Salary Credited: green when paid for the month
+  (table salary_credits; "All ... Salary Paid" marks everyone on the tab). Marking paid approves his draft slip.
 */
 
 const TABS = [
@@ -33,8 +38,7 @@ const TABS = [
   ['drivers', '🚚 Drivers'],
   ['site', '👷 Site Employees'],
   ['sub', '🤝 Subcontractors'],
-  ['attendance', '🗓 Attendance'],
-  ['slips', '🧾 Salary slips']
+  ['attendance', '🗓 Attendance']
 ];
 const TICKETS = ['Yes', 'No', 'Yearly', 'Every 2 years'];
 const BUCKET = 'staff-files';
@@ -75,6 +79,10 @@ function PersonnelPage() {
   const [att, setAtt] = useState([]);
   const [month, setMonth] = useState(thisMonth());
   const [send, setSend] = useState(null); // { table, row }
+  const [slipsAll, setSlipsAll] = useState([]);
+  const [credits, setCredits] = useState({});
+  const [viewSlip, setViewSlip] = useState(null); // { name, kind, id }
+  const [payAll, setPayAll] = useState(false);
   const [del, setDel] = useState(null);
   const [toast, setToast] = useState(null);
   const [error, setError] = useState('');
@@ -87,7 +95,11 @@ function PersonnelPage() {
   }, []);
 
   useEffect(() => {
-    try { const t = new URLSearchParams(window.location.search).get('tab'); if (TABS.some(([k]) => k === t)) setTab(t); } catch { /* ignore */ }
+    try {
+      const t = new URLSearchParams(window.location.search).get('tab');
+      if (t === 'slips') { window.location.replace('/expenses/salary'); return; } // moved to All Companies > Salary
+      if (TABS.some(([k]) => k === t)) setTab(t);
+    } catch { /* ignore */ }
   }, []);
   function openAttendance(company) {
     try { window.history.replaceState(null, '', `/personnel?tab=attendance&co=${company}&m=${month}`); } catch { /* ignore */ }
@@ -116,6 +128,9 @@ function PersonnelPage() {
     setDrivers(dr.data || []);
     setSubs(sc.data || []);
     setAtt(a.data || []);
+    const sl = await s.from('salary_slips').select('*').order('month', { ascending: false });
+    setSlipsAll(sl.data || []);
+    setCredits(await loadCredits(month));
   }, [month]);
   useEffect(() => { load(); }, [load]);
 
@@ -239,12 +254,32 @@ function PersonnelPage() {
       />
     </div>
   );
+  const kindOf = (table) => (table === 'exp_staff' ? 'staff' : 'driver');
+  const slipsOf = (table, row) => slipsAll.filter((x) => x.person_kind === kindOf(table) && x.person_id === row.id);
   const slipCell = (table) => (row) => (
     <div className="pn-cell">
-      {docCell(table, 'slip', 'Salary slip')(row)}
+      <button type="button" className="dfl-more" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); setViewSlip({ name: row.name, kind: kindOf(table), id: row.id }); }}>
+        👁 Slip{slipsOf(table, row).length ? ` (${slipsOf(table, row).length})` : ''}
+      </button>
       {isAdmin && <button type="button" className="dfl-more pn-send" onClick={(e) => { e.stopPropagation(); setSend({ table, row }); }} onMouseDown={(e) => e.stopPropagation()}>📤 Send To Employee</button>}
     </div>
   );
+  const paidCol = (table) => ({
+    key: 'paid', label: `Salary Credited · ${monthLabel(month)}`, type: 'calc', width: 175,
+    render: (row) => (
+      <PaidButton credit={credits[creditKey(kindOf(table), row.id)]} canEdit={isAdmin}
+        onPay={() => payPeople([{ kind: kindOf(table), id: row.id, name: row.name }])}
+        onUndo={async () => { const e = await unmarkPaid(kindOf(table), row.id, month); if (e) flash(e, 'err'); else { flash(`${row.name}: not paid`); setCredits(await loadCredits(month)); } }} />
+    )
+  });
+  async function payPeople(list) {
+    const withNet = list.map((p) => ({ ...p, amount: slipsAll.find((x) => x.person_kind === p.kind && x.person_id === p.id && x.month === month)?.net ?? null }));
+    const r = await markPaid(withNet, month, me);
+    setPayAll(false);
+    if (r.error) { flash(r.error, 'err'); return; }
+    flash(`Salary paid: ${list.length}${r.approved ? ` · ${r.approved} slip${r.approved === 1 ? '' : 's'} approved` : ''}${r.sent ? ` · ${r.sent} phone${r.sent === 1 ? '' : 's'} told` : ''}`);
+    load();
+  }
   const money = (k) => ({ key: k, label: '', type: 'number', width: 105, render: (r) => (n(r[k]) ? fmtAmt(r[k]) : <span className="muted">–</span>) });
   const companyCol = { key: 'company', label: 'Company', type: 'select', width: 135, options: allCos.map((c) => c.short), raw: (r) => CO_SHORT[r.company] || r.company || '', render: (r) => CO_SHORT[r.company] || r.company || <span className="muted">–</span> };
   const attCol = {
@@ -277,6 +312,7 @@ function PersonnelPage() {
       { key: 'ticket', label: 'Ticket', type: 'combo', width: 120, options: TICKETS },
       attCol,
       ...(kind === 'site' ? [{ key: 'mobile', label: 'Contact Number', type: 'text', width: 140, placeholder: '9xxxxxxx' }] : []),
+      paidCol(T),
       { key: 'slip', label: 'Salary slip', type: 'calc', width: 300, render: slipCell(T) }
     ];
   }
@@ -291,6 +327,7 @@ function PersonnelPage() {
     { ...money('house_rent'), label: 'House rent' },
     { ...money('utilities'), label: 'Utilities' },
     { key: 'ticket', label: 'Ticket', type: 'combo', width: 120, options: TICKETS },
+    paidCol('transport_drivers'),
     { key: 'slip', label: 'Salary slip', type: 'calc', width: 300, render: slipCell('transport_drivers') }
   ];
   const subColumns = [
@@ -343,8 +380,8 @@ function PersonnelPage() {
 
   if (staff === null) return <div className="loading">Loading...</div>;
 
-  const showCo = tab !== 'sub' && tab !== 'attendance' && tab !== 'slips';
-  const own = tab === 'attendance' || tab === 'slips'; // tabs with their own toolbar
+  const showCo = tab !== 'sub' && tab !== 'attendance';
+  const own = tab === 'attendance'; // tab with its own toolbar
   const canDel = isAdmin && canDelete;
   let grid = null;
   if (tab === 'office' || tab === 'site') {
@@ -380,7 +417,7 @@ function PersonnelPage() {
       <div className="page-tools no-print">
         <h1 className="pn-title">👥 Personnel <small>Employees</small></h1>
         <div className="tools">
-          {tab === 'office' || tab === 'site' ? (
+          {tab === 'office' || tab === 'site' || tab === 'drivers' ? (
             <div className="month-select at-month">
               <button type="button" className="btn ghost sm" onClick={() => setMonth(shiftM(month, -1))} aria-label="Previous month">‹</button>
               <input type="month" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} aria-label="Month" />
@@ -433,15 +470,35 @@ function PersonnelPage() {
             onDone={() => { setEdit(false); setDelMode(false); }}
           />
         )}
+        {isAdmin && (tab === 'office' || tab === 'site' || tab === 'drivers') && (
+          <button type="button" className="btn" onClick={() => setPayAll(true)}>💵 All {tab === 'office' ? 'Office Employees' : tab === 'site' ? 'Site Employees' : 'Drivers'} Salary Paid</button>
+        )}
         <PrintColumns className="btn" />
         {(edit || delMode) && <span className="pn-mode">{[edit && '✏️ Editing: tap a box to change it', delMode && '🗑 Delete buttons are on'].filter(Boolean).join(' · ')}</span>}
       </div>}
 
-      {tab === 'attendance' ? <AttendanceSheet /> : tab === 'slips' ? (
-        <SalarySlips staff={staff} drivers={drivers} me={me} isAdmin={isAdmin} flash={flash} onSend={(x) => setSend(x)} />
-      ) : grid}
+      {tab === 'attendance' ? <AttendanceSheet /> : grid}
 
-      {send && <SendModal table={send.table} row={(send.table === 'exp_staff' ? staff : drivers).find((x) => x.id === send.row.id) || send.row} onClose={() => setSend(null)} onToggle={(row, on) => patchRow(send.table, row, { slip_link_on: on })} flash={flash} />}
+      {send && (
+        <SendSlipLink table={send.table} row={(send.table === 'exp_staff' ? staff : drivers).find((x) => x.id === send.row.id) || send.row} flash={flash} onClose={() => setSend(null)}
+          onChanged={(row) => setterOf(send.table)((l) => (l || []).map((x) => (x.id === row.id ? row : x)))} />
+      )}
+      {viewSlip && <SlipViewer name={viewSlip.name} slips={slipsAll.filter((x) => x.person_kind === viewSlip.kind && x.person_id === viewSlip.id)} onClose={() => setViewSlip(null)} />}
+      {payAll && (() => {
+        const list = tab === 'office' ? officeRows : tab === 'site' ? siteRows : driverRows;
+        const kind = tab === 'drivers' ? 'driver' : 'staff';
+        const todo = list.filter((r) => !credits[creditKey(kind, r.id)]);
+        return (
+          <Modal title={`💵 Salary paid · ${monthLabel(month)}`} onClose={() => setPayAll(false)}>
+            <p style={{ marginTop: 0 }}>Mark <b>{todo.length}</b> {tab === 'office' ? 'office employee' : tab === 'site' ? 'site employee' : 'driver'}{todo.length === 1 ? '' : 's'}{co ? ` of ${CO_SHORT[co]}` : ''} as paid for {monthLabel(month)}? Their draft salary slips are approved and show in their app.</p>
+            {!todo.length && <p className="ok">Everyone here is already paid.</p>}
+            <div className="modal-actions">
+              <button type="button" className="btn ghost" onClick={() => setPayAll(false)}>Cancel</button>
+              <button type="button" className="btn in" disabled={!todo.length} onClick={() => payPeople(todo.map((r) => ({ kind, id: r.id, name: r.name })))}>Yes, all paid</button>
+            </div>
+          </Modal>
+        );
+      })()}
 
       {addCo && (
         <Modal title="＋ Add company" onClose={() => setAddCo(null)}>
@@ -500,32 +557,6 @@ function EditMenu({ edit, delMode, undoCount, canDel, delNote, onEdit, onAdd, on
         </div>
       )}
     </div>
-  );
-}
-
-/* 📤 Send To Employee: his own salary slip link (no login), by WhatsApp or Copy; can be turned off */
-function SendModal({ row, onClose, onToggle, flash }) {
-  const url = typeof window !== 'undefined' ? `${window.location.origin}/s/${row.slip_token}` : '';
-  const digits = String(row.mobile || row.phone || '').replace(/\D/g, '');
-  const wa = digits ? (digits.length === 8 ? `968${digits}` : digits) : '';
-  const text = `Salam ${row.name}\n\nThis is your salary slip link\n${url}\n\nOpen it in Chrome\nTap Add to my phone\nTap Notify me\n\nEvery month your salary slip shows there with PDF download`;
-  return (
-    <Modal title={`Send To Employee · ${row.name}`} onClose={onClose}>
-      <p className="muted" style={{ marginTop: 0 }}>
-        His own link. Install it once on his phone: every month his approved salary slip shows there by itself (tab 🧾 Salary slips), with PDF download. No login needed.
-      </p>
-      <div className="pn-link">
-        <code>{url}</code>
-        <span className={`pn-state ${row.slip_link_on ? 'ok' : 'bad'}`}>{row.slip_link_on ? 'Link is on' : 'Link is off'}</span>
-      </div>
-      <div className="modal-actions" style={{ flexWrap: 'wrap' }}>
-        <a className="btn in" href={`https://wa.me/${wa}?text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer">📤 WhatsApp{wa ? ` ${row.mobile || row.phone}` : ''}</a>
-        <button type="button" className="btn" onClick={() => { navigator.clipboard?.writeText(url); flash('Link copied'); }}>📋 Copy link</button>
-        <a className="btn ghost" href={url} target="_blank" rel="noreferrer">👁 Open</a>
-        <button type="button" className="btn ghost" onClick={() => onToggle(row, !row.slip_link_on)}>{row.slip_link_on ? '⛔ Turn link off' : '✅ Turn link on'}</button>
-        <button type="button" className="btn ghost" onClick={onClose}>Close</button>
-      </div>
-    </Modal>
   );
 }
 

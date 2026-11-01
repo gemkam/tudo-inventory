@@ -3552,3 +3552,8 @@ body:has(.ent-page.ur) .modal, body:has(.ent-page.ur) .dfv { font-family: 'Noto 
 .company-head.ch-top + .page-tools, .vat-head + .page-tools { justify-content: flex-start; margin: 0 0 12px; }
 .company-head.ch-top + .page-tools > .crumb, .vat-head + .page-tools > .crumb { display: none; }
 .company-head.ch-top + .page-tools + .co-switch, .company-head.ch-top + .page-tools + .office-tabs { margin-bottom: 12px; }
+/* Salary Credited button (1 Nov 2026) */
+.paid-btn { font: inherit; font-size: 12.5px; font-weight: 700; padding: 5px 14px; border-radius: 999px; border: 1.5px solid var(--pill-line, var(--line)); background: var(--surface); color: var(--muted); cursor: pointer; white-space: nowrap; }
+.paid-btn:hover:not([disabled]) { border-color: #13836b; color: #13836b; }
+.paid-btn.on { background: #13836b; border-color: #13836b; color: #fff; }
+.paid-btn[disabled] { cursor: default; }

@@ -56,6 +56,7 @@ export default function ExpenseSideNav({ isAdmin = false }) {
         <div className="tsn-title">🧾 All Companies</div>
         <Btn href="/expenses/summary" on={onSummary} icon="📊">Group Summary</Btn>
         <Btn href="/docs" on={false} icon="📋">Documents Checklist</Btn>
+        <Btn href="/expenses/salary" on={path === '/expenses/salary'} icon="💰">Salary</Btn>
         <Btn href="/expenses/vat" on={path === '/expenses/vat'} icon="🧾">VAT return</Btn>
         {COMPANIES.map((c) => (
           <div key={c.key} className={`tsn-group${open[c.key] ? ' open' : ''}`}>
