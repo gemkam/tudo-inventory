@@ -2646,23 +2646,6 @@ a.sm-name { color: var(--brown); } a.sm-name:hover { text-decoration: underline;
 .at-del { border: 0; background: transparent; cursor: pointer; font-size: 13px; padding: 0 4px; opacity: .7; }
 .at-del:hover { opacity: 1; }
 
-/* Side menu column (1 Nov 2026, replaces the hover strip that covered the page):
-   open = full menu on the LEFT and the page beside it (nothing hidden); « closes it to a thin icon strip, ☰ opens it.
-   Remembered per device (components/SideToggle.js, class side-closed on <html>). */
-@media (min-width: 981px) {
-  .page.has-side { grid-template-columns: 250px minmax(0, 1fr); transition: grid-template-columns .18s ease; }
-  html.side-closed .page.has-side { grid-template-columns: 54px minmax(0, 1fr); }
-  html.side-closed .page.has-side > .tsn { padding: 8px 6px; overflow: hidden; }
-  html.side-closed .page.has-side > .tsn .tsn-tx,
-  html.side-closed .page.has-side > .tsn .tsn-car,
-  html.side-closed .page.has-side > .tsn .tsn-kids,
-  html.side-closed .page.has-side > .tsn .tsn-sep,
-  html.side-closed .page.has-side > .tsn .tsn-title-tx { display: none; }
-  html.side-closed .page.has-side > .tsn .tsn-btn { padding: 8px 0; justify-content: center; }
-  html.side-closed .page.has-side > .tsn .tsn-title { justify-content: center; padding: 2px 0 8px; }
-  .page.has-side > .tsn .tsn-btn, .page.has-side > .tsn .tsn-title { white-space: nowrap; }
-  .page.has-side > .tsn .tsn-btn .tsn-tx { white-space: normal; }
-}
 .tsn-title { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 .tsn-toggle { flex: none; width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--brown); font-size: 15px; font-weight: 700; cursor: pointer; line-height: 1; }
 .tsn-toggle:hover { background: var(--brown); color: #fff; border-color: var(--brown); }
@@ -3846,47 +3829,29 @@ html.desk-on-phone .al-chev { display: inline-flex; align-items: center; justify
   border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--ink); font-size: 16px; cursor: pointer; }
 html.desk-on-phone .al-sheet-back { position: fixed; inset: 0; z-index: 1000; background: rgba(0, 0, 0, .35); }
 
-/* Side menu docked to the LEFT EDGE of the screen + opens on mouse hover (1 Nov 2026):
-   - no empty gap on the far left: the page with a side menu uses the full width, the menu sits at the edge
-   - closed (default) = thin icon strip; put the mouse on it and it opens, the page moves right to make room;
-     mouse away and it closes again. « / ☰ keeps it open (remembered on the device, components/SideToggle.js) */
-@media (min-width: 981px) {
-  .page.has-side { max-width: none; margin: 0; padding-left: 0; padding-right: max(20px, env(safe-area-inset-right, 0px)); column-gap: 24px; }
-  .page.has-side > .tsn { top: 0; max-height: 100vh; min-height: calc(100vh - 120px); border-radius: 0 14px 14px 0; border-left: 0; }
-  html.side-closed .page.has-side:has(> .tsn:hover) { grid-template-columns: 250px minmax(0, 1fr); }
-  html.side-closed .page.has-side > .tsn:hover { padding: 10px; overflow-y: auto; box-shadow: 6px 0 24px -10px rgba(0, 0, 0, .25); }
-  html.side-closed .page.has-side > .tsn:hover .tsn-tx { display: flex; }
-  html.side-closed .page.has-side > .tsn:hover .tsn-car, html.side-closed .page.has-side > .tsn:hover .tsn-title-tx { display: inline; }
-  html.side-closed .page.has-side > .tsn:hover .tsn-sep { display: block; }
-  html.side-closed .page.has-side > .tsn:hover .tsn-kids { display: grid; }
-  html.side-closed .page.has-side > .tsn:hover .tsn-btn { padding: 8px 12px; justify-content: flex-start; }
-  html.side-closed .page.has-side > .tsn:hover .tsn-title { justify-content: space-between; padding: 4px 8px 8px; }
-}
-
-/* ===== Side menu on a PC, final (1 Nov 2026, user): stuck to the LEFT EDGE of the screen (no empty space before it),
-   a thin icon strip that OPENS WHEN THE MOUSE IS ON IT (opens over the page) and closes when the mouse leaves.
-   Same for All Companies, Reports & Summary, Transport and Personnel. The « / ☰ button is no longer used on a PC. */
+/* ===== Side menu on a PC, the ONLY rules for it (2 Nov 2026; older « / ☰ and :hover versions removed because they
+   fought each other and left the menu half open). Stuck to the LEFT EDGE, a thin icon strip; opens over the page when
+   the mouse is on it and closes when the mouse leaves or a page is picked. Open/closed is the class "open", set by
+   components/SideHover.js (mouse enter / leave, keyboard focus), so it can never get stuck by a click. ===== */
 @media screen and (min-width: 981px) {
-  .page.has-side, html.side-closed .page.has-side {
+  .page.has-side {
     max-width: none; margin: 0; padding-left: 0; padding-right: max(20px, env(safe-area-inset-right, 0px));
-    grid-template-columns: 58px minmax(0, 1fr); column-gap: 22px; transition: none;
+    grid-template-columns: 58px minmax(0, 1fr); column-gap: 22px;
   }
   .page.has-side > .side-main { width: 100%; max-width: 1480px; justify-self: center; }
-  .page.has-side > .tsn, html.side-closed .page.has-side > .tsn {
+  .page.has-side > .tsn {
     position: sticky; top: 0; align-self: start; z-index: 60;
-    width: 58px; height: calc(100vh - var(--tsn-top, 0px)); max-height: none; margin-top: -32px;
+    width: 58px; max-width: none; height: 100vh; max-height: none; margin-top: -32px;
     border-radius: 0 14px 14px 0; border-left: 0; padding: 10px 6px; overflow: hidden;
     transition: width .2s ease, box-shadow .2s ease;
   }
-  .page.has-side > .tsn:hover, .page.has-side > .tsn:has(:focus-visible) {
-    width: 280px; max-width: none; overflow-y: auto; padding: 10px; box-shadow: 14px 0 40px -14px rgba(0, 0, 0, .35);
-  }
-  .page.has-side > .tsn:not(:hover):not(:has(:focus-visible)) :is(.tsn-tx, .tsn-car, .tsn-kids, .tsn-sep, .tsn-title-tx) { display: none; }
-  .page.has-side > .tsn:not(:hover):not(:has(:focus-visible)) .tsn-btn { padding: 9px 0; justify-content: center; }
-  .page.has-side > .tsn:not(:hover):not(:has(:focus-visible)) .tsn-title { justify-content: center; padding: 2px 0 8px; font-size: 0; }
-  .page.has-side > .tsn:not(:hover):not(:has(:focus-visible)) .tsn-title::before { content: '☰'; font-size: 20px; color: var(--brown); }
+  .page.has-side > .tsn.open { width: 280px; overflow-y: auto; padding: 10px; box-shadow: 14px 0 40px -14px rgba(0, 0, 0, .35); }
+  .page.has-side > .tsn:not(.open) :is(.tsn-tx, .tsn-car, .tsn-kids, .tsn-sep, .tsn-title-tx) { display: none; }
+  .page.has-side > .tsn:not(.open) .tsn-btn { padding: 9px 0; justify-content: center; }
+  .page.has-side > .tsn:not(.open) .tsn-title { justify-content: center; padding: 2px 0 8px; font-size: 0; }
+  .page.has-side > .tsn:not(.open) .tsn-title::before { content: '☰'; font-size: 20px; color: var(--brown); }
   .page.has-side > .tsn .tsn-btn, .page.has-side > .tsn .tsn-title { white-space: nowrap; }
-  .page.has-side > .tsn:hover .tsn-btn .tsn-tx { white-space: normal; }
+  .page.has-side > .tsn.open .tsn-btn .tsn-tx { white-space: normal; }
   .tsn-toggle { display: none !important; }
 }
 @media (prefers-reduced-motion: reduce) { .page.has-side > .tsn { transition: none !important; } }
