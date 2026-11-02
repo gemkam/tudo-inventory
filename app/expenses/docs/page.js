@@ -518,6 +518,20 @@ function DocsPage() {
       )}
 
 
+      {list !== null && shown.length > 0 && (() => {
+        const tot = r3(shown.reduce((t, d) => t + totalOf(d), 0));
+        const vat = r3(shown.reduce((t, d) => t + r3(lineTotal(d.items) * n(d.vat_pct) / 100), 0));
+        return (
+          <div className="rp-tiles dx-tiles">
+            <div className="rp-tile">
+              <div className="rp-tile-label">{kind === 'invoice' ? '🧾' : '💵'} Total amount</div>
+              <div className="rp-tile-num"><Omr v={tot} /></div>
+              <div className="rp-tile-sub">{shown.length} {shown.length === 1 ? K.one.toLowerCase() : K.label.toLowerCase()}{q ? ' found' : ''} · {C.short}{vat ? ` · VAT ${fmt3(vat)} inside` : ''}</div>
+            </div>
+          </div>
+        );
+      })()}
+
       {list === null ? <div className="loading">Loading...</div> : shown.length === 0 ? (
         <div className="iv-empty">
           <div className="iv-empty-mark">{kind === 'invoice' ? '🧾' : '💵'}</div>
