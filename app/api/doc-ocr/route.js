@@ -199,7 +199,7 @@ export async function POST(req) {
   } catch (e) {
     const msg = e.code === 'NO_KEY' ? 'No AI key with photo reading is set in Vercel.'
       : /rate|limit|quota|429/i.test(e.message) ? 'The free AI limit is used up for now. Try again later.'
-        : `The AI could not read this file. ${e.message.slice(0, 200)}`;
+        : `The AI could not read this file. ${e.message.slice(0, 900)}`;
     return Response.json({ error: msg }, { status: 502 });
   }
 }
