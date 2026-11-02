@@ -47,6 +47,8 @@ function DocsPage() {
   const [picked, setPicked] = useState([]); // selected ids in Edit
   const [bulk, setBulk] = useState(null); // { act: 'delete' | 'move', to }
   const [busy, setBusy] = useState(false);
+  const [undo, setUndo] = useState([]); // ↶ Undo steps this visit: [{ label, run }] newest last, up to 30
+  const trash = useRef(new Set()); // papers of deleted docs: kept until ✓ Done so Undo can bring them back
   const timer = useRef(null);
 
   const flash = useCallback((text, k = 'ok') => {
@@ -164,6 +166,7 @@ function DocsPage() {
     };
     if (doc.scan) row.scan = doc.scan;
     const s = sb().from('company_docs');
+    const before = doc.id ? (list || []).find((d) => d.id === doc.id) : null;
     const res = doc.id
       ? await s.update(row).eq('id', doc.id).select().single()
       : await s.insert({ ...row, created_by: me || null }).select().single();
@@ -171,8 +174,51 @@ function DocsPage() {
     if (res.error) { flash(res.error.code === '42501' ? 'You need Full access to save.' : res.error.message, 'err'); return; }
     setDoc({ ...res.data, items: res.data.items.length ? res.data.items : blankItems() });
     setDirty(false);
+    const saved = res.data;
+    if (before) {
+      const { id, created_at: _c, ...back } = before;
+      pushUndo(`change ${before.doc_no}`, async () => {
+        const { error } = await sb().from('company_docs').update(back).eq('id', id);
+        if (error) throw new Error(error.message);
+        setDoc((d) => (d && d.id === id ? { ...before, items: before.items?.length ? before.items : blankItems() } : d));
+      });
+    } else {
+      pushUndo(`add ${saved.doc_no}`, async () => {
+        const { error } = await sb().from('company_docs').delete().eq('id', saved.id);
+        if (error) throw new Error(error.message);
+        setDoc((d) => (d && d.id === saved.id ? null : d));
+      });
+    }
     load();
     flash(kind === 'receipt' ? `Saved. Added to ${C.short} expenses (All Companies).` : 'Saved');
+  }
+
+  const pushUndo = (label, run) => setUndo((u) => [...u.slice(-29), { label, run }]);
+
+  async function doUndo() {
+    const step = undo[undo.length - 1];
+    if (!step || busy) return;
+    setBusy(true);
+    const err = await step.run().catch((e) => e.message);
+    setBusy(false);
+    if (err) { flash(`Undo failed: ${err}`, 'err'); return; }
+    setUndo((u) => u.slice(0, -1));
+    setPicked([]); load();
+    flash(`↶ Undone: ${step.label}`);
+  }
+
+  /* put deleted rows back exactly (same id, number and papers); the DB trigger adds the expense lines again */
+  async function restoreRows(rows) {
+    const { error } = await sb().from('company_docs').insert(rows.map((r) => ({ ...r })));
+    if (error) return error.message;
+    rows.forEach((r) => (r.files || []).forEach((f) => trash.current.delete(f.path)));
+    return '';
+  }
+
+  async function emptyTrash() {
+    const paths = [...trash.current];
+    trash.current.clear();
+    if (paths.length) await sb().storage.from('doc-files').remove(paths);
   }
 
   function toggleEdit() {
@@ -180,13 +226,14 @@ function DocsPage() {
       if (doc && dirty && !window.confirm('Close without saving?')) { return; }
       if (doc && !doc.id) setDoc(null);
       else if (doc && dirty) openDoc((list || []).find((d) => d.id === doc.id) || doc);
-      setEditing(false); setPicked([]); setBulk(null);
+      setEditing(false); setPicked([]); setBulk(null); setUndo([]);
+      emptyTrash();
       return;
     }
     setEditing(true);
   }
   // lock again when this page closes
-  useEffect(() => () => lockEdit(), []);
+  useEffect(() => () => { lockEdit(); emptyTrash(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pickOne = (id) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
@@ -199,9 +246,10 @@ function DocsPage() {
     const rows = (list || []).filter((d) => picked.includes(d.id));
     setBusy(true);
     const { error } = await sb().from('company_docs').delete().in('id', rows.map((d) => d.id));
-    if (!error) await removeFiles(rows);
     setBusy(false);
     if (error) { flash(error.code === '42501' ? 'You need Full access to delete.' : error.message, 'err'); return; }
+    rows.forEach((r) => (r.files || []).forEach((f) => f.path && trash.current.add(f.path)));
+    pushUndo(`delete ${rows.length}`, async () => { const e = await restoreRows(rows); if (e) throw new Error(e); });
     setBulk(null); setPicked([]); load();
     flash(`${rows.length} deleted${kind === 'receipt' ? '. Removed from All Companies too.' : ''}`);
   }
@@ -217,6 +265,7 @@ function DocsPage() {
     const { data: there } = await sb().from('company_docs').select('doc_no').eq('company', to).eq('kind', toKind);
     let max = (there || []).reduce((mx, d) => { const m = String(d.doc_no || '').match(/(\d+)\s*$/); return m ? Math.max(mx, Number(m[1])) : mx; }, 0);
     let ok = 0; let err = '';
+    const old = [];
     for (const d of [...rows].reverse()) {
       max += 1;
       const depts = DEPARTMENTS[to] || [];
@@ -231,7 +280,17 @@ function DocsPage() {
       change.department = department || null;
       const { error } = await sb().from('company_docs').update(change).eq('id', d.id);
       if (error) { err = error.code === '42501' ? 'You need Full access to move.' : error.message; break; }
+      old.push({ id: d.id, company: d.company, kind: d.kind, doc_no: d.doc_no, department: d.department, payment_method: d.payment_method, head: d.head });
       ok += 1;
+    }
+    if (old.length) {
+      pushUndo(`move ${old.length}`, async () => {
+        for (const o of old) {
+          const { id, ...back } = o;
+          const { error } = await sb().from('company_docs').update({ ...back, updated_at: new Date().toISOString() }).eq('id', id);
+          if (error) throw new Error(error.message);
+        }
+      });
     }
     setBusy(false);
     setBulk(null); setPicked([]); load();
@@ -246,9 +305,13 @@ function DocsPage() {
   }
 
   async function deleteDoc() {
+    const before = (list || []).find((d) => d.id === doc.id);
     const { error } = await sb().from('company_docs').delete().eq('id', doc.id);
     if (error) { flash(error.message, 'err'); return; }
-    await removeFiles([doc]);
+    if (before) {
+      (before.files || []).forEach((f) => f.path && trash.current.add(f.path));
+      pushUndo(`delete ${before.doc_no}`, async () => { const e = await restoreRows([before]); if (e) throw new Error(e); });
+    } else await removeFiles([doc]);
     setDel(false); setDoc(null); setDirty(false); load();
     flash(kind === 'receipt' ? 'Deleted. Removed from All Companies too.' : 'Deleted');
   }
@@ -289,6 +352,7 @@ function DocsPage() {
             <EditToggle show={isAdmin} on={editing} onClick={toggleEdit} />
             {canEdit && <button type="button" className="btn" onClick={saveDoc} disabled={saving}>{saving ? 'Saving...' : dirty ? '💾 Save' : '✓ Saved'}</button>}
             <button type="button" className="btn ghost" onClick={printDoc}>🖨 Print / PDF</button>
+            {canEdit && undo.length > 0 && <button type="button" className="btn ghost" onClick={doUndo} disabled={busy}>↶ Undo {undo[undo.length - 1].label}</button>}
             {canEdit && doc.id && <button type="button" className="btn ghost danger-text" onClick={() => setDel(true)}>Delete</button>}
           </div>
         </div>
@@ -474,7 +538,16 @@ function DocsPage() {
   }
 
   /* ---------------- List ---------------- */
-  const shown = (list || []).filter((d) => !q || `${d.doc_no} ${d.party} ${(d.items || []).map((i) => i.desc).join(' ')}`.toLowerCase().includes(q.toLowerCase()));
+  /* search: every word must be found somewhere in the doc (number, date, party, lines, receipt no., vehicle, fuel, VAT no., amounts, payment, department ...) */
+  const hay = (d) => {
+    const x = shortOf(d);
+    const tot = r3(lineTotal(d.items) * (1 + n(d.vat_pct) / 100));
+    return [d.doc_no, fmtD(d.doc_date), d.doc_date, d.party, d.party_details, d.party_vat, (d.items || []).map((i) => `${i.desc} ${i.amount}`).join(' '),
+      x.receipt_no, x.vehicle_no, String(x.vehicle_no || '').replace(/[\s/-]/g, ''), x.fuel, x.vat_no, x.amount, tot.toFixed(3),
+      d.payment_method, d.department, d.head, d.category, d.notes, d.signatory, d.created_by, KINDS[d.kind]?.one].filter(Boolean).join(' ').toLowerCase();
+  };
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+  const shown = (list || []).filter((d) => { if (!words.length) return true; const h = hay(d); return words.every((w) => h.includes(w)); });
   const totalOf = (d) => r3(lineTotal(d.items) * (1 + n(d.vat_pct) / 100));
 
   return (
@@ -488,7 +561,7 @@ function DocsPage() {
       <div className="page-tools">
         <Link href={`/expenses?co=${co}`} className="crumb">← All Companies</Link>
         <div className="tools">
-          <input className="iv-search" type="search" placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className="iv-search" type="search" placeholder="Search anything: vehicle, receipt no., petrol, amount, date..." value={q} onChange={(e) => setQ(e.target.value)} />
           <EditToggle show={isAdmin} on={editing} onClick={toggleEdit} />
         </div>
       </div>
@@ -504,7 +577,18 @@ function DocsPage() {
         <div className="dx-bar no-print">
           <b>✏️ Edit</b>
           <button type="button" className="btn" onClick={newDoc}>＋ Add {K.one.toLowerCase()}</button>
-          <DocImport co={co} coShort={C.short} kind={kind} userName={me} last={(list || [])[0]} nextNo={nextNoFor} onDone={load} flash={flash} />
+          <DocImport co={co} coShort={C.short} kind={kind} userName={me} last={(list || [])[0]} nextNo={nextNoFor} flash={flash}
+            onDone={(rows) => {
+              load();
+              if (rows?.length) {
+                pushUndo(`import ${rows.length}`, async () => {
+                  const { error } = await sb().from('company_docs').delete().in('id', rows.map((r) => r.id));
+                  if (error) throw new Error(error.message);
+                  const paths = rows.map((r) => r.path).filter(Boolean);
+                  if (paths.length) await sb().storage.from('doc-files').remove(paths);
+                });
+              }
+            }} />
           <span className="dx-sep" />
           <button type="button" className="btn ghost" disabled={!shown.length}
             onClick={() => setPicked(picked.length === shown.length ? [] : shown.map((d) => d.id))}>
@@ -513,6 +597,10 @@ function DocsPage() {
           <button type="button" className="btn ghost danger-text" disabled={!picked.length} onClick={() => setBulk({ act: 'delete' })}>🗑 Delete{picked.length ? ` (${picked.length})` : ''}</button>
           <button type="button" className="btn ghost" disabled={!picked.length}
             onClick={() => setBulk({ act: 'move', to: co, toKind: kind === 'invoice' ? 'receipt' : 'invoice' })}>↔ Move{picked.length ? ` (${picked.length})` : ''}</button>
+          <button type="button" className="btn ghost" disabled={!undo.length || busy} onClick={doUndo}
+            title={undo.length ? `Undo: ${undo[undo.length - 1].label}` : 'Nothing to undo yet'}>
+            ↶ Undo{undo.length ? ` ${undo[undo.length - 1].label}` : ''}
+          </button>
           <span className="muted dx-hint">{picked.length ? `${picked.length} selected` : 'Tick rows to delete or move'}</span>
         </div>
       )}
@@ -526,7 +614,12 @@ function DocsPage() {
             <div className="rp-tile">
               <div className="rp-tile-label">{kind === 'invoice' ? '🧾' : '💵'} Total amount</div>
               <div className="rp-tile-num"><Omr v={tot} /></div>
-              <div className="rp-tile-sub">{shown.length} {shown.length === 1 ? K.one.toLowerCase() : K.label.toLowerCase()}{q ? ' found' : ''} · {C.short}{vat ? ` · VAT ${fmt3(vat)} inside` : ''}</div>
+              <div className="rp-tile-sub">{shown.length} {shown.length === 1 ? K.one.toLowerCase() : K.label.toLowerCase()}{q ? ' found' : ''} · {C.short} · with VAT</div>
+            </div>
+            <div className="rp-tile">
+              <div className="rp-tile-label">🧾 VAT 5%</div>
+              <div className="rp-tile-num"><Omr v={vat} /></div>
+              <div className="rp-tile-sub">{vat ? `Inside the total · without VAT ${fmt3(r3(tot - vat))}` : 'No VAT on these'}</div>
             </div>
           </div>
         );

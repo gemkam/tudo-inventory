@@ -4078,3 +4078,4 @@ tr.dx-on td { background: var(--tint, #eef7f3); }
 .pp-pdf { width: 100%; height: 80vh; border: 0; }
 @media print { .pp-wrap { break-after: page; } .pp-img { max-height: 95vh; } }
 .dx-tiles { margin-top: 14px; }
+.di-dup { background: #fde4e1; color: #a5281b; font-weight: 600; }

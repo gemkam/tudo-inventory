@@ -158,7 +158,14 @@ export default function DocImport({ co, coShort, kind, userName, last, nextNo, o
       });
       const out = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(out.error || `Error ${res.status}`);
-      upd(card.id, (c) => ({ ...c, status: 'ready', model: out.model, form: toForm(out.data, kind, co, last) }));
+      const form = toForm(out.data, kind, co, last);
+      // same bill saved before? (same receipt no., any company) -> untick and say where
+      const rno = String(form.receipt_no || '').trim();
+      if (rno) {
+        const { data: same } = await sb().from('company_docs').select('doc_no, company').eq('scan->>receipt_no', rno).limit(1);
+        if (same && same.length) { form.save = false; form.dup = `Already saved as ${same[0].doc_no}. Not ticked, so it is not saved twice.`; }
+      }
+      upd(card.id, (c) => ({ ...c, status: 'ready', model: out.model, form }));
     } catch (e) {
       upd(card.id, (c) => ({ ...c, status: 'error', error: e.message }));
     }
@@ -183,6 +190,14 @@ export default function DocImport({ co, coShort, kind, userName, last, nextNo, o
     setSaving(true);
     let ok = 0;
     const seq = { invoice: 0, receipt: 0 };
+    const savedRows = [];
+    // the same receipt no. ticked twice in this import: keep the first only
+    const seen = new Set();
+    for (const c of todo) {
+      const r = String(c.form.receipt_no || '').trim();
+      if (r && seen.has(r)) { flash(`${c.name}: receipt ${r} is ticked twice. Untick one.`, 'err'); return; }
+      if (r) seen.add(r);
+    }
     for (const c of todo) {
       const f = c.form;
       const items = f.items.map((i) => ({ desc: String(i.desc || '').trim(), amount: i.amount === '' ? '' : r3(i.amount) })).filter((i) => i.desc || i.amount !== '');
@@ -210,10 +225,11 @@ export default function DocImport({ co, coShort, kind, userName, last, nextNo, o
         await sb().from('company_docs').update({ files: [{ path, name: c.name, size: c.file.size, type: c.file.type || '', at: new Date().toISOString(), by: userName || '' }] }).eq('id', data.id);
       }
       ok += 1;
+      savedRows.push({ id: data.id, path: up.error ? null : path });
       upd(c.id, (x) => ({ ...x, status: 'saved', savedNo: data.doc_no }));
     }
     setSaving(false);
-    if (ok) { flash(`${ok} saved${todo.some((c) => c.form.kind === 'receipt') ? ` and added to ${coShort} expenses` : ''}.`); onDone(); }
+    if (ok) { flash(`${ok} saved${todo.some((c) => c.form.kind === 'receipt') ? ` and added to ${coShort} expenses` : ''}.`); onDone(savedRows); }
   }
 
   const close = () => {
@@ -264,6 +280,7 @@ export default function DocImport({ co, coShort, kind, userName, last, nextNo, o
                             </select>
                             {f.scan.confidence && <span className={`di-conf c-${f.scan.confidence}`}>{f.scan.confidence === 'high' ? 'Clear' : f.scan.confidence === 'medium' ? 'Check' : 'Unclear'}</span>}
                           </div>
+                          {f.dup && <p className="di-warn di-dup">⚠ {f.dup}</p>}
                           {f.scan.warnings && <p className="di-warn">⚠ {f.scan.warnings}</p>}
                           {f.diesel && co === 'modern-city' && f.kind === 'receipt' && <p className="di-warn">⚠ Diesel for the trucks is already counted from the trip sheets. Save this only if it is not on a trip sheet, or it is counted twice.</p>}
                           <div className="di-grid">
