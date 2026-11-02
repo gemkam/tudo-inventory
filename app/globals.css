@@ -3999,3 +3999,6 @@ html.desk-on-phone .al-sheet-back { position: fixed; inset: 0; z-index: 1000; ba
 .intro-splash.story .is-sub-text { animation-delay: 1.4s; }
 .intro-splash.story .is-line { animation-delay: 1.7s; }
 @media (max-width: 600px) { .intro-splash.story .is-stage { transform: translateX(-46.5%); } } /* centre the office tower on phones */
+/* Powered by / KS TECH LLC sit under OFFICE SYSTEMS, a little lower (2 Nov 2026) */
+.intro-splash.story .is-center { margin-bottom: 0; }
+.intro-splash.story .is-powered { position: relative; left: auto; right: auto; bottom: auto; width: 100%; margin-top: clamp(40px, 9vh, 80px); background: none; }
