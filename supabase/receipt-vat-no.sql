@@ -1,0 +1,5 @@
+-- 2 Nov 2026 (applied): a payment receipt's VAT No. now goes into its All Companies line (exp_entries.vat_reg_no).
+-- In public.sync_transport_exp(), company_docs branch, the insert has vat_reg_no =
+--   coalesce(nullif(new.scan->>'vat_no',''), nullif(new.party_vat,''))
+-- (scan.vat_no = VAT No. read from the bill, else the "VAT No." typed on the receipt).
+-- Old receipts were re-synced with: update public.company_docs set updated_at = updated_at where kind = 'receipt';
