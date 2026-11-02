@@ -12,6 +12,7 @@ import RaufPicturePanel from '@/components/RaufPicturePanel';
 const TOOLS = [
   ['/users', '👥', 'Users', 'Create users, 4 access levels, online now / last seen', 'owner'],
   ['/activity', '👁', 'User activity', 'Logins, pages opened, buttons pressed, every change (old → new)', 'owner'],
+  ['/admin/power', '🛠', 'Power Editor', 'Edit, change, replace and delete anything in every table of the app, with Undo', 'owner'],
   ['/settings', '⚙️', 'Settings', 'Inventory categories, bills and app settings', 'admin'],
   ['/timeline', '🕒', 'Timeline', 'Everything built and changed in the app, day by day', 'admin'],
   ['/sitemap', '🗺', 'Sitemap', 'Every page of the app as a searchable tree', 'admin'],

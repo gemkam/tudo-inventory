@@ -60,6 +60,7 @@ function trail(path, q, names) {
     const t = { office: 'Office Employees', drivers: 'Drivers', site: 'Site Employees', sub: 'Subcontractors', attendance: 'Attendance', archives: 'Archives', slips: 'Salary slips' }[q.get('tab') || 'office'];
     return [HOME, ['Personnel', '/personnel'], ['Employees', '/personnel'], [t || 'Office Employees', path]];
   }
+  if (seg[0] === 'admin' && seg[1] === 'power') return [HOME, ADMIN, ['Power Editor', path]];
   if (seg[0] === 'admin') return [HOME, ADMIN];
   if (seg[0] === 'users') return [HOME, ADMIN, ['Users', path]];
   if (seg[0] === 'activity') return [HOME, ADMIN, ['User activity', path]];
