@@ -18,19 +18,19 @@ import { num, fmtAmt, fmtDay, fmtFullDate, monthKey, monthLabel, monthStart, tod
 import Omr from '@/components/Omr';
 import EditToggle from '@/components/EditToggle';
 import SalarySlipPaper from '@/components/SalarySlip';
-import { SALARY_FIELDS, salaryTotal, salaryPayable, allowancePlan, vatOf, driverProfit, TAX_RATE } from '@/lib/transport';
+import { SALARY_FIELDS, salaryTotal, salaryPayable, allowancePlan, vatOf, driverProfit, TAX_RATE, rentNet, dieselNet } from '@/lib/transport';
 import { requestEditPassword, lockEdit } from '@/lib/editLock';
 
 const NUM_KEYS = ['rent', 'received', 'driver_allowance', 'diesel', 'toll', 'maintenance', 'gate_pass', 'exit_fee', 'empty_border_fee', 'container_wash', 'vehicle_wash'];
 
 /* Print / export: pick the columns (indexes into tableData().head). Saved on this device. */
-const COLS_KEY = 'tudo-trip-print-cols-v2';
-const DEFAULT_COLS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14];
+const COLS_KEY = 'tudo-trip-print-cols-v3'; // v3: rent / diesel with and without VAT
+const DEFAULT_COLS = [0, 1, 2, 3, 4, 18, 5, 6, 7, 8, 9, 11, 19, 12, 13, 14];
 const PRESETS = [
   ['All columns', null],
   ['Driver copy (no money in)', [0, 1, 2, 3, 9, 10, 11, 14]],
-  ['Money only', [0, 1, 2, 4, 5, 6, 7, 8]],
-  ['Costs only', [0, 1, 2, 3, 9, 11, 12, 13]],
+  ['Money only', [0, 1, 2, 4, 18, 5, 6, 7, 8]],
+  ['Costs only', [0, 1, 2, 3, 9, 11, 19, 12, 13]],
   ['Standard', DEFAULT_COLS]
 ];
 
@@ -133,6 +133,7 @@ function DriverSheet() {
   totals.net = num(totals.rent - totals.costs);
   totals.vat = num(rows.reduce((t, e) => t + vatOf(e), 0));
   totals.rentNet = num(totals.rent - totals.vat);
+  totals.dieselNet = num(rows.reduce((t, e) => t + dieselNet(e), 0));
 
   /* Profit of this sheet (month or all months) and the running balance of all months */
   const inPeriod = (d) => month === 'all' || monthKey(d) === month;
@@ -272,7 +273,8 @@ function DriverSheet() {
     { key: 'entry_date', label: 'Date', type: 'date', width: 128, render: (r) => fmtDay(r.entry_date) },
     { key: 'from_place', label: 'From', type: 'text', width: 130 },
     { key: 'to_place', label: 'To', type: 'text', width: 170, render: (r) => r.to_place || (r.description ? <em className="muted">{r.description}</em> : '') },
-    { key: 'rent', label: 'Total rent', type: 'number', min: 0, width: 104, render: amt('rent') },
+    { key: 'rent', label: 'Total rent with VAT', type: 'number', min: 0, width: 120, render: amt('rent') },
+    { key: 'rent_net', label: 'Total rent without VAT', type: 'calc', width: 130, render: (r) => (Number(r.rent) ? fmtAmt(rentNet(r)) : <span className="muted">–</span>) },
     {
       key: 'vat_included', label: 'VAT 5%', type: 'calc', width: 170,
       render: (r) => (Number(r.rent) > 0 ? (
@@ -288,7 +290,8 @@ function DriverSheet() {
     { key: 'payment_status', label: 'Payment', type: 'select', options: ['Received', 'Not Received', 'Partly received'], width: 132, render: (r) => r.payment_status ? <span className={`tag ${/not/i.test(r.payment_status) ? 'due' : /receiv/i.test(r.payment_status) ? 'ok' : 'info'}`}>{r.payment_status}</span> : '' },
     { key: 'driver_allowance', label: 'Driver allowance', type: 'number', min: 0, width: 118, render: amt('driver_allowance') },
     { key: 'allowance_status', label: 'Allowance', type: 'select', options: ['Paid', 'Not paid'], width: 104, render: (r) => r.allowance_status ? <span className={`tag ${/not/i.test(r.allowance_status) ? 'warn' : r.allowance_status === 'Paid' ? 'ok' : 'info'}`}>{r.allowance_status}{r.allowance_status === 'Paid' && r.allowance_salary_id && salMonths[r.allowance_salary_id] > monthKey(r.entry_date) ? ` (${monthLabel(salMonths[r.allowance_salary_id])})` : ''}</span> : '' },
-    { key: 'diesel', label: 'Diesel', type: 'number', min: 0, width: 92, render: amt('diesel') },
+    { key: 'diesel', label: 'Diesel with VAT', type: 'number', min: 0, width: 110, render: amt('diesel') },
+    { key: 'diesel_net', label: 'Diesel without VAT', type: 'calc', width: 120, render: (r) => (Number(r.diesel) ? fmtAmt(dieselNet(r)) : <span className="muted">–</span>) },
     { key: 'toll', label: 'Toll / other', type: 'number', min: 0, width: 100, render: amt('toll') },
     { key: 'maintenance', label: 'Maintenance', type: 'number', min: 0, width: 112, render: amt('maintenance') },
     // from the Driver trip form (31 Oct 2026): extra trip costs, papers and Trip complete
@@ -342,19 +345,20 @@ function DriverSheet() {
   }
 
   function tableData(list = rows) {
-    const head = ['Date', 'From', 'To', 'Description', 'Rent', 'Received', 'Received on', 'Balance', 'Payment', 'Driver allow.', 'Allowance', 'Diesel', 'Toll/other', 'Maint.', 'Status', 'Credit in', 'Entered by', 'VAT 5%', 'Rent w/o VAT'];
+    const head = ['Date', 'From', 'To', 'Description', 'Total rent with VAT', 'Received', 'Received on', 'Balance', 'Payment', 'Driver allow.', 'Allowance', 'Diesel with VAT', 'Toll/other', 'Maint.', 'Status', 'Credit in', 'Entered by', 'VAT 5%', 'Total rent without VAT', 'Diesel without VAT'];
     const data = list.map((r) => [
       fmtFullDate(r.entry_date), r.from_place || '', r.to_place || '', r.description || '',
       num(r.rent), num(r.received), r.received_date ? fmtFullDate(r.received_date) : '', num(Number(r.rent || 0) - Number(r.received || 0)), r.payment_status || '',
       num(r.driver_allowance), r.allowance_status || '', num(r.diesel), num(r.toll), num(r.maintenance), r.remarks || '', r.credit_in || '', r.entered_by || '',
-      vatOf(r), num(Number(r.rent || 0) - vatOf(r))
+      vatOf(r), rentNet(r), dieselNet(r)
     ]);
     const tot = (k) => num(list.reduce((t, e) => t + Number(e[k] || 0), 0));
     const trips = list.filter((e) => Number(e.rent) > 0).length;
     const T = { rent: tot('rent'), received: tot('received'), driver_allowance: tot('driver_allowance'), diesel: tot('diesel'), toll: tot('toll'), maintenance: tot('maintenance') };
     const V = num(list.reduce((t, e) => t + vatOf(e), 0));
-    const totalsRow = ['Total', `${trips} trips`, '', '', T.rent, T.received, '', num(T.rent - T.received), '', T.driver_allowance, '', T.diesel, T.toll, T.maintenance, '', '', '', V, num(T.rent - V)];
-    return { head, data, totalsRow, numCols: [4, 5, 7, 9, 11, 12, 13, 17, 18] };
+    const DN = num(list.reduce((t, e) => t + dieselNet(e), 0));
+    const totalsRow = ['Total', `${trips} trips`, '', '', T.rent, T.received, '', num(T.rent - T.received), '', T.driver_allowance, '', T.diesel, T.toll, T.maintenance, '', '', '', V, num(T.rent - V), DN];
+    return { head, data, totalsRow, numCols: [4, 5, 7, 9, 11, 12, 13, 17, 18, 19] };
   }
 
   async function doExcel() {
@@ -750,7 +754,7 @@ function DriverSheet() {
           emptyText="No trips in this month."
           footer={{
             entry_date: `${totals.trips} trips`,
-            rent: fmtAmt(totals.rent), received: fmtAmt(totals.received), vat_included: totals.vat ? `VAT ${fmtAmt(totals.vat)}` : '',
+            rent: fmtAmt(totals.rent), rent_net: fmtAmt(totals.rentNet), diesel_net: fmtAmt(totals.dieselNet), received: fmtAmt(totals.received), vat_included: totals.vat ? `VAT ${fmtAmt(totals.vat)}` : '',
             balance: <span className={totals.balance > 0 ? 'neg' : ''}>{fmtAmt(totals.balance)}</span>,
             driver_allowance: prevOpenTotal > 0 ? <span className="fa-prev">{fmtAmt(totals.driver_allowance)}<small>+ prev. {fmtAmt(prevOpenTotal)} not paid</small></span> : fmtAmt(totals.driver_allowance), diesel: fmtAmt(totals.diesel),
             toll: fmtAmt(totals.toll), maintenance: fmtAmt(totals.maintenance)

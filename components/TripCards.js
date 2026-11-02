@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Fragment } from 'react';
 import DateInput from '@/components/DateInput';
 import { TextInput, PayRow, money } from '@/components/PayCard';
 import { fmtDay } from '@/lib/sheet';
@@ -121,7 +121,7 @@ export default function TripCards({ rows, columns, canEdit, onSave, onAdd, onDel
                           <span className="pc-v">{r.vat_included ? money(vatOf(r)) : '–'}</span>
                         </div>
                       )}
-                      {r.vat_included && n(r.rent) > 0 ? <PayRow label="Rent without VAT" value={r3(n(r.rent) - vatOf(r))} /> : null}
+                      {n(r.rent) > 0 ? <PayRow label="Total rent without VAT" value={r3(n(r.rent) - vatOf(r))} /> : null}
                       <PayRow label={lab('received')} value={r.received}>{canEdit ? field(r, 'received') : undefined}</PayRow>
                       {(canEdit || r.received_date) && (
                         <PayRow label={lab('received_date')}>
@@ -149,7 +149,10 @@ export default function TripCards({ rows, columns, canEdit, onSave, onAdd, onDel
                     <div className="pc-sec">
                       <h4>Costs</h4>
                       {['diesel', 'toll', 'maintenance'].map((k) => (canEdit || n(r[k])) ? (
-                        <PayRow key={k} label={lab(k)} value={r[k]}>{canEdit ? field(r, k) : undefined}</PayRow>
+                        <Fragment key={k}>
+                          <PayRow label={lab(k)} value={r[k]}>{canEdit ? field(r, k) : undefined}</PayRow>
+                          {k === 'diesel' && n(r.diesel) > 0 ? <PayRow label="Diesel without VAT" value={r3((n(r.diesel) * 100) / 105)} /> : null}
+                        </Fragment>
                       ) : null)}
                       {!canEdit && costs > 0 && <PayRow label="Total costs" value={costs} kind="total" />}
                     </div>
@@ -190,16 +193,17 @@ export default function TripCards({ rows, columns, canEdit, onSave, onAdd, onDel
           <div className="pc-body tc-total-body">
             <div className="pc-sec">
               <h4>Money</h4>
-              <PayRow label="Total rent" value={totals.rent} />
+              <PayRow label="Total rent with VAT" value={totals.rent} />
               {totals.vat > 0 && <PayRow label="VAT 5% (inside rent)" value={totals.vat} kind="minus" />}
-              {totals.vat > 0 && <PayRow label="Rent without VAT" value={totals.rentNet} kind="total" />}
+              <PayRow label="Total rent without VAT" value={totals.rentNet} kind="total" />
               <PayRow label="Received" value={totals.received} />
               <PayRow label="Balance to collect" kind={totals.balance > 0 ? 'due' : 'total'}>{totals.balance ? money(totals.balance) : 'Nil ✓'}</PayRow>
             </div>
             <div className="pc-sec">
               <h4>Driver and costs</h4>
               <PayRow label="Driver allowance" value={totals.driver_allowance} note={prevOpenTotal > 0 ? `+ previous ${money(prevOpenTotal)} not paid` : undefined} />
-              <PayRow label="Diesel" value={totals.diesel} />
+              <PayRow label="Diesel with VAT" value={totals.diesel} />
+              <PayRow label="Diesel without VAT" value={totals.dieselNet ?? r3(n(totals.diesel) * 100 / 105)} />
               <PayRow label="Toll / other" value={totals.toll} />
               <PayRow label="Maintenance" value={totals.maintenance} />
             </div>
