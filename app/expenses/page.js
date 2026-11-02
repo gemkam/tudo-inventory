@@ -201,7 +201,8 @@ function ExpensesPage() {
     { key: 'paid', label: 'Paid OMR', type: 'number', min: 0, width: 110, render: amt('paid') },
     { key: 'unpaid', label: 'Unpaid OMR', type: 'number', min: 0, width: 110, render: amt('unpaid') },
     { key: 'vat', label: 'VAT 5%', type: 'number', min: 0, width: 95, render: amt('vat') },
-    { key: 'vat_reg_no', label: 'VAT Reg No', type: 'text', width: 140 }
+    { key: 'vat_reg_no', label: 'VAT Reg No', type: 'text', width: 140 },
+    { key: 'vehicle_no', label: 'Vehicle No', type: 'text', width: 120 }
   ];
 
   const staffPaidCols = staff.some(hasPaidCols);
@@ -234,9 +235,9 @@ function ExpensesPage() {
   /* ---------- Export ---------- */
   function entryTable(list) {
     return {
-      head: ['SR#', 'Bill No', 'Date', 'Description', 'Department', 'Bill category', 'Head of account', 'Paid OMR', 'Unpaid OMR', 'VAT 5%', 'VAT Reg No'],
-      rows: list.map((r, i) => [i + 1, r.bill_no || '', fmtD(r.entry_date), r.description || '', r.department || '', r.category || '', r.head || '', num(r.paid), r.unpaid === null ? '' : num(r.unpaid), r.vat === null ? 'NA' : num(r.vat), r.vat_reg_no || 'NA']),
-      totalsRow: ['Total', '', '', `${list.length} bills`, '', '', '', total(list, 'paid'), total(list, 'unpaid'), total(list, 'vat'), ''],
+      head: ['SR#', 'Bill No', 'Date', 'Description', 'Department', 'Bill category', 'Head of account', 'Paid OMR', 'Unpaid OMR', 'VAT 5%', 'VAT Reg No', 'Vehicle No'],
+      rows: list.map((r, i) => [i + 1, r.bill_no || '', fmtD(r.entry_date), r.description || '', r.department || '', r.category || '', r.head || '', num(r.paid), r.unpaid === null ? '' : num(r.unpaid), r.vat === null ? 'NA' : num(r.vat), r.vat_reg_no || 'NA', r.vehicle_no || '']),
+      totalsRow: ['Total', '', '', `${list.length} bills`, '', '', '', total(list, 'paid'), total(list, 'unpaid'), total(list, 'vat'), '', ''],
       numCols: [7, 8, 9]
     };
   }

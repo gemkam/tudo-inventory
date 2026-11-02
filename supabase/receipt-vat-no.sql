@@ -2,4 +2,5 @@
 -- In public.sync_transport_exp(), company_docs branch, the insert has vat_reg_no =
 --   coalesce(nullif(new.scan->>'vat_no',''), nullif(new.party_vat,''))
 -- (scan.vat_no = VAT No. read from the bill, else the "VAT No." typed on the receipt).
+-- Also exp_entries.vehicle_no (new column) = nullif(new.scan->>'vehicle_no',''), shown as "Vehicle No" in the bills table and exports.
 -- Old receipts were re-synced with: update public.company_docs set updated_at = updated_at where kind = 'receipt';
