@@ -4002,3 +4002,9 @@ html.desk-on-phone .al-sheet-back { position: fixed; inset: 0; z-index: 1000; ba
 /* Powered by / KS TECH LLC sit under OFFICE SYSTEMS, a little lower (2 Nov 2026) */
 .intro-splash.story .is-center { margin-bottom: 0; }
 .intro-splash.story .is-powered { position: relative; left: auto; right: auto; bottom: auto; width: 100%; margin-top: clamp(40px, 9vh, 80px); background: none; }
+
+/* Data entry ＋ Add driver: same plain pill as "＋ Add company" (2 Nov 2026), far right of the driver row */
+.ent-drivers .ent-driver-add { grid-column: -2 / -1; grid-row: 1; justify-self: end; align-self: center; border: 1px solid var(--line); border-style: solid;
+  font: inherit; font-weight: 600; font-size: 14px; padding: 9px 18px; border-radius: 999px; background: var(--surface); color: var(--ink); cursor: pointer; box-shadow: none; }
+.ent-drivers .ent-driver-add:hover { background: var(--tint); color: var(--brown); }
+@media screen and (max-width: 760px) { .ent-page .ent-drivers .ent-driver-add { grid-column: auto; grid-row: auto; order: 99; justify-self: end; } }

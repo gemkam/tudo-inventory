@@ -277,12 +277,9 @@ function EntryPage() {
           </button>
         ))}
         {!drivers.length && <p className="muted">No drivers yet.</p>}
-        {/* ＋ Add New Driver: same card as a driver, at the far right (1 Nov 2026, replaces the toolbar button) */}
+        {/* ＋ Add driver: plain pill like ＋ Add company, at the far right (2 Nov 2026) */}
         {isOffice && (
-          <button type="button" className="ent-driver ent-driver-add" onClick={() => setAddDrv({ name: '', vehicle: '' })}>
-            <span className="ent-av" aria-hidden="true">＋</span>
-            <span><b>Add New Driver</b></span>
-          </button>
+          <button type="button" className="ent-driver-add" onClick={() => setAddDrv({ name: '', vehicle: '' })}>＋ Add driver</button>
         )}
       </div>
 
