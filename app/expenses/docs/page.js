@@ -11,6 +11,7 @@ import { todayISO, fmtFullDate } from '@/lib/sheet';
 import { omrInWords } from '@/lib/words';
 import DocImport from '@/components/DocImport';
 import EditToggle from '@/components/EditToggle';
+import PaperPreview from '@/components/PaperPreview';
 import { shortOf, hasShort, FUELS } from '@/lib/docShort';
 import { lockEdit } from '@/lib/editLock';
 import DocFiles from '@/components/DocFiles';
@@ -293,7 +294,29 @@ function DocsPage() {
         </div>
         {kind === 'receipt' && <p className="cd-hint no-print">When you save, this receipt is added to <b>{C.short}</b> expenses in All Companies{doc.department ? <> (department <b>{doc.department}</b>)</> : ''} by itself. Change or delete it here and the expense follows.</p>}
 
-        <article className={`cd-paper k-${kind}${ro ? ' ro' : ''}`}>
+        {kind === 'receipt' && (doc.files || []).length > 0 && (
+          <div className="pp-wrap">
+            <div className="pp-cap">🧾 Bill from {doc.party || 'the supplier'}</div>
+            <PaperPreview files={doc.files} />
+          </div>
+        )}
+
+        <article className={`cd-paper k-${kind}${ro ? ' ro' : ''}${kind === 'receipt' ? ' cd-purchase' : ''}`}>
+          {kind === 'receipt' ? (
+            /* Payment receipt = our purchase: NO letterhead (no logo, CR, address), just the record */
+            <header className="cd-head cd-head-plain">
+              <div className="cd-co">
+                <b>Payment receipt</b>
+                <span>Purchase by {C.short}</span>
+              </div>
+              <div className="cd-title">
+                <div className="cd-meta">
+                  <label><span>No.</span><input className="cd-in" value={doc.doc_no || ''} readOnly={ro} onChange={(e) => set('doc_no', e.target.value)} /></label>
+                  <label><span>Date</span>{ro ? <span className="cd-ro">{fmtD(doc.doc_date)}</span> : <DateInput className="cd-in" value={doc.doc_date || ''} onChange={(v) => set('doc_date', v)} />}</label>
+                </div>
+              </div>
+            </header>
+          ) : (
           <header className="cd-head">
             <img className="cd-logo" src={C.logo} alt={C.short} />
             <div className="cd-co">
@@ -309,7 +332,8 @@ function DocsPage() {
               </div>
             </div>
           </header>
-          <div className="cd-rule" />
+          )}
+          {kind !== 'receipt' && <div className="cd-rule" />}
 
           <section className="cd-party">
             <div className="cd-cap">{K.party}</div>
@@ -382,12 +406,12 @@ function DocsPage() {
 
           <textarea className={`cd-in cd-notes${doc.notes ? '' : ' is-empty'}`} rows={2} placeholder="Notes (optional)" value={doc.notes || ''} readOnly={ro} onChange={(e) => set('notes', e.target.value)} />
 
-          <footer className="cd-sign">
+          {kind !== 'receipt' && <footer className="cd-sign">
             <div><div className="cd-line" /><span>{kind === 'receipt' ? 'Paid by' : 'Authorised signature'}</span>
               <input className="cd-in cd-signame" placeholder="Name (optional)" value={doc.signatory || ''} readOnly={ro} onChange={(e) => set('signatory', e.target.value)} />
             </div>
             <div><div className="cd-line" /><span>{kind === 'receipt' ? 'Received by' : 'Received by (client)'}</span></div>
-          </footer>
+          </footer>}
         </article>
 
         {doc.id || doc.scan ? (
