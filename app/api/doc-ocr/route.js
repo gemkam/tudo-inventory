@@ -17,7 +17,7 @@ export const maxDuration = 60;
 const PROMPT = `You read photos of bills, invoices, fuel receipts and payment receipts from Oman (English and Arabic).
 Currency is Omani Rial (OMR, RO, R.O., ر.ع) with 3 decimals (1 OMR = 1000 baisa). Dates in Oman are day/month/year.
 Glossary:
-- MOGAS 95, M95, Mogas Super, Super = PETROL (super). MOGAS 91, M91, Regular = PETROL (regular). Gasoil, Diesel = DIESEL.
+- MOGAS 98, MOGAS 95, MOGAS 91, M98, M95, M91, Super, Regular = PETROL. Gasoil, Diesel = DIESEL.
 - VEH, VEH No, Vehicle No, Plate = vehicle number (Oman plates look like 1234 AB).
 - TXN, TXN ID, Trans No = transaction id. TID = terminal id. MID = merchant id. Ticket / Ticket No = ticket number.
 - Pump, Pump No, Nozzle = pump number. User / Cashier / Attendant = the person at the counter.
@@ -150,6 +150,8 @@ function clean(p) {
   const mode = ['inclusive', 'exclusive', 'none'].includes(p.vat_mode) ? p.vat_mode : (vat ? 'inclusive' : 'none');
   if (total === null && items.length) total = r3(items.reduce((t, i) => t + (i.amount || 0), 0) + (mode === 'exclusive' ? vat || 0 : 0));
   if (sub === null && total !== null) sub = r3(total - (vat || 0));
+  // VAT inside the total (fuel): subtotal must be total minus VAT (the AI sometimes repeats the total)
+  if (total !== null && vat && mode !== 'exclusive' && Math.abs(r3(sub + vat) - total) > 0.004) sub = r3(total - vat);
   if (vat === null && sub !== null && total !== null) vat = r3(total - sub);
   return {
     doc_type: String(p.doc_type || 'other'),

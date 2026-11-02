@@ -11,6 +11,7 @@ import { todayISO, fmtFullDate } from '@/lib/sheet';
 import { omrInWords } from '@/lib/words';
 import DocImport from '@/components/DocImport';
 import EditToggle from '@/components/EditToggle';
+import { shortOf, hasShort, FUELS } from '@/lib/docShort';
 import { lockEdit } from '@/lib/editLock';
 import DocFiles from '@/components/DocFiles';
 import { COMPANIES, companyOf, DEPARTMENTS, HEADS, CATEGORIES, PAY_METHODS, n, r3 } from '@/lib/expenses';
@@ -160,6 +161,7 @@ function DocsPage() {
       payment_method: doc.payment_method || null, department: doc.department || null, head: doc.head || null, category: doc.category || null,
       notes: doc.notes || null, signatory: doc.signatory || null, updated_at: new Date().toISOString()
     };
+    if (doc.scan) row.scan = doc.scan;
     const s = sb().from('company_docs');
     const res = doc.id
       ? await s.update(row).eq('id', doc.id).select().single()
@@ -402,14 +404,34 @@ function DocsPage() {
                   }} />
               </div>
             )}
-            {doc.scan?.fields?.length ? (
-              <details className="di-fields" open>
-                <summary>Details read from the paper ({doc.scan.fields.length})</summary>
-                <table><tbody>
-                  {doc.scan.fields.map((x, i) => <tr key={i}><td>{x.label}</td><td>{x.value}</td></tr>)}
-                </tbody></table>
-              </details>
-            ) : null}
+            {doc.scan || hasShort(doc) ? (() => {
+              const x = shortOf(doc);
+              const setS = (k, v) => { setDoc((d) => ({ ...d, scan: { ...shortOf(d), ...(d.scan || {}), [k]: v } })); setDirty(true); };
+              const box = (k, label) => (
+                <label key={k}><span>{label}</span>
+                  {ro ? <b>{x[k] || '-'}</b> : <input value={x[k] || ''} onChange={(e) => setS(k, e.target.value)} />}
+                </label>
+              );
+              return (
+                <div className="dx-short">
+                  <div className="dx-short-cap">From the paper <small>(not printed on the letterhead)</small></div>
+                  <div className="dx-short-grid">
+                    {box('receipt_no', 'Receipt No.')}
+                    {box('vehicle_no', 'Vehicle No.')}
+                    <label><span>Fuel</span>
+                      {ro ? <b>{x.fuel || '-'}</b> : (
+                        <select value={x.fuel || ''} onChange={(e) => setS('fuel', e.target.value)}>
+                          <option value="">Not fuel</option>{FUELS.map((f) => <option key={f} value={f}>{f}</option>)}
+                        </select>
+                      )}
+                    </label>
+                    {box('vat_no', 'VAT No.')}
+                    <label><span>Amount</span><b>{x.amount === null || x.amount === undefined || x.amount === '' ? '-' : <Omr v={n(x.amount)} />}</b>
+                      {n(x.vat_amount) ? <small className="muted">VAT {fmt3(x.vat_amount)} inside</small> : null}</label>
+                  </div>
+                </div>
+              );
+            })() : null}
           </section>
         ) : null}
 
@@ -480,7 +502,7 @@ function DocsPage() {
       ) : (
         <div className="iv-table-wrap">
           <table className="iv-list" style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead><tr>{canEdit && <th className="dx-c"><input type="checkbox" aria-label="Select all" checked={!!shown.length && picked.length === shown.length} onChange={() => setPicked(picked.length === shown.length ? [] : shown.map((d) => d.id))} /></th>}<th>No.</th><th>Date</th><th>{K.party}</th><th>Details</th>{kind === 'receipt' && <th>Department</th>}<th className="num">Total OMR</th></tr></thead>
+            <thead><tr>{canEdit && <th className="dx-c"><input type="checkbox" aria-label="Select all" checked={!!shown.length && picked.length === shown.length} onChange={() => setPicked(picked.length === shown.length ? [] : shown.map((d) => d.id))} /></th>}<th>No.</th><th>Date</th><th>{K.party}</th><th>Receipt No.</th><th>Vehicle No.</th><th>Fuel</th><th>VAT No.</th>{kind === 'receipt' && <th>Department</th>}<th className="num">Amount OMR</th></tr></thead>
             <tbody>
               {shown.map((d) => (
                 <tr key={d.id} tabIndex={0} className={picked.includes(d.id) ? 'dx-on' : ''} onClick={() => openDoc(d)} onKeyDown={(e) => e.key === 'Enter' && openDoc(d)}>
@@ -488,7 +510,12 @@ function DocsPage() {
                   <td className="iv-list-no">{d.doc_no}{(d.files || []).length ? ' 📎' : ''}</td>
                   <td>{fmtD(d.doc_date)}</td>
                   <td>{d.party}</td>
-                  <td className="muted">{(d.items || []).map((i) => i.desc).filter(Boolean).join(', ').slice(0, 70)}</td>
+                  {(() => { const x = shortOf(d); return (<>
+                    <td className="dx-rno">{x.receipt_no}</td>
+                    <td>{x.vehicle_no}</td>
+                    <td>{x.fuel ? <span className={`dx-fuel f-${x.fuel.toLowerCase()}`}>{x.fuel}</span> : ''}</td>
+                    <td className="muted">{x.vat_no}</td>
+                  </>); })()}
                   {kind === 'receipt' && <td>{d.department || ''}</td>}
                   <td className="num"><Omr v={totalOf(d)} /></td>
                 </tr>

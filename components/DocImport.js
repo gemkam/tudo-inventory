@@ -7,6 +7,7 @@ import Omr from '@/components/Omr';
 import { sb } from '@/lib/supabase';
 import { todayISO } from '@/lib/sheet';
 import { HEADS, CATEGORIES, PAY_METHODS, DEPARTMENTS, n, r3 } from '@/lib/expenses';
+import { fuelOf, FUELS } from '@/lib/docShort';
 
 /*
   📥 Import documents for All Companies > Invoices / Payment receipts (app/expenses/docs/page.js).
@@ -93,8 +94,9 @@ async function fileToImage(file) {
 
 /* AI result -> a form the user checks */
 function toForm(d, kind, co, last) {
-  const fuel = d.is_fuel;
-  const diesel = (d.items || []).some((i) => /diesel|gasoil/i.test(i.desc));
+  const fuelType = fuelOf((d.items || []).map((i) => i.desc).join(' ')) || (d.is_fuel ? 'Petrol' : '');
+  const fuel = !!fuelType;
+  const diesel = fuelType === 'Diesel';
   const mode = d.vat_mode;
   const vatOn = n(d.vat_amount) > 0;
   const raw = (d.items || []).length ? d.items : [{ desc: d.doc_type || 'Payment', amount: d.total }];
@@ -102,11 +104,8 @@ function toForm(d, kind, co, last) {
   // inclusive VAT: bring the lines down to their amount without VAT, so subtotal + 5% = the paper total
   const target = vatOn ? n(d.subtotal_excl_vat) : n(d.total) || rawSum;
   const factor = mode === 'inclusive' && vatOn && rawSum ? target / rawSum : 1;
-  const extra = [d.vehicle_no ? `Vehicle ${d.vehicle_no}` : '', d.doc_no ? `Ref ${d.doc_no}` : ''].filter(Boolean).join(' · ');
-  const items = raw.map((i, k) => {
-    const qty = i.qty ? ` ${i.qty}${i.unit ? ` ${i.unit}` : ''}${i.unit_price ? ` x ${i.unit_price}` : ''}` : '';
-    return { desc: `${i.desc || 'Item'}${qty}${k === 0 && extra ? ` · ${extra}` : ''}`, amount: r3(n(i.amount) * factor).toFixed(3) };
-  });
+  // the line printed on the letterhead stays short: only the product (vehicle, receipt no. etc. are NOT printed)
+  const items = raw.map((i) => ({ desc: i.desc || 'Item', amount: r3(n(i.amount) * factor).toFixed(3) }));
   // any rounding gap goes on the first line
   const gap = r3(target - items.reduce((t, i) => t + n(i.amount), 0));
   if (gap && Math.abs(gap) < 0.05) items[0].amount = r3(n(items[0].amount) + gap).toFixed(3);
@@ -116,16 +115,19 @@ function toForm(d, kind, co, last) {
     kind,
     doc_date: d.date || todayISO(),
     party: d.vendor || '',
-    party_details: [d.vendor_details, d.time ? `Time ${d.time}` : ''].filter(Boolean).join(' · '),
+    party_details: '',
     party_vat: d.vendor_vat || '',
+    receipt_no: d.doc_no || '',
+    vehicle_no: d.vehicle_no || '',
+    fuel: fuelType,
     payment_method: pay,
     department: last?.department || (DEPARTMENTS[co] || [])[0] || '',
     head: fuel ? 'Vehicle Running and Maintenance' : last?.head || 'Office Expenses',
     category: fuel ? (diesel ? 'Diesel' : 'Petrol') : last?.category || '',
     vat_pct: vatOn ? 5 : 0,
     items,
-    fields: d.fields || [],
     paperTotal: d.total,
+    vat_amount: d.vat_amount,
     scan: d,
     diesel
   };
@@ -137,9 +139,12 @@ export default function DocImport({ co, coShort, kind, userName, last, nextNo, o
   const [saving, setSaving] = useState(false);
 
   const upd = (id, fn) => setCards((cs) => cs.map((c) => (c.id === id ? fn(c) : c)));
-  const setF = (id, k, v) => upd(id, (c) => ({ ...c, form: { ...c.form, [k]: v } }));
+  const setF = (id, k, v) => upd(id, (c) => {
+    const form = { ...c.form, [k]: v };
+    if (k === 'fuel' && v) { form.category = v; form.head = 'Vehicle Running and Maintenance'; }
+    return { ...c, form };
+  });
   const setItem = (id, i, k, v) => upd(id, (c) => ({ ...c, form: { ...c.form, items: c.form.items.map((x, j) => (j === i ? { ...x, [k]: v } : x)) } }));
-  const setField = (id, i, k, v) => upd(id, (c) => ({ ...c, form: { ...c.form, fields: c.form.fields.map((x, j) => (j === i ? { ...x, [k]: v } : x)) } }));
 
   async function readOne(card) {
     try {
@@ -189,7 +194,11 @@ export default function DocImport({ co, coShort, kind, userName, last, nextNo, o
         head: f.kind === 'receipt' ? f.head || null : null,
         category: f.kind === 'receipt' ? f.category || null : null,
         notes: null, signatory: null, created_by: userName || null,
-        scan: { ...c.form.scan, fields: f.fields, file_name: c.name, model: c.model, read_at: new Date().toISOString() }
+        // only the short details are kept (Kamran: Receipt No., Amount, VAT No., Vehicle No., Fuel)
+        scan: {
+          receipt_no: f.receipt_no.trim(), vehicle_no: f.vehicle_no.trim(), fuel: f.fuel, vat_no: f.party_vat.trim(),
+          amount: f.paperTotal ?? null, vat_amount: f.vat_amount ?? null, file_name: c.name
+        }
       };
       const { data, error } = await sb().from('company_docs').insert(row).select().single();
       if (error) { upd(c.id, (x) => ({ ...x, status: 'error', error: error.code === '42501' ? 'You need Full access to save.' : error.message })); continue; }
@@ -260,7 +269,13 @@ export default function DocImport({ co, coShort, kind, userName, last, nextNo, o
                           <div className="di-grid">
                             <label><span>Date</span><DateInput value={f.doc_date} onChange={(v) => setF(c.id, 'doc_date', v)} /></label>
                             <label className="wide"><span>{f.kind === 'receipt' ? 'Paid to' : 'Bill to'}</span><input value={f.party} onChange={(e) => setF(c.id, 'party', e.target.value)} /></label>
-                            <label className="wide"><span>Details</span><input value={f.party_details} onChange={(e) => setF(c.id, 'party_details', e.target.value)} /></label>
+                            <label><span>Receipt No.</span><input value={f.receipt_no} onChange={(e) => setF(c.id, 'receipt_no', e.target.value)} /></label>
+                            <label><span>Vehicle No.</span><input value={f.vehicle_no} onChange={(e) => setF(c.id, 'vehicle_no', e.target.value)} /></label>
+                            <label><span>Fuel</span>
+                              <select value={f.fuel} onChange={(e) => setF(c.id, 'fuel', e.target.value)}>
+                                <option value="">Not fuel</option>{FUELS.map((x) => <option key={x} value={x}>{x}</option>)}
+                              </select>
+                            </label>
                             <label><span>VAT No.</span><input value={f.party_vat} onChange={(e) => setF(c.id, 'party_vat', e.target.value)} /></label>
                             {f.kind === 'receipt' && (
                               <>
@@ -289,20 +304,6 @@ export default function DocImport({ co, coShort, kind, userName, last, nextNo, o
                             {f.paperTotal !== null && f.paperTotal !== undefined && <span className={off ? 'bad' : 'good'}>Paper says {r3(f.paperTotal).toFixed(3)} {off ? '⚠ not the same' : '✓'}</span>}
                           </div>
 
-                          <details className="di-fields" open>
-                            <summary>All details on the paper ({f.fields.length})</summary>
-                            <table>
-                              <tbody>
-                                {f.fields.map((x, i) => (
-                                  <tr key={i}>
-                                    <td><input value={x.label} onChange={(e) => setField(c.id, i, 'label', e.target.value)} /></td>
-                                    <td><input value={x.value} onChange={(e) => setField(c.id, i, 'value', e.target.value)} /></td>
-                                  </tr>
-                                ))}
-                                {f.scan.cash_given !== null && <tr><td>Cash given</td><td>{num(f.scan.cash_given)}{f.scan.change !== null ? ` · Change ${num(f.scan.change)}` : ''}</td></tr>}
-                              </tbody>
-                            </table>
-                          </details>
                         </>
                       )}
                     </div>
