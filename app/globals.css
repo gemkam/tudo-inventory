@@ -4079,3 +4079,17 @@ tr.dx-on td { background: var(--tint, #eef7f3); }
 @media print { .pp-wrap { break-after: page; } .pp-img { max-height: 95vh; } }
 .dx-tiles { margin-top: 14px; }
 .di-dup { background: #fde4e1; color: #a5281b; font-weight: 600; }
+
+/* PC / laptop (2 Nov 2026): same as the phone. The Alerts column is hidden, the floating alarm clock opens the list
+   as a box on the right; tiles use the full width. */
+@media screen and (min-width: 761px) {
+  html:not(.desk-on-phone) .home-grid { grid-template-columns: 1fr; }
+  html:not(.desk-on-phone) .home-grid .alerts-col { display: none; }
+  html:not(.desk-on-phone) .home-grid .alerts-col.mob-open {
+    display: block; position: fixed; top: 80px; right: 20px; bottom: 20px; left: auto; width: min(440px, calc(100vw - 40px));
+    z-index: 1001; max-height: none; overflow: auto; animation: al-pop .2s ease-out;
+  }
+  html:not(.desk-on-phone) .al-chev { display: inline-flex; align-items: center; justify-content: center; margin-left: auto; width: 34px; height: 34px;
+    border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--ink); font-size: 16px; cursor: pointer; }
+  html:not(.desk-on-phone) .al-sheet-back { position: fixed; inset: 0; z-index: 1000; background: rgba(0, 0, 0, .25); }
+}

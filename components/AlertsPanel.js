@@ -22,10 +22,9 @@ import { buildDocReminders } from '@/lib/docChecklist';
 const POP_KEY = 'tudo-alarm-seen';
 /* Phones only (same width as the CSS below 760px). Also a phone with Chrome "Desktop site" switched on
    (app/layout.js marks it html.desk-on-phone): it is still a phone, so it gets the alarm clock (1 Nov 2026). */
+/* 2 Nov 2026: PC / laptop now works the same as the phone: only the floating alarm clock, click it to see the list. */
 function isPhone() {
-  try {
-    return document.documentElement.classList.contains('desk-on-phone') || window.matchMedia('(max-width: 760px)').matches;
-  } catch { return false; }
+  return true;
 }
 const LOCAL_KEY = 'tudo-closed-alerts';
 const WORDS = /\b(bank\s*transfer|cash|pdc|cheque)\b/i;
