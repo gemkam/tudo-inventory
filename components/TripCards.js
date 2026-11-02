@@ -151,6 +151,7 @@ export default function TripCards({ rows, columns, canEdit, onSave, onAdd, onDel
                       {['diesel', 'toll', 'maintenance'].map((k) => (canEdit || n(r[k])) ? (
                         <Fragment key={k}>
                           <PayRow label={lab(k)} value={r[k]}>{canEdit ? field(r, k) : undefined}</PayRow>
+                          {k === 'diesel' && n(r.diesel) > 0 ? <PayRow label="Diesel VAT 5% (inside)" value={r3(n(r.diesel) - (n(r.diesel) * 100) / 105)} kind="minus" /> : null}
                           {k === 'diesel' && n(r.diesel) > 0 ? <PayRow label="Diesel without VAT" value={r3((n(r.diesel) * 100) / 105)} /> : null}
                         </Fragment>
                       ) : null)}
@@ -203,6 +204,7 @@ export default function TripCards({ rows, columns, canEdit, onSave, onAdd, onDel
               <h4>Driver and costs</h4>
               <PayRow label="Driver allowance" value={totals.driver_allowance} note={prevOpenTotal > 0 ? `+ previous ${money(prevOpenTotal)} not paid` : undefined} />
               <PayRow label="Diesel with VAT" value={totals.diesel} />
+              <PayRow label="Diesel VAT 5% (inside)" value={totals.dieselVat ?? r3(n(totals.diesel) - n(totals.diesel) * 100 / 105)} kind="minus" />
               <PayRow label="Diesel without VAT" value={totals.dieselNet ?? r3(n(totals.diesel) * 100 / 105)} />
               <PayRow label="Toll / other" value={totals.toll} />
               <PayRow label="Maintenance" value={totals.maintenance} />

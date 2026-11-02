@@ -8,7 +8,7 @@ import CompanyHeader, { COMPANY_NAME } from '@/components/CompanyHeader';
 import Omr from '@/components/Omr';
 import { sb } from '@/lib/supabase';
 import { num, fmtAmt, fmtFullDate, monthKey, monthLabel, exportStamp, exportExcel, exportPdf } from '@/lib/sheet';
-import { vatOf, rentNet, dieselNet } from '@/lib/transport';
+import { vatOf, rentNet, dieselNet, dieselVat } from '@/lib/transport';
 
 /*
   All Drivers Trip Sheets (/transport/trip-sheets, opened from Drivers page and the Transport side menu).
@@ -17,7 +17,7 @@ import { vatOf, rentNet, dieselNet } from '@/lib/transport';
   ☑ Columns chooser (saved on this device, localStorage tudo-all-trips-cols) is used by Print, PDF and Excel.
 */
 
-const COLS_KEY = 'tudo-all-trips-cols-v2';
+const COLS_KEY = 'tudo-all-trips-cols-v3';
 const amtOrBlank = (v) => (Number(v) ? Number(v) : '');
 
 // [key, label, value(row), isNumber]
@@ -36,6 +36,7 @@ const COLUMNS = [
   ['allow', 'Driver allowance', (r) => num(r.driver_allowance), true],
   ['allow_st', 'Allowance', (r) => r.allowance_status || ''],
   ['diesel', 'Diesel with VAT', (r) => num(r.diesel), true],
+  ['diesel_vat', 'Diesel VAT 5%', (r) => dieselVat(r), true],
   ['diesel_net', 'Diesel without VAT', (r) => dieselNet(r), true],
   ['toll', 'Toll / other', (r) => num(r.toll), true],
   ['maint', 'Maintenance', (r) => num(r.maintenance), true],
@@ -44,13 +45,13 @@ const COLUMNS = [
   ['by', 'Entered by', (r) => r.entered_by || '']
 ];
 const ALL_KEYS = COLUMNS.map((c) => c[0]);
-const STANDARD = ['date', 'from', 'to', 'desc', 'rent', 'rent_net', 'received', 'balance', 'payment', 'allow', 'allow_st', 'diesel', 'diesel_net', 'toll', 'maint', 'status'];
+const STANDARD = ['date', 'from', 'to', 'desc', 'rent', 'rent_net', 'received', 'balance', 'payment', 'allow', 'allow_st', 'diesel', 'diesel_vat', 'diesel_net', 'toll', 'maint', 'status'];
 const PRESETS = [
   ['All columns', ALL_KEYS],
   ['Standard', STANDARD],
   ['Driver copy (no money in)', ['date', 'from', 'to', 'desc', 'allow', 'allow_st', 'diesel', 'status']],
   ['Money only', ['date', 'from', 'to', 'rent', 'vat', 'rent_net', 'received', 'recv_on', 'balance', 'payment']],
-  ['Costs only', ['date', 'from', 'to', 'desc', 'allow', 'diesel', 'diesel_net', 'toll', 'maint']]
+  ['Costs only', ['date', 'from', 'to', 'desc', 'allow', 'diesel', 'diesel_vat', 'diesel_net', 'toll', 'maint']]
 ];
 
 function AllTripSheets() {
