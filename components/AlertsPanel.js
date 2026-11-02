@@ -138,6 +138,10 @@ export default function AlertsPanel() {
   const [showClosed, setShowClosed] = useState(false);
   const [popup, setPopup] = useState(false);
   const [mobOpen, setMobOpen] = useState(false); /* phones: alerts hidden until the clock is tapped */
+  /* PC (2 Nov 2026): − minimizes the Alerts box to its heading, ▢ opens it again; remembered on this device */
+  const [mini, setMini] = useState(false);
+  useEffect(() => { try { setMini(localStorage.getItem('tudo-alerts-min') === '1'); } catch { /* ignore */ } }, []);
+  const toggleMini = () => setMini((m) => { const n = !m; try { localStorage.setItem('tudo-alerts-min', n ? '1' : '0'); } catch { /* ignore */ } return n; });
   const [phone, setPhone] = useState(false);
   useEffect(() => {
     let mq; try { mq = window.matchMedia('(max-width: 760px)'); } catch { return undefined; }
@@ -239,7 +243,7 @@ export default function AlertsPanel() {
     <>
     {phone && <FloatingClock count={open.length} ringing={urgent.length > 0} onOpen={() => setMobOpen(true)} />}
     {phone && mobOpen && <div className="al-sheet-back" onClick={() => setMobOpen(false)} aria-hidden="true" />}
-    <aside className={`alerts-col ${urgent.length ? 'has-urgent' : ''} ${mobOpen ? 'mob-open' : ''}`} aria-label="Alerts">
+    <aside className={`alerts-col ${urgent.length ? 'has-urgent' : ''} ${mobOpen ? 'mob-open' : ''} ${mini && !phone ? 'min' : ''}`} aria-label="Alerts">
       <div className="al-head">
         <button type="button" className="al-clock-btn" onClick={(e) => { if (isPhone()) return; e.stopPropagation(); if (urgent.length) setPopup(true); }}
           title={urgent.length ? 'Show urgent alerts' : 'No urgent alerts'} aria-label="Show urgent alerts"
@@ -251,6 +255,12 @@ export default function AlertsPanel() {
           <p>{all === null ? 'Checking...' : urgent.length ? `${urgent.length} need attention now` : open.length ? 'Tap × to close one' : 'Nothing needs attention'}</p>
         </div>
         <button type="button" className="al-chev" onClick={() => setMobOpen(false)} aria-label="Close alerts">✕</button>
+        {!phone && (
+          <button type="button" className="al-min" onClick={toggleMini} aria-expanded={!mini}
+            title={mini ? 'Open the alerts' : 'Minimize the alerts'} aria-label={mini ? 'Open the alerts' : 'Minimize the alerts'}>
+            {mini ? '▢' : '−'}
+          </button>
+        )}
       </div>
 
       <ol className="al-list">

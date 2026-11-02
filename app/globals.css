@@ -3973,3 +3973,12 @@ html.desk-on-phone .al-sheet-back { position: fixed; inset: 0; z-index: 1000; ba
   font: inherit; font-weight: 600; font-size: 14px; padding: 9px 18px; border-radius: 999px; background: var(--surface); color: var(--ink); cursor: pointer; box-shadow: none; }
 .ent-drivers .ent-driver-add:hover { background: var(--tint); color: var(--brown); }
 @media screen and (max-width: 760px) { .ent-page .ent-drivers .ent-driver-add { grid-column: auto; grid-row: auto; order: 99; justify-self: end; } }
+
+/* Alerts minimize (2 Nov 2026, PC): − shrinks the box to its heading (list hidden), ▢ opens it again; remembered per device */
+.al-min { margin-left: auto; flex: none; width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface);
+  color: var(--brown); font-size: 18px; font-weight: 700; line-height: 1; cursor: pointer; display: grid; place-items: center; }
+.al-min:hover, .al-min:focus-visible { background: var(--brown); color: #fff; border-color: var(--brown); }
+.alerts-col.min .al-list, .alerts-col.min .al-empty, .alerts-col.min .al-closed { display: none !important; }
+.alerts-col.min { max-height: none; overflow: visible; }
+.alerts-col.min .al-head { border-bottom: 0; margin-bottom: 0; padding-bottom: 0; }
+@media screen and (min-width: 1081px) { .home-grid:has(.alerts-col.min) { grid-template-columns: minmax(0, 1fr) 260px; } }
