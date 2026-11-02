@@ -10,7 +10,7 @@ export const maxDuration = 60;
   The page shrinks each photo / PDF page to a JPEG first. A vision AI reads the paper and returns JSON:
   the main fields for the receipt form + EVERY other label printed on the paper (TXN ID, Ticket, TID,
   Date of supply, Date of payment, Time, User, Pump No., VEH No. = vehicle number, product, quantity, price ...).
-  Order of AI services (each only if its key is set in Vercel): Groq vision -> OpenRouter -> Mistral -> OpenAI -> Anthropic.
+  Order of AI services (each only if its key is set in Vercel): Groq qwen/qwen3.8-27b (Llama 4 vision models were removed from Groq) -> OpenRouter -> Mistral -> OpenAI -> Anthropic.
   Nothing is saved here: the page shows the result to check and edit before Save.
 */
 
@@ -58,7 +58,7 @@ async function openaiStyle(url, key, models, image, errs) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
         body: JSON.stringify({
-          model, temperature: 0, max_tokens: 2000,
+          model, temperature: 0, max_tokens: 6000,
           messages: [{ role: 'user', content: [{ type: 'text', text: PROMPT }, { type: 'image_url', image_url: { url: image } }] }]
         })
       });
@@ -84,7 +84,7 @@ async function readImage(image) {
   const env = process.env;
   if (env.GROQ_API_KEY) {
     const a = await openaiStyle('https://api.groq.com/openai/v1/chat/completions', env.GROQ_API_KEY,
-      [env.OCR_MODEL, 'meta-llama/llama-4-maverick-17b-128e-instruct', 'meta-llama/llama-4-scout-17b-16e-instruct'], image, errs);
+      [env.OCR_MODEL, 'qwen/qwen3.8-27b'], image, errs);
     if (a) return a;
   }
   if (env.OPENROUTER_API_KEY) {
@@ -192,7 +192,7 @@ export async function POST(req) {
 
   try {
     const { text, model } = await readImage(image);
-    const m = String(text).match(/\{[\s\S]*\}/);
+    const m = String(text).replace(/<think>[\s\S]*?<\/think>/gi, '').match(/\{[\s\S]*\}/);
     let parsed;
     try { parsed = JSON.parse(m ? m[0] : '{}'); } catch { return Response.json({ error: 'The AI answer could not be read. Try again or use a clearer photo.' }, { status: 502 }); }
     return Response.json({ data: clean(parsed), model });
