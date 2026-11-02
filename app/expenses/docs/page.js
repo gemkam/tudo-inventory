@@ -10,6 +10,8 @@ import { sb } from '@/lib/supabase';
 import { todayISO, fmtFullDate } from '@/lib/sheet';
 import { omrInWords } from '@/lib/words';
 import DocImport from '@/components/DocImport';
+import EditToggle from '@/components/EditToggle';
+import { lockEdit } from '@/lib/editLock';
 import DocFiles from '@/components/DocFiles';
 import { COMPANIES, companyOf, DEPARTMENTS, HEADS, CATEGORIES, PAY_METHODS, n, r3 } from '@/lib/expenses';
 
@@ -39,6 +41,10 @@ function DocsPage() {
   const [del, setDel] = useState(false);
   const [q, setQ] = useState('');
   const [toast, setToast] = useState(null);
+  const [editing, setEditing] = useState(false); // ✏️ Edit (password 728300) -> Add, Delete, Move
+  const [picked, setPicked] = useState([]); // selected ids in Edit
+  const [bulk, setBulk] = useState(null); // { act: 'delete' | 'move', to }
+  const [busy, setBusy] = useState(false);
   const timer = useRef(null);
 
   const flash = useCallback((text, k = 'ok') => {
@@ -70,10 +76,11 @@ function DocsPage() {
     if (error) { flash(error.message, 'err'); setList([]); return; }
     setList(data || []);
   }, [co, kind, flash]);
-  useEffect(() => { setList(null); load(); }, [load]);
+  useEffect(() => { setList(null); setPicked([]); load(); }, [load]);
 
   const C = companyOf(co);
   const K = KINDS[kind];
+  const canEdit = isAdmin && editing;
 
   /* Choices from earlier documents (pick or type) */
   const parties = useMemo(() => [...new Set((list || []).map((d) => d.party).filter(Boolean))], [list]);
@@ -123,7 +130,7 @@ function DocsPage() {
   }
 
   function closeDoc() {
-    if (dirty && isAdmin && !window.confirm('Close without saving?')) return;
+    if (dirty && canEdit && !window.confirm('Close without saving?')) return;
     setDoc(null); setDirty(false);
   }
 
@@ -165,15 +172,72 @@ function DocsPage() {
     flash(kind === 'receipt' ? `Saved. Added to ${C.short} expenses (All Companies).` : 'Saved');
   }
 
+  function toggleEdit() {
+    if (editing) {
+      if (doc && dirty && !window.confirm('Close without saving?')) { return; }
+      if (doc && !doc.id) setDoc(null);
+      else if (doc && dirty) openDoc((list || []).find((d) => d.id === doc.id) || doc);
+      setEditing(false); setPicked([]); setBulk(null);
+      return;
+    }
+    setEditing(true);
+  }
+  // lock again when this page closes
+  useEffect(() => () => lockEdit(), []);
+
+  const pickOne = (id) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+
+  async function removeFiles(rows) {
+    const paths = rows.flatMap((d) => (d.files || []).map((f) => f.path)).filter(Boolean);
+    if (paths.length) await sb().storage.from('doc-files').remove(paths);
+  }
+
+  async function bulkDelete() {
+    const rows = (list || []).filter((d) => picked.includes(d.id));
+    setBusy(true);
+    const { error } = await sb().from('company_docs').delete().in('id', rows.map((d) => d.id));
+    if (!error) await removeFiles(rows);
+    setBusy(false);
+    if (error) { flash(error.code === '42501' ? 'You need Full access to delete.' : error.message, 'err'); return; }
+    setBulk(null); setPicked([]); load();
+    flash(`${rows.length} deleted${kind === 'receipt' ? '. Removed from All Companies too.' : ''}`);
+  }
+
+  /* Move to another company: new number of that company (PR-AW-0001 -> PR-ST-0005), its expense line moves too */
+  async function bulkMove(to) {
+    const rows = (list || []).filter((d) => picked.includes(d.id));
+    const T = companyOf(to);
+    setBusy(true);
+    const pre = `${K.prefix}-${CO_CODE[to] || 'X'}-`;
+    const { data: there } = await sb().from('company_docs').select('doc_no').eq('company', to).eq('kind', kind);
+    let max = (there || []).reduce((mx, d) => { const m = String(d.doc_no || '').match(/(\d+)\s*$/); return m ? Math.max(mx, Number(m[1])) : mx; }, 0);
+    let ok = 0; let err = '';
+    for (const d of [...rows].reverse()) {
+      max += 1;
+      const depts = DEPARTMENTS[to] || [];
+      const department = d.department && !depts.includes(d.department) && depts.length ? depts[0] : d.department;
+      const { error } = await sb().from('company_docs')
+        .update({ company: to, doc_no: `${pre}${String(max).padStart(4, '0')}`, department, updated_at: new Date().toISOString() })
+        .eq('id', d.id);
+      if (error) { err = error.code === '42501' ? 'You need Full access to move.' : error.message; break; }
+      ok += 1;
+    }
+    setBusy(false);
+    setBulk(null); setPicked([]); load();
+    if (err) flash(`${ok} moved. Stopped: ${err}`, 'err');
+    else flash(`${ok} moved to ${T.short}${kind === 'receipt' ? ' (expense lines moved too)' : ''}.`);
+  }
+
   async function deleteDoc() {
     const { error } = await sb().from('company_docs').delete().eq('id', doc.id);
     if (error) { flash(error.message, 'err'); return; }
+    await removeFiles([doc]);
     setDel(false); setDoc(null); setDirty(false); load();
     flash(kind === 'receipt' ? 'Deleted. Removed from All Companies too.' : 'Deleted');
   }
 
   function printDoc() {
-    if (dirty && isAdmin) flash('Tip: press Save first so this copy is kept.');
+    if (dirty && canEdit) flash('Tip: press Save first so this copy is kept.');
     setTimeout(() => window.print(), 50);
   }
 
@@ -195,7 +259,7 @@ function DocsPage() {
 
   /* ---------------- Editor / paper ---------------- */
   if (doc) {
-    const ro = !isAdmin;
+    const ro = !canEdit;
     const sub = lineTotal(doc.items);
     const vat = r3((sub * n(doc.vat_pct)) / 100);
     const tot = r3(sub + vat);
@@ -205,9 +269,10 @@ function DocsPage() {
         <div className="page-tools">
           <button type="button" className="crumb linkish" onClick={closeDoc}>← {K.label}</button>
           <div className="tools">
-            {isAdmin && <button type="button" className="btn" onClick={saveDoc} disabled={saving}>{saving ? 'Saving...' : dirty ? '💾 Save' : '✓ Saved'}</button>}
+            <EditToggle show={isAdmin} on={editing} onClick={toggleEdit} />
+            {canEdit && <button type="button" className="btn" onClick={saveDoc} disabled={saving}>{saving ? 'Saving...' : dirty ? '💾 Save' : '✓ Saved'}</button>}
             <button type="button" className="btn ghost" onClick={printDoc}>🖨 Print / PDF</button>
-            {isAdmin && doc.id && <button type="button" className="btn ghost danger-text" onClick={() => setDel(true)}>Delete</button>}
+            {canEdit && doc.id && <button type="button" className="btn ghost danger-text" onClick={() => setDel(true)}>Delete</button>}
           </div>
         </div>
         {kind === 'receipt' && <p className="cd-hint no-print">When you save, this receipt is added to <b>{C.short}</b> expenses in All Companies{doc.department ? <> (department <b>{doc.department}</b>)</> : ''} by itself. Change or delete it here and the expense follows.</p>}
@@ -315,7 +380,7 @@ function DocsPage() {
               <div className="di-saved-files">
                 <b>📎 Original paper</b>
                 <DocFiles row={{ id: `company_docs/${doc.id}`, owner: doc.party, doc_name: doc.doc_no, files: doc.files || [] }}
-                  canEdit={isAdmin} userName={me} flash={flash}
+                  canEdit={canEdit} userName={me} flash={flash}
                   onSave={async (files) => {
                     const { error } = await sb().from('company_docs').update({ files }).eq('id', doc.id);
                     if (error) { flash(error.message, 'err'); return; }
@@ -364,8 +429,7 @@ function DocsPage() {
         <Link href={`/expenses?co=${co}`} className="crumb">← All Companies</Link>
         <div className="tools">
           <input className="iv-search" type="search" placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} />
-          {isAdmin && <button type="button" className="btn" onClick={newDoc}>+ New {K.one.toLowerCase()}</button>}
-          {isAdmin && <DocImport co={co} coShort={C.short} kind={kind} userName={me} last={(list || [])[0]} nextNo={nextNoFor} onDone={load} flash={flash} />}
+          <EditToggle show={isAdmin} on={editing} onClick={toggleEdit} />
         </div>
       </div>
 
@@ -376,20 +440,37 @@ function DocsPage() {
         ))}
       </div>
 
+      {canEdit && (
+        <div className="dx-bar no-print">
+          <b>✏️ Edit</b>
+          <button type="button" className="btn" onClick={newDoc}>＋ Add {K.one.toLowerCase()}</button>
+          <DocImport co={co} coShort={C.short} kind={kind} userName={me} last={(list || [])[0]} nextNo={nextNoFor} onDone={load} flash={flash} />
+          <span className="dx-sep" />
+          <button type="button" className="btn ghost" disabled={!shown.length}
+            onClick={() => setPicked(picked.length === shown.length ? [] : shown.map((d) => d.id))}>
+            {picked.length && picked.length === shown.length ? '☐ Clear' : '☑ Select all'}
+          </button>
+          <button type="button" className="btn ghost danger-text" disabled={!picked.length} onClick={() => setBulk({ act: 'delete' })}>🗑 Delete{picked.length ? ` (${picked.length})` : ''}</button>
+          <button type="button" className="btn ghost" disabled={!picked.length}
+            onClick={() => setBulk({ act: 'move', to: COMPANIES.find((c) => c.key !== co)?.key || '' })}>↔ Move{picked.length ? ` (${picked.length})` : ''}</button>
+          <span className="muted dx-hint">{picked.length ? `${picked.length} selected` : 'Tick rows to delete or move'}</span>
+        </div>
+      )}
+
 
       {list === null ? <div className="loading">Loading...</div> : shown.length === 0 ? (
         <div className="iv-empty">
           <div className="iv-empty-mark">{kind === 'invoice' ? '🧾' : '💵'}</div>
           <p>No {K.label.toLowerCase()} yet for {C.short}.</p>
-          {isAdmin && <button type="button" className="btn" onClick={newDoc}>+ New {K.one.toLowerCase()}</button>}
         </div>
       ) : (
         <div className="iv-table-wrap">
           <table className="iv-list" style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead><tr><th>No.</th><th>Date</th><th>{K.party}</th><th>Details</th>{kind === 'receipt' && <th>Department</th>}<th className="num">Total OMR</th></tr></thead>
+            <thead><tr>{canEdit && <th className="dx-c"><input type="checkbox" aria-label="Select all" checked={!!shown.length && picked.length === shown.length} onChange={() => setPicked(picked.length === shown.length ? [] : shown.map((d) => d.id))} /></th>}<th>No.</th><th>Date</th><th>{K.party}</th><th>Details</th>{kind === 'receipt' && <th>Department</th>}<th className="num">Total OMR</th></tr></thead>
             <tbody>
               {shown.map((d) => (
-                <tr key={d.id} tabIndex={0} onClick={() => openDoc(d)} onKeyDown={(e) => e.key === 'Enter' && openDoc(d)}>
+                <tr key={d.id} tabIndex={0} className={picked.includes(d.id) ? 'dx-on' : ''} onClick={() => openDoc(d)} onKeyDown={(e) => e.key === 'Enter' && openDoc(d)}>
+                  {canEdit && <td className="dx-c" onClick={(e) => e.stopPropagation()}><input type="checkbox" aria-label={`Select ${d.doc_no}`} checked={picked.includes(d.id)} onChange={() => pickOne(d.id)} /></td>}
                   <td className="iv-list-no">{d.doc_no}{(d.files || []).length ? ' 📎' : ''}</td>
                   <td>{fmtD(d.doc_date)}</td>
                   <td>{d.party}</td>
@@ -402,6 +483,35 @@ function DocsPage() {
           </table>
         </div>
       )}
+
+      {bulk && (() => {
+        const rows = (list || []).filter((d) => picked.includes(d.id));
+        const names = rows.slice(0, 8).map((d) => <li key={d.id}><b>{d.doc_no}</b> · {fmtD(d.doc_date)} · {d.party} · {r3(totalOf(d)).toFixed(3)}</li>);
+        return bulk.act === 'delete' ? (
+          <Modal title={`Delete ${rows.length} ${rows.length === 1 ? K.one.toLowerCase() : K.label.toLowerCase()}?`} onClose={() => !busy && setBulk(null)}>
+            <ul className="dx-list">{names}{rows.length > 8 && <li>... and {rows.length - 8} more</li>}</ul>
+            {kind === 'receipt' && <p className="muted" style={{ margin: 0 }}>Their lines in All Companies are removed too, with the attached papers.</p>}
+            <div className="modal-actions">
+              <button className="btn ghost" onClick={() => setBulk(null)} disabled={busy}>Cancel</button>
+              <button className="btn danger" onClick={bulkDelete} disabled={busy}>{busy ? 'Deleting...' : '🗑 Delete'}</button>
+            </div>
+          </Modal>
+        ) : (
+          <Modal title={`Move ${rows.length} to another company`} onClose={() => !busy && setBulk(null)}>
+            <ul className="dx-list">{names}{rows.length > 8 && <li>... and {rows.length - 8} more</li>}</ul>
+            <label className="dx-to"><span>Move from <b>{C.short}</b> to</span>
+              <select value={bulk.to} onChange={(e) => setBulk({ ...bulk, to: e.target.value })}>
+                {COMPANIES.filter((c) => c.key !== co).map((c) => <option key={c.key} value={c.key}>{c.short}</option>)}
+              </select>
+            </label>
+            <p className="muted" style={{ margin: 0 }}>They get the next number of that company{kind === 'receipt' ? ' and their expense lines move to it too' : ''}.</p>
+            <div className="modal-actions">
+              <button className="btn ghost" onClick={() => setBulk(null)} disabled={busy}>Cancel</button>
+              <button className="btn" onClick={() => bulkMove(bulk.to)} disabled={busy || !bulk.to}>{busy ? 'Moving...' : '↔ Move'}</button>
+            </div>
+          </Modal>
+        );
+      })()}
       {toast && <div className={`toast ${toast.kind}`} role="status">{toast.text}</div>}
     </>
   );
