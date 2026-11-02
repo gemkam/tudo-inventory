@@ -16,7 +16,11 @@ import { useEffect, useRef, useState } from 'react';
 import { INTRO_REPLAY } from '@/lib/intro';
 import IntroScene from '@/components/IntroScene';
 
-const OUT_AT = 8800;   // ms after open when the fade out starts (KS TECH LLC done by ~5.8s, then holds 3 s)
+// Story (2 Nov 2026): 0-5 s the scene (office at work, trucks passing) fills the screen; at 5 s the camera
+// tilts up (scene slides down and away); at 5.6 s the logo, title, OFFICE SYSTEMS, Powered by, KS TECH LLC come in.
+const CAM_AT = 5000;   // camera goes up
+const BRAND_AT = 5600; // logo part starts (its own animation delays count from here)
+const OUT_AT = 13900;  // KS TECH LLC done ~5.8 s after BRAND_AT, holds ~2.5 s, then fade out
 const OUT_MS = 900;    // length of the fade out
 
 function Letters({ text, start, step, glint, className }) {
@@ -39,6 +43,7 @@ function Letters({ text, start, step, glint, className }) {
 export default function IntroSplash() {
   const [state, setState] = useState('play'); // play | out | gone
   const [run, setRun] = useState(0);           // changes on replay so every CSS animation starts again
+  const [phase, setPhase] = useState('scene'); // scene | cam | brand
   const timers = useRef([]);
   const leaving = useRef(false);
 
@@ -65,13 +70,17 @@ export default function IntroSplash() {
     root.classList.add('intro-playing');
     setRun((r) => r + 1);
     setState('play');
-    timers.current.push(setTimeout(leave, OUT_AT));
+    setPhase('scene');
+    timers.current.push(setTimeout(() => setPhase('cam'), CAM_AT), setTimeout(() => setPhase('brand'), BRAND_AT), setTimeout(leave, OUT_AT));
   };
 
   useEffect(() => {
     const root = document.documentElement;
     if (root.classList.contains('intro-done')) setState('gone');
-    else { root.classList.add('intro-playing'); timers.current.push(setTimeout(leave, OUT_AT)); }
+    else {
+      root.classList.add('intro-playing');
+      timers.current.push(setTimeout(() => setPhase('cam'), CAM_AT), setTimeout(() => setPhase('brand'), BRAND_AT), setTimeout(leave, OUT_AT));
+    }
 
     const onKey = () => { if (!leaving.current && root.classList.contains('intro-playing')) leave(); };
     const onReplay = () => start();
@@ -88,12 +97,13 @@ export default function IntroSplash() {
   if (state === 'gone') return null;
 
   return (
-    <div key={run} className={`intro-splash${state === 'out' ? ' is-out' : ''}`} role="presentation" onClick={leave}>
+    <div key={run} className={`intro-splash story ph-${phase}${state === 'out' ? ' is-out' : ''}`} role="presentation" onClick={leave}>
       <div className="is-aurora" aria-hidden="true">
         <i className="a1" /><i className="a2" /><i className="a3" />
       </div>
-      <IntroScene />
+      {phase !== 'brand' && <IntroScene />}
 
+      {phase === 'brand' && (<>
       <div className="is-center">
         <div className="is-logo-wrap">
           <span className="is-halo" aria-hidden="true" />
@@ -117,9 +127,10 @@ export default function IntroSplash() {
 
       <div className="is-powered" aria-label="Powered by KS TECH LLC">
         <span className="is-pw-small">Powered by</span>
-        <Letters text="KS TECH LLC" start={4950} step={55} className="is-pw-name" />
+        <Letters text="KS TECH LLC" start={4500} step={55} className="is-pw-name" />
         <span className="is-pw-glow" aria-hidden="true" />
       </div>
+      </>)}
 
       <span className="is-skip" aria-hidden="true">Tap to skip</span>
     </div>
