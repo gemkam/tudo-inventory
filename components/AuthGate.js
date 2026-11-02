@@ -18,6 +18,7 @@ import ThemeMenu from '@/components/ThemeMenu';
 import OfficeTabs from '@/components/OfficeTabs';
 import BackToTop from '@/components/BackToTop';
 import EditPasswordHost from '@/components/EditPasswordHost';
+import LookApplier from '@/components/LookApplier';
 import { lockEdit } from '@/lib/editLock';
 import { startActivity, logPage, endActivity } from '@/lib/activity';
 
@@ -211,6 +212,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
       {user.canRead && !blocked && !user.isEntry && <PrintColumns auto />}
       <BackToTop />
       <EditPasswordHost />
+      <LookApplier />
       {user.canRead && !blocked && <TableCards />}
       {user.canRead && (
         <RaufAssistant

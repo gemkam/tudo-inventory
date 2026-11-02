@@ -4137,3 +4137,21 @@ textarea.pw-in { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px;
   .pw-layout { grid-template-columns: 1fr; }
   .pw-tables { position: static; max-height: 260px; }
 }
+/* Power Editor tabs and look editor (components/LookEditor.js) */
+.pw-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.pw-look { display: grid; gap: 10px; margin-top: 12px; }
+.lk-box { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: grid; gap: 10px; overflow-x: auto; }
+.lk-bar { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.lk-bar .muted { font-size: 13px; flex: 1 1 300px; }
+.lk-empty { margin: 6px 0; }
+.lk-t { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 720px; }
+.lk-t th { text-align: left; font-size: 11.5px; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.lk-t td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.lk-t td:first-child, .lk-t th:first-child { width: 40px; text-align: center; }
+.lk-t td:last-child { width: 44px; }
+.lk-t tr.off td { opacity: .5; }
+.lk-t select, .lk-t input, .lk-t textarea { width: 100%; font-size: 13.5px; padding: 6px 9px; }
+.lk-t input[type="checkbox"] { width: 17px; height: 17px; }
+.lk-sel { margin-top: 6px; font-family: ui-monospace, Menlo, monospace; }
+.lk-color { display: flex; gap: 6px; align-items: center; }
+.lk-color input[type="color"] { width: 42px; height: 34px; padding: 2px; flex: none; }
