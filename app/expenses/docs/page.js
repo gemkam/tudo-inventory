@@ -9,6 +9,8 @@ import Omr, { fmt3 } from '@/components/Omr';
 import { sb } from '@/lib/supabase';
 import { todayISO, fmtFullDate } from '@/lib/sheet';
 import { omrInWords } from '@/lib/words';
+import DocImport from '@/components/DocImport';
+import DocFiles from '@/components/DocFiles';
 import { COMPANIES, companyOf, DEPARTMENTS, HEADS, CATEGORIES, PAY_METHODS, n, r3 } from '@/lib/expenses';
 
 /*
@@ -84,6 +86,17 @@ function DocsPage() {
   function nextNo() {
     const pre = `${K.prefix}-${CO_CODE[co] || 'X'}-`;
     const max = (list || []).reduce((mx, d) => {
+      const m = String(d.doc_no || '').match(/(\d+)\s*$/);
+      return m ? Math.max(mx, Number(m[1])) : mx;
+    }, 0);
+    return `${pre}${String(max + 1).padStart(4, '0')}`;
+  }
+
+  /* next number for the import (any kind); read fresh each time, so numbers follow on during one import */
+  async function nextNoFor(k) {
+    const pre = `${KINDS[k].prefix}-${CO_CODE[co] || 'X'}-`;
+    const { data } = await sb().from('company_docs').select('doc_no').eq('company', co).eq('kind', k);
+    const max = (data || []).reduce((mx, d) => {
       const m = String(d.doc_no || '').match(/(\d+)\s*$/);
       return m ? Math.max(mx, Number(m[1])) : mx;
     }, 0);
@@ -296,6 +309,31 @@ function DocsPage() {
           </footer>
         </article>
 
+        {doc.id || doc.scan ? (
+          <section className="di-saved no-print">
+            {doc.id && (
+              <div className="di-saved-files">
+                <b>📎 Original paper</b>
+                <DocFiles row={{ id: `company_docs/${doc.id}`, owner: doc.party, doc_name: doc.doc_no, files: doc.files || [] }}
+                  canEdit={isAdmin} userName={me} flash={flash}
+                  onSave={async (files) => {
+                    const { error } = await sb().from('company_docs').update({ files }).eq('id', doc.id);
+                    if (error) { flash(error.message, 'err'); return; }
+                    setDoc((d) => ({ ...d, files })); load();
+                  }} />
+              </div>
+            )}
+            {doc.scan?.fields?.length ? (
+              <details className="di-fields" open>
+                <summary>Details read from the paper ({doc.scan.fields.length})</summary>
+                <table><tbody>
+                  {doc.scan.fields.map((x, i) => <tr key={i}><td>{x.label}</td><td>{x.value}</td></tr>)}
+                </tbody></table>
+              </details>
+            ) : null}
+          </section>
+        ) : null}
+
         {del && (
           <Modal title={`Delete ${K.one.toLowerCase()}?`} onClose={() => setDel(false)}>
             <p style={{ margin: 0 }}>Delete <b>{doc.doc_no}</b> ({doc.party})?{kind === 'receipt' && ' Its line in All Companies is removed too.'}</p>
@@ -327,6 +365,7 @@ function DocsPage() {
         <div className="tools">
           <input className="iv-search" type="search" placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} />
           {isAdmin && <button type="button" className="btn" onClick={newDoc}>+ New {K.one.toLowerCase()}</button>}
+          {isAdmin && <DocImport co={co} coShort={C.short} kind={kind} userName={me} last={(list || [])[0]} nextNo={nextNoFor} onDone={load} flash={flash} />}
         </div>
       </div>
 
@@ -351,7 +390,7 @@ function DocsPage() {
             <tbody>
               {shown.map((d) => (
                 <tr key={d.id} tabIndex={0} onClick={() => openDoc(d)} onKeyDown={(e) => e.key === 'Enter' && openDoc(d)}>
-                  <td className="iv-list-no">{d.doc_no}</td>
+                  <td className="iv-list-no">{d.doc_no}{(d.files || []).length ? ' 📎' : ''}</td>
                   <td>{fmtD(d.doc_date)}</td>
                   <td>{d.party}</td>
                   <td className="muted">{(d.items || []).map((i) => i.desc).filter(Boolean).join(', ').slice(0, 70)}</td>
