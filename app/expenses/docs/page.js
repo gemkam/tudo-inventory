@@ -203,29 +203,43 @@ function DocsPage() {
     flash(`${rows.length} deleted${kind === 'receipt' ? '. Removed from All Companies too.' : ''}`);
   }
 
-  /* Move to another company: new number of that company (PR-AW-0001 -> PR-ST-0005), its expense line moves too */
-  async function bulkMove(to) {
+  /* Move to another company and / or to the other type (Invoices <-> Payment receipts).
+     Each doc gets the next number of where it goes (PR-AW-0001 -> PR-ST-0005, INV-AW-0002 -> PR-AW-0007).
+     A payment receipt is an expense in All Companies (DB trigger): it is added, moved or removed with it. */
+  async function bulkMove(to, toKind = kind) {
     const rows = (list || []).filter((d) => picked.includes(d.id));
     const T = companyOf(to);
     setBusy(true);
-    const pre = `${K.prefix}-${CO_CODE[to] || 'X'}-`;
-    const { data: there } = await sb().from('company_docs').select('doc_no').eq('company', to).eq('kind', kind);
+    const pre = `${KINDS[toKind].prefix}-${CO_CODE[to] || 'X'}-`;
+    const { data: there } = await sb().from('company_docs').select('doc_no').eq('company', to).eq('kind', toKind);
     let max = (there || []).reduce((mx, d) => { const m = String(d.doc_no || '').match(/(\d+)\s*$/); return m ? Math.max(mx, Number(m[1])) : mx; }, 0);
     let ok = 0; let err = '';
     for (const d of [...rows].reverse()) {
       max += 1;
       const depts = DEPARTMENTS[to] || [];
-      const department = d.department && !depts.includes(d.department) && depts.length ? depts[0] : d.department;
-      const { error } = await sb().from('company_docs')
-        .update({ company: to, doc_no: `${pre}${String(max).padStart(4, '0')}`, department, updated_at: new Date().toISOString() })
-        .eq('id', d.id);
+      let department = d.department && !depts.includes(d.department) && depts.length ? depts[0] : d.department;
+      const change = { company: to, kind: toKind, doc_no: `${pre}${String(max).padStart(4, '0')}`, updated_at: new Date().toISOString() };
+      if (toKind === 'receipt') {
+        // a receipt needs payment method, department and head (kept if it already had them)
+        if (!department) department = depts[0] || null;
+        change.payment_method = d.payment_method || 'Cash';
+        change.head = d.head || 'Office Expenses';
+      }
+      change.department = department || null;
+      const { error } = await sb().from('company_docs').update(change).eq('id', d.id);
       if (error) { err = error.code === '42501' ? 'You need Full access to move.' : error.message; break; }
       ok += 1;
     }
     setBusy(false);
     setBulk(null); setPicked([]); load();
     if (err) flash(`${ok} moved. Stopped: ${err}`, 'err');
-    else flash(`${ok} moved to ${T.short}${kind === 'receipt' ? ' (expense lines moved too)' : ''}.`);
+    else {
+      const where = [to !== co ? T.short : '', toKind !== kind ? KINDS[toKind].label : ''].filter(Boolean).join(' · ');
+      const exp = toKind === 'receipt' && kind !== 'receipt' ? ` and added to ${T.short} expenses`
+        : toKind !== 'receipt' && kind === 'receipt' ? ' and removed from All Companies expenses'
+          : toKind === 'receipt' && to !== co ? ' (expense lines moved too)' : '';
+      flash(`${ok} moved to ${where}${exp}.`);
+    }
   }
 
   async function deleteDoc() {
@@ -452,7 +466,7 @@ function DocsPage() {
           </button>
           <button type="button" className="btn ghost danger-text" disabled={!picked.length} onClick={() => setBulk({ act: 'delete' })}>🗑 Delete{picked.length ? ` (${picked.length})` : ''}</button>
           <button type="button" className="btn ghost" disabled={!picked.length}
-            onClick={() => setBulk({ act: 'move', to: COMPANIES.find((c) => c.key !== co)?.key || '' })}>↔ Move{picked.length ? ` (${picked.length})` : ''}</button>
+            onClick={() => setBulk({ act: 'move', to: co, toKind: kind === 'invoice' ? 'receipt' : 'invoice' })}>↔ Move{picked.length ? ` (${picked.length})` : ''}</button>
           <span className="muted dx-hint">{picked.length ? `${picked.length} selected` : 'Tick rows to delete or move'}</span>
         </div>
       )}
@@ -497,17 +511,34 @@ function DocsPage() {
             </div>
           </Modal>
         ) : (
-          <Modal title={`Move ${rows.length} to another company`} onClose={() => !busy && setBulk(null)}>
+          <Modal title={`Move ${rows.length} ${rows.length === 1 ? K.one.toLowerCase() : K.label.toLowerCase()}`} onClose={() => !busy && setBulk(null)}>
             <ul className="dx-list">{names}{rows.length > 8 && <li>... and {rows.length - 8} more</li>}</ul>
-            <label className="dx-to"><span>Move from <b>{C.short}</b> to</span>
+            <div className="dx-to">
+              <span>Move to type</span>
+              <div className="dx-kinds">
+                {Object.entries(KINDS).map(([k, v]) => (
+                  <button key={k} type="button" className={`rp-chip ${bulk.toKind === k ? 'active' : ''}`} onClick={() => setBulk({ ...bulk, toKind: k })}>
+                    {k === 'invoice' ? '🧾' : '💵'} {v.label}{k === kind ? ' (now)' : ''}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <label className="dx-to"><span>Move to company</span>
               <select value={bulk.to} onChange={(e) => setBulk({ ...bulk, to: e.target.value })}>
-                {COMPANIES.filter((c) => c.key !== co).map((c) => <option key={c.key} value={c.key}>{c.short}</option>)}
+                {COMPANIES.map((c) => <option key={c.key} value={c.key}>{c.short}{c.key === co ? ' (now)' : ''}</option>)}
               </select>
             </label>
-            <p className="muted" style={{ margin: 0 }}>They get the next number of that company{kind === 'receipt' ? ' and their expense lines move to it too' : ''}.</p>
+            {bulk.to === co && bulk.toKind === kind ? <p className="di-warn">Pick another type or another company.</p> : (
+              <p className="muted" style={{ margin: 0 }}>
+                They get the next number there ({KINDS[bulk.toKind].prefix}-{CO_CODE[bulk.to] || 'X'}-...).
+                {bulk.toKind === 'receipt' && kind !== 'receipt' && <> As payment receipts they are added to <b>{companyOf(bulk.to).short}</b> expenses in All Companies.</>}
+                {bulk.toKind !== 'receipt' && kind === 'receipt' && <> As invoices they are removed from All Companies expenses.</>}
+                {bulk.toKind === 'receipt' && kind === 'receipt' && bulk.to !== co && <> Their expense lines move to <b>{companyOf(bulk.to).short}</b> too.</>}
+              </p>
+            )}
             <div className="modal-actions">
               <button className="btn ghost" onClick={() => setBulk(null)} disabled={busy}>Cancel</button>
-              <button className="btn" onClick={() => bulkMove(bulk.to)} disabled={busy || !bulk.to}>{busy ? 'Moving...' : '↔ Move'}</button>
+              <button className="btn" onClick={() => bulkMove(bulk.to, bulk.toKind)} disabled={busy || (bulk.to === co && bulk.toKind === kind)}>{busy ? 'Moving...' : '↔ Move'}</button>
             </div>
           </Modal>
         );

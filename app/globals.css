@@ -4053,3 +4053,4 @@ tr.dx-on td { background: var(--tint, #eef7f3); }
 .dx-to { display: grid; gap: 6px; font-size: 13.5px; }
 .dx-to select { width: 100%; }
 @media (max-width: 760px) { .dx-hint { margin-left: 0; width: 100%; } .dx-sep { display: none; } }
+.dx-kinds { display: flex; gap: 8px; flex-wrap: wrap; }
