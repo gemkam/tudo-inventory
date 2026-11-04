@@ -1,6 +1,8 @@
 'use client';
 
 import RangeReport from '@/components/RangeReport';
+import VatPanel from '@/components/VatPanel';
+import { boundsDates, vatPdfTables, vatExcelSheets } from '@/lib/vatReport';
 import { transportReport } from '@/lib/rangeReports';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -40,6 +42,7 @@ function TransportReports() {
   const [range, setRange] = useState('month');
   const [busy, setBusy] = useState('');
   const areaRef = useRef(null);
+  const [vatV, setVatV] = useState(null); // 🧾 VAT report of the same period (for PDF / Excel)
 
   useEffect(() => {
     (async () => {
@@ -160,7 +163,8 @@ function TransportReports() {
         tables: [
           { heading: 'Drivers compared', head: driverHead, rows: driverRows.map((x) => fmtRow(x, 2)), totalsRow: fmtRow(driverTotal, 2), numCols: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14] },
           { heading: `Money still to collect (${r.toCollect.length})`, head: ['Date', 'Driver', 'Route', 'Rent', 'Received', 'Due'], rows: collectRows.map((x) => fmtRow(x, 3)), totalsRow: ['', '', 'Total', '', '', fmtAmt(T.receivable)], numCols: [3, 4, 5] },
-          { heading: `All trips and expenses in this period (${r.es.length})`, head: ['Date', 'Driver', 'From', 'To / description', 'Rent', 'VAT 5%', 'Received', 'Diesel', 'Toll', 'Maint.', 'Payment'], rows: tripRows.map((x) => fmtRow(x, 4)), totalsRow: ['Total', '', '', '', fmtAmt(T.work), fmtAmt(T.vat), fmtAmt(T.received), fmtAmt(T.diesel), fmtAmt(T.toll), fmtAmt(T.maintenance), ''], numCols: [4, 5, 6, 7, 8, 9] }
+          { heading: `All trips and expenses in this period (${r.es.length})`, head: ['Date', 'Driver', 'From', 'To / description', 'Rent', 'VAT 5%', 'Received', 'Diesel', 'Toll', 'Maint.', 'Payment'], rows: tripRows.map((x) => fmtRow(x, 4)), totalsRow: ['Total', '', '', '', fmtAmt(T.work), fmtAmt(T.vat), fmtAmt(T.received), fmtAmt(T.diesel), fmtAmt(T.toll), fmtAmt(T.maintenance), ''], numCols: [4, 5, 6, 7, 8, 9] },
+          ...vatPdfTables(vatV)
         ]
       });
     } catch (e) {
@@ -192,7 +196,8 @@ function TransportReports() {
         { name: 'Months', title: 'Month by month', subtitle: sub, head: ['Month', 'Work amount', 'VAT 5%', 'Expenses', 'Profit'], rows: r.byMonth.map((x) => [monthLabel(x.m), x.work, x.vat, x.cost, x.profit]), numCols: [1, 2, 3, 4], widths: [18, 14, 12, 14, 14] },
         { name: 'Routes', title: 'Routes', subtitle: sub, head: ['Route', 'Trips', 'Rent total', 'Average rent'], rows: r.topRoutes.map((x) => [x.label, x.trips, x.rent, num(x.rent / x.trips)]), numCols: [1, 2, 3], widths: [36, 8, 12, 12] },
         { name: 'To collect', title: 'Money still to collect', subtitle: sub, head: ['Date', 'Driver', 'Route', 'Rent', 'Received', 'Due'], rows: collectRows, totalsRow: ['', '', 'Total', '', '', T.receivable], numCols: [3, 4, 5], widths: [14, 14, 32, 10, 10, 10] },
-        { name: 'Trips', title: `All trips · ${RANGES[range]}`, subtitle: sub, head: ['Date', 'Driver', 'From', 'To / description', 'Rent', 'VAT 5%', 'Received', 'Diesel', 'Toll', 'Maintenance', 'Payment'], rows: tripRows, numCols: [4, 5, 6, 7, 8, 9], widths: [13, 13, 16, 30, 9, 9, 9, 9, 9, 11, 14] }
+        { name: 'Trips', title: `All trips · ${RANGES[range]}`, subtitle: sub, head: ['Date', 'Driver', 'From', 'To / description', 'Rent', 'VAT 5%', 'Received', 'Diesel', 'Toll', 'Maintenance', 'Payment'], rows: tripRows, numCols: [4, 5, 6, 7, 8, 9], widths: [13, 13, 16, 30, 9, 9, 9, 9, 9, 11, 14] },
+        ...vatExcelSheets(vatV, sub)
       ]);
     } catch (e) {
       console.error(e);
@@ -222,7 +227,7 @@ function TransportReports() {
           <button key={k} type="button" className={`rp-chip ${range === k ? 'active' : ''}`} onClick={() => setRange(k)} aria-pressed={range === k}>{RANGES[k]}</button>
         ))}
         <RangeReport title="Transport report" company="Modern City for Express Services LLC · Transport Division" landscape className="rp-chip rr-chip"
-          build={(from, to) => transportReport({ entries, drivers: drivers || [], salaries, extras, from, to })} label="📅 From date to date · Print" />
+          build={(from, to) => transportReport({ entries, drivers: drivers || [], salaries, extras, from, to })} label="📅 From date to date · Print" vatSources={['transport']} />
       </div>
       <p className="rp-range-note">
         {rangeNote(range)} {r.wholeMonths ? 'Salaries and monthly expenses are included for each month in the period.' : 'Salaries and monthly expenses count for whole months only, so they are left out of a 7-day view.'}
@@ -323,6 +328,7 @@ function TransportReports() {
             </div>
           </div>
         </div>
+        <VatPanel {...boundsDates(rangeBounds(range))} sources={['transport']} onData={setVatV} />
       </div>
     </>
   );

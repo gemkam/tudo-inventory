@@ -6,7 +6,7 @@ import AuthGate from '@/components/AuthGate';
 import Modal from '@/components/Modal';
 import { sb } from '@/lib/supabase';
 import { COMPANIES } from '@/lib/expenses';
-import { vatOf, dieselVat } from '@/lib/transport';
+import { buildVatData } from '@/lib/vatReport';
 import { fmtAmt, monthLabel, exportStamp, exportExcel, exportPdf } from '@/lib/sheet';
 import { quarterOf, quarterMonths, quarterLabel, addDays, dmy } from '@/lib/groupTools';
 
@@ -25,7 +25,6 @@ const r3 = (v) => Math.round(n(v) * 1000) / 1000;
 const mk = (d) => String(d || '').slice(0, 7);
 const SOURCES = [...COMPANIES.map((c) => ({ key: c.key, label: c.short })), { key: 'transport', label: 'Transport' }];
 const labelOf = (k) => SOURCES.find((s) => s.key === k)?.label || k;
-const SKIP_KINDS = ['trip', 'salary', 'extra'];
 
 const SUM_COLS = [
   ['taxedNet', 'Sales with VAT (without VAT)'],
@@ -60,27 +59,8 @@ function VatReturnPage() {
         s.from('company_docs').select('id, company, kind, doc_no, doc_date, party, items, vat_pct').eq('kind', 'invoice'),
         s.from('transport_drivers').select('id, name')
       ]);
-      const drv = Object.fromEntries((dr.data || []).map((x) => [x.id, x.name]));
-      const sales = [
-        ...(t.data || []).filter((r) => n(r.rent) > 0).map((r) => ({
-          src: 'transport', date: r.entry_date, month: mk(r.entry_date), ref: drv[r.driver_id] || 'Trip', from: `Transport · trip sheet of ${drv[r.driver_id] || 'driver'}`,
-          text: [r.from_place, r.to_place].filter(Boolean).join(' → ') || 'Trip', amount: r3(r.rent), vat: vatOf(r)
-        })),
-        ...(d.data || []).map((x) => {
-          const sub = r3((Array.isArray(x.items) ? x.items : []).reduce((a, it) => a + n(it.amount), 0));
-          const vat = r3((sub * n(x.vat_pct)) / 100);
-          return { src: x.company || 'modern-city', date: x.doc_date, month: mk(x.doc_date), ref: x.doc_no || 'Invoice', from: `Invoices · ${labelOf(x.company || 'modern-city')}`, text: x.party || '', amount: r3(sub + vat), vat };
-        }).filter((x) => x.amount && x.date)
-      ];
-      const bills = (e.data || []).filter((b) => b.entry_date && !SKIP_KINDS.includes(b.source_kind)).map((b) => ({
-        src: b.company, date: b.entry_date, month: mk(b.entry_date), ref: b.bill_no || '', from: b.source_kind === 'receipt' ? `Bills · ${labelOf(b.company)}` : b.source_kind === 'maint' ? `Transport · Vehicles maintenance (${labelOf(b.company)})` : `All Companies bills · ${labelOf(b.company)}`, text: b.description || '',
-        amount: r3(n(b.paid) + n(b.unpaid)), vat: r3(b.vat), vatNo: b.vat_reg_no || ''
-      }));
-      // diesel on the trip sheets: 5% VAT is always inside the fuel price, so it is input VAT of Transport
-      (t.data || []).filter((r) => n(r.diesel) > 0 && r.entry_date).forEach((r) => bills.push({
-        src: 'transport', date: r.entry_date, month: mk(r.entry_date), ref: drv[r.driver_id] || 'Trip', from: `Transport · trip sheet diesel of ${drv[r.driver_id] || 'driver'}`,
-        text: `Diesel · ${[r.from_place, r.to_place].filter(Boolean).join(' → ') || 'Trip'}`, amount: r3(r.diesel), vat: dieselVat(r), vatNo: ''
-      }));
+      // same rules as every report's 🧾 VAT part (lib/vatReport.js)
+      const { sales, bills } = buildVatData({ exp: e.data || [], te: t.data || [], docs: d.data || [], drivers: dr.data || [], labelOf });
       const months = [...new Set([...sales, ...bills].map((x) => x.month).filter(Boolean))].sort();
       setData({ sales, bills, months });
       const nowQ = quarterOf(new Date().toISOString().slice(0, 7));

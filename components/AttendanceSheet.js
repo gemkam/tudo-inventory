@@ -262,7 +262,7 @@ export default function AttendanceSheet() {
               const { data, error } = await q;
               if (error) throw new Error(error.message);
               return attendanceReport({ staff: staff || [], att: data || [], from, to });
-            }} label="🖨 Report by dates" />
+            }} label="🖨 Report by dates" vatSources={[co]} />
           <button type="button" className="btn ghost" onClick={doExcel} disabled={!staff.length}>📗 Excel</button>
           <PrintColumns className="btn ghost" />
         </div>

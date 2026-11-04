@@ -1,6 +1,8 @@
 'use client';
 
 import RangeReport from '@/components/RangeReport';
+import VatPanel from '@/components/VatPanel';
+import { periodDates } from '@/lib/vatReport';
 import { groupReport } from '@/lib/rangeReports';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -32,6 +34,7 @@ function SummaryPage() {
   const [data, setData] = useState(null);
   const [pick, setPick] = useState(SOURCES.map((s) => s.key));
   const [period, setPeriod] = useState('');
+  const [vatV, setVatV] = useState(null); // 🧾 VAT report of the chosen period and companies (also in the PDF)
   const [open, setOpen] = useState(false);
   const [drill, setDrill] = useState(null);
   const [budgetOpen, setBudgetOpen] = useState(false);
@@ -208,7 +211,7 @@ function SummaryPage() {
         const blob = await (await fetch('/tudonum-group.png')).blob();
         logo = await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(blob); });
       } catch { /* no logo */ }
-      const doc = buildGroupPdf(G, { periodLabel, monthLabel, logo, extraAlerts: [...vehicleAlerts, ...attAlerts], att: ATT });
+      const doc = buildGroupPdf(G, { periodLabel, monthLabel, logo, extraAlerts: [...vehicleAlerts, ...attAlerts], att: ATT, vat: vatV });
       doc.save(`Reports & Summary ${periodLabel}.pdf`);
     } finally { setBusy(false); }
   }
@@ -234,7 +237,7 @@ function SummaryPage() {
           <button type="button" className="btn" onClick={downloadPdf} disabled={busy}>{busy ? 'Making PDF...' : '📕 PDF'}</button>
           <button type="button" className="btn" onClick={share}>📤 Share</button>
           <RangeReport title="Group expense report" company="Tudo Num Group" landscape
-            build={(from, to) => groupReport({ lines, pick, labelOf, from, to })} label="🖨 Report by dates" />
+            build={(from, to) => groupReport({ lines, pick, labelOf, from, to })} label="🖨 Report by dates" vatSources={pick} />
           <PrintColumns className="btn" />
         </div>
       </div>
@@ -550,6 +553,7 @@ function SummaryPage() {
           )}
 
           <PLStatement G={G} periodLabel={periodLabel} />
+          <VatPanel {...periodDates(period)} sources={pick} onData={setVatV} title={`🧾 VAT report · ${periodLabel}`} />
 
           <section className="panel">
             <h2>By company</h2>

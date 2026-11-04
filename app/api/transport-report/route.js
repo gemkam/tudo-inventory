@@ -3,6 +3,7 @@ import nodemailer from 'nodemailer';
 import { buildTransportPdf, fmt3, mlabel } from '@/lib/transportReportPdf';
 import { GROUP_SOURCES, buildLines, buildIncome, computeGroup, shiftMonth, fmt as gfmt } from '@/lib/groupSummary';
 import { buildGroupPdf } from '@/lib/groupSummaryPdf';
+import { buildVatData, computeVat, periodDates } from '@/lib/vatReport';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -73,13 +74,21 @@ async function send(note) {
         if (res.ok) logo = `data:image/png;base64,${Buffer.from(await res.arrayBuffer()).toString('base64')}`;
       } catch { /* no logo */ }
     }
-    const gdoc = buildGroupPdf(G, { periodLabel: mlabel(period), monthLabel: mlabel, logo });
+    // 🧾 VAT report of the same month (company invoices are not in the email data, so only trips, bills and diesel)
+    let vat = null;
+    try {
+      const vs = GROUP_SOURCES.map((x) => ({ key: x.key, label: x.kind === 'transport' ? 'Transport' : x.label }));
+      const vd = buildVatData({ exp: g.data.exp || [], te: data.entries || [], drivers: data.drivers || [], labelOf: (k) => vs.find((x) => x.key === k)?.label || k });
+      vat = computeVat(vd, { ...periodDates(period), sources: vs.map((x) => x.key), allSources: vs });
+    } catch (e) { console.error('vat in email', e); }
+    const gdoc = buildGroupPdf(G, { periodLabel: mlabel(period), monthLabel: mlabel, logo, vat });
     attachments.push({ filename: `Reports & Summary ${mlabel(period)}.pdf`, content: Buffer.from(gdoc.output('arraybuffer')), contentType: 'application/pdf' });
     groupText = [
       '',
       `Reports & Summary ${mlabel(period)} (OMR, attached):`,
       `Total spent: ${gfmt(G.grand.spent)}`,
       G.grand.unpaid ? `Unpaid: ${gfmt(G.grand.unpaid)}` : '',
+      vat ? `VAT: output ${gfmt(vat.T.outputVat)} · input ${gfmt(vat.T.inputVat)} · ${vat.T.net >= 0 ? 'to pay' : 'to claim back'} ${gfmt(Math.abs(vat.T.net))}` : '',
       G.budgetTotal.budget ? `Budget used: ${Math.round((G.budgetTotal.actual / G.budgetTotal.budget) * 100)}%` : '',
       ...G.alerts.slice(0, 5).map((a) => `- ${a.text.replace(/[^\x20-\x7E]/g, '').trim()}`)
     ].filter(Boolean).join('\n');
