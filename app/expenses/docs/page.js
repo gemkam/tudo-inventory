@@ -56,7 +56,7 @@ function finish(e, options, set, k) {
   requestAnimationFrame(() => { try { el.setSelectionRange(typed.length, full.length); } catch { /* ignore */ } });
 }
 
-function BillRow({ f, set, canPick, co, saving, onSave, onCancel, sugg = {} }) {
+function BillRow({ f, set, canPick, co, saving, onSave, onCancel, sugg = {}, picked = false, onPick = null, paper = null, status = '', onLeave = null }) {
   const stop = (e) => e.stopPropagation();
   const pickRef = useRef(null);
   const key = (e) => {
@@ -93,8 +93,9 @@ function BillRow({ f, set, canPick, co, saving, onSave, onCancel, sugg = {} }) {
       onChange={(e) => (auto[k] ? finish(e, auto[k], set, k) : set(k, e.target.value))} />
   );
   return (
-    <tr className="br-row" onClick={stop}>
-      {canPick && <td className="dx-c" />}
+    <tr className={`br-row${picked ? ' dx-on' : ''}${status === 'dirty' ? ' br-dirty' : ''}${status === 'err' ? ' br-errrow' : ''}`} onClick={stop}
+      onBlur={(e) => { if (onLeave && !e.currentTarget.contains(e.relatedTarget)) onLeave(); }}>
+      {canPick && <td className="dx-c">{onPick && <input type="checkbox" aria-label={`Select ${f.doc_no}`} checked={picked} onChange={onPick} />}</td>}
       <td className="iv-list-no">{f.doc_no}</td>
       <td><DateInput className="br-in" value={f.doc_date || ''} onChange={(v) => set('doc_date', v)} /></td>
       <td>{inp('party', 'Paid to', { autoFocus: !f.id, list: 'br-party' })}</td>
@@ -109,7 +110,7 @@ function BillRow({ f, set, canPick, co, saving, onSave, onCancel, sugg = {} }) {
       <td className="num">{money('amount', 'With VAT', onGrand)}</td>
       <td>{inp('vat_no', 'VAT No.', { list: 'br-vatno' })}</td>
       <td><DeptPicker co={co} value={f.department} onChange={(v) => set('department', v)} disabled={saving} /></td>
-      <td className="br-paper">
+      {paper ? <td onClick={stop}>{paper}</td> : <td className="br-paper">
         {f.oldFiles > 0 && <span className="muted br-has">📎 {f.oldFiles} saved</span>}
         {(f.newFiles || []).map((x, i) => (
           <span key={i} className="br-file" title={x.name}>📄 {x.name.length > 18 ? `${x.name.slice(0, 16)}…` : x.name}
@@ -118,10 +119,14 @@ function BillRow({ f, set, canPick, co, saving, onSave, onCancel, sugg = {} }) {
         <input ref={pickRef} type="file" accept="image/*,application/pdf" multiple hidden
           onChange={(e) => { const add = [...(e.target.files || [])]; e.target.value = ''; if (add.length) set('newFiles', [...(f.newFiles || []), ...add]); }} />
         <button type="button" className="btn small ghost" onClick={() => pickRef.current?.click()} disabled={saving}>＋ Add paper</button>
-      </td>
+      </td>}
       <td style={{ whiteSpace: 'nowrap' }}>
-        <button type="button" className="btn small" onClick={onSave} disabled={saving}>{saving ? 'Saving...' : '✓ Save'}</button>{' '}
-        <button type="button" className="btn small ghost" onClick={onCancel} disabled={saving}>✕</button>
+        {!f.id ? (<>
+          <button type="button" className="btn small" onClick={onSave} disabled={saving}>{saving ? 'Saving...' : '✓ Save'}</button>{' '}
+          <button type="button" className="btn small ghost" onClick={onCancel} disabled={saving}>✕</button>
+        </>) : (
+          <span className={`br-st st-${status || 'idle'}`}>{status === 'saving' ? 'Saving...' : status === 'saved' ? '✓ Saved' : status === 'dirty' ? '● Not saved' : status === 'err' ? '⚠ Not saved' : ''}</span>
+        )}
       </td>
     </tr>
   );
@@ -340,24 +345,58 @@ function DocsPage() {
       vatOfParty, partyOfVat
     };
   }, [list]);
-  const setBill = (k, v) => setRow((f) => {
+  const autofill = (f, k, v) => {
     const next = { ...f, [k]: v };
     const key = String(v || '').trim().toLowerCase();
     if (k === 'party' && key && sugg.vatOfParty[key] && !String(f.vat_no || '').trim()) next.vat_no = sugg.vatOfParty[key];
     if (k === 'vat_no' && key && sugg.partyOfVat[key] && !String(f.party || '').trim()) next.party = sugg.partyOfVat[key];
     return next;
-  });
+  };
+  const setBill = (k, v) => setRow((f) => autofill(f, k, v));
 
-  async function saveRow() {
-    const f = row;
+  /* Kamran 4 Nov 2026: one ✏️ Edit opens EVERY bill for typing (no separate edit per bill).
+     A changed bill saves by itself when you leave its row (or press Enter); Esc puts the row back. */
+  const [forms, setForms] = useState({}); // id -> form being typed
+  const formsRef = useRef({});
+  const [rowSt, setRowSt] = useState({}); // id -> 'saving' | 'saved' | 'err'
+  const savingIds = useRef(new Set());
+  const updForms = (fn) => setForms((m) => { const nx = fn(m); formsRef.current = nx; return nx; });
+  const FORM_KEYS = ['doc_date', 'party', 'receipt_no', 'vehicle_no', 'fuel', 'vat_no', 'vat', 'sub', 'amount', 'department'];
+  const num3 = (v) => (v === '' || v === null || v === undefined ? '' : r3(v).toFixed(3));
+  const isDirty = (f, d) => {
+    const o = billForm(d);
+    return FORM_KEYS.some((k) => (['vat', 'sub', 'amount'].includes(k) ? num3(f[k]) !== num3(o[k]) : String(f[k] ?? '').trim() !== String(o[k] ?? '').trim()));
+  };
+  const setBillFor = (d) => (k, v) => {
+    updForms((m) => ({ ...m, [d.id]: autofill(m[d.id] || billForm(d), k, v) }));
+    setRowSt((st) => (st[d.id] && st[d.id] !== 'saving' ? { ...st, [d.id]: '' } : st));
+  };
+  const revertRow = (d) => { updForms((m) => { const nx = { ...m }; delete nx[d.id]; return nx; }); setRowSt((st) => ({ ...st, [d.id]: '' })); };
+  async function leaveRow(d) {
+    const f = formsRef.current[d.id];
+    if (!f || savingIds.current.has(d.id) || !isDirty(f, d)) return;
+    savingIds.current.add(d.id);
+    setRowSt((st) => ({ ...st, [d.id]: 'saving' }));
+    const ok = await saveRow(f);
+    savingIds.current.delete(d.id);
+    setRowSt((st) => ({ ...st, [d.id]: ok ? 'saved' : 'err' }));
+    if (ok) {
+      updForms((m) => { const nx = { ...m }; if (nx[d.id] === f) delete nx[d.id]; return nx; });
+      setTimeout(() => setRowSt((st) => (st[d.id] === 'saved' ? { ...st, [d.id]: '' } : st)), 2500);
+    }
+  }
+
+  async function saveRow(given) {
+    const f = given || row;
     const total = r3(n(f.amount));
     const vat = r3(n(f.vat));
-    if (!f.party.trim()) { flash('Type who was paid (Paid to).', 'err'); return; }
-    if (!(total > 0)) { flash('Type the amount (with VAT).', 'err'); return; }
-    if (vat < 0 || vat >= total) { flash('VAT must be less than the amount.', 'err'); return; }
+    const tag = f.id ? `${f.doc_no}: ` : '';
+    if (!f.party.trim()) { flash(`${tag}Type who was paid (Paid to).`, 'err'); return false; }
+    if (!(total > 0)) { flash(`${tag}Type the Grand Total (with VAT).`, 'err'); return false; }
+    if (vat < 0 || vat >= total) { flash(`${tag}VAT must be less than the Grand Total.`, 'err'); return false; }
     const rno = String(f.receipt_no || '').trim();
     const dup = rno && (list || []).find((d) => d.id !== f.id && String(shortOf(d).receipt_no || '').trim() === rno);
-    if (dup) { flash(`Receipt No. ${rno} is already saved as ${dup.doc_no}.`, 'err'); return; }
+    if (dup) { flash(`${tag}Receipt No. ${rno} is already saved as ${dup.doc_no}.`, 'err'); return false; }
     const before = f.id ? (list || []).find((d) => d.id === f.id) : null;
     const sub = r3(total - vat);
     // keep the lines of an existing bill when the amount did not change, else one line with the amount without VAT
@@ -378,11 +417,11 @@ function DocsPage() {
     if (f.fuel) { rec.head = 'Vehicle Running and Maintenance'; rec.category = f.fuel; }
     else if (!before) { rec.head = last?.head || 'Office Expenses'; rec.category = null; }
     if (!before) rec.payment_method = last?.payment_method || 'Cash';
-    setRowSaving(true);
+    if (!f.id) setRowSaving(true);
     const t = sb().from('company_docs');
     const res = before ? await t.update(rec).eq('id', f.id).select().single() : await t.insert({ ...rec, created_by: me || null }).select().single();
     if (res.error) setRowSaving(false);
-    if (res.error) { flash(res.error.code === '42501' ? 'You need Full access to save.' : res.error.message, 'err'); return; }
+    if (res.error) { flash(res.error.code === '42501' ? 'You need Full access to save.' : `${tag}${res.error.message}`, 'err'); return false; }
     const saved = res.data;
     if (rec.department) addDept(co, rec.department); // a new department typed here goes into the list by itself
     if (before) {
@@ -394,9 +433,10 @@ function DocsPage() {
         if (added.length) await sb().storage.from('doc-files').remove(added.map((x) => x.path));
       });
     }
-    setRow(null);
-    load();
+    if (!f.id) setRow(null);
+    await load();
     flash(`${saved.doc_no} saved${added.length ? ` with ${added.length} paper${added.length === 1 ? '' : 's'}` : ''}. Added to ${C.short} expenses (All Companies).`);
+    return true;
   }
 
   const pushUndo = (label, run) => setUndo((u) => [...u.slice(-29), { label, run }]);
@@ -432,7 +472,7 @@ function DocsPage() {
       if (doc && dirty && !window.confirm('Close without saving?')) { return; }
       if (doc && !doc.id) setDoc(null);
       else if (doc && dirty) openDoc((list || []).find((d) => d.id === doc.id) || doc);
-      setEditing(false); setPicked([]); setBulk(null); setUndo([]); setRow(null);
+      setEditing(false); setPicked([]); setBulk(null); setUndo([]); setRow(null); updForms(() => ({})); setRowSt({});
       emptyTrash();
       return;
     }
@@ -837,7 +877,7 @@ function DocsPage() {
           </button>
           <span className="dx-sep" />
           <CloseEdit onClose={toggleEdit} disabled={busy || rowSaving} />
-          <span className="muted dx-hint">{picked.length ? `${picked.length} selected` : kind === 'receipt' ? 'Tap a bill to change it · tick rows to delete or move' : 'Tick rows to delete or move'}</span>
+          <span className="muted dx-hint">{picked.length ? `${picked.length} selected` : kind === 'receipt' ? 'Type in any box · a bill saves by itself when you leave its row · Esc puts it back' : 'Tick rows to delete or move'}</span>
         </div>
       )}
 
@@ -852,11 +892,21 @@ function DocsPage() {
             <thead><tr>{canEdit && <th className="dx-c"><input type="checkbox" aria-label="Select all" checked={!!shown.length && picked.length === shown.length} onChange={() => setPicked(picked.length === shown.length ? [] : shown.map((d) => d.id))} /></th>}<th>No.</th><th>Date</th><th>{K.party}</th><th>Receipt No.</th><th>Vehicle No.</th><th>Fuel</th><th className="num">Subtotal</th><th className="num">VAT 5%</th><th className="num">Grand Total</th><th>VAT No.</th>{kind === 'receipt' && <th>Department</th>}{kind === 'receipt' && <th>Bill paper</th>}{kind === 'receipt' && canEdit && <th />}</tr></thead>
             <tbody>
               {kind === 'receipt' && row && !row.id && <BillRow f={row} set={setBill} sugg={sugg} canPick={canEdit} co={co} saving={rowSaving} onSave={saveRow} onCancel={() => setRow(null)} />}
-              {shown.map((d) => kind === 'receipt' && row && row.id === d.id ? (
-                <BillRow key={d.id} f={row} set={setBill} sugg={sugg} canPick={canEdit} co={co} saving={rowSaving} onSave={saveRow} onCancel={() => setRow(null)} />
+              {shown.map((d) => kind === 'receipt' && canEdit ? (
+                <BillRow key={d.id} f={forms[d.id] || billForm(d)} set={setBillFor(d)} sugg={sugg} canPick co={co}
+                  saving={rowSt[d.id] === 'saving'} status={rowSt[d.id] || (forms[d.id] && isDirty(forms[d.id], d) ? 'dirty' : '')}
+                  onSave={() => leaveRow(d)} onCancel={() => revertRow(d)} onLeave={() => leaveRow(d)}
+                  picked={picked.includes(d.id)} onPick={() => pickOne(d.id)}
+                  paper={<DocFiles row={{ id: `company_docs/${d.id}`, owner: d.party, doc_name: d.doc_no, files: d.files || [] }}
+                    canEdit userName={me} flash={flash}
+                    onSave={async (files) => {
+                      const { error } = await sb().from('company_docs').update({ files }).eq('id', d.id);
+                      if (error) { flash(error.message, 'err'); return; }
+                      load();
+                    }} />} />
               ) : (
-                <tr key={d.id} tabIndex={0} className={picked.includes(d.id) ? 'dx-on' : ''} onClick={() => (kind === 'receipt' ? canEdit && startRow(d) : openDoc(d))} onKeyDown={(e) => e.key === 'Enter' && (kind === 'receipt' ? canEdit && startRow(d) : openDoc(d))}
-                  title={kind === 'receipt' ? (canEdit ? 'Tap to change this bill' : '') : 'Open'} style={kind === 'receipt' && !canEdit ? { cursor: 'default' } : undefined}>
+                <tr key={d.id} tabIndex={0} className={picked.includes(d.id) ? 'dx-on' : ''} onClick={() => kind !== 'receipt' && openDoc(d)} onKeyDown={(e) => e.key === 'Enter' && kind !== 'receipt' && openDoc(d)}
+                  title={kind === 'receipt' ? '' : 'Open'} style={kind === 'receipt' && !canEdit ? { cursor: 'default' } : undefined}>
                   {canEdit && <td className="dx-c" onClick={(e) => e.stopPropagation()}><input type="checkbox" aria-label={`Select ${d.doc_no}`} checked={picked.includes(d.id)} onChange={() => pickOne(d.id)} /></td>}
                   <td className="iv-list-no">{d.doc_no}{(d.files || []).length ? ' 📎' : ''}</td>
                   <td>{fmtD(d.doc_date)}</td>
@@ -882,7 +932,6 @@ function DocsPage() {
                         }} />
                     </td>
                   )}
-                  {kind === 'receipt' && canEdit && <td className="muted" style={{ whiteSpace: 'nowrap' }}>✏️</td>}
                 </tr>
               ))}
             </tbody>

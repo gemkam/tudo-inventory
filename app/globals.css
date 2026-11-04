@@ -4449,3 +4449,11 @@ tr.tf-hide { display: none !important; }
 .dx-bar-off { border-style: solid; }
 .dx-bar-off + .iv-table-wrap, .dx-bar-off + .iv-empty { margin-top: 10px; }
 .iv-list td.dx-grand { font-weight: 700; }
+/* Bills: every row open in Edit, saves by itself (4 Nov 2026) */
+.br-row.br-dirty td { background: color-mix(in srgb, #f5c542 12%, transparent); }
+.br-row.br-errrow td { background: color-mix(in srgb, #c0392b 10%, transparent); }
+.br-st { font-size: 12px; font-weight: 600; }
+.br-st.st-saved { color: var(--brown); }
+.br-st.st-dirty { color: #b7791f; }
+.br-st.st-err { color: #c0392b; }
+.br-st.st-saving { color: var(--muted); }
