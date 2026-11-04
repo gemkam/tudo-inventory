@@ -757,6 +757,25 @@ function DocsPage() {
         ))}
       </div>
 
+      {list !== null && shown.length > 0 && (() => {
+        const tot = r3(shown.reduce((t, d) => t + totalOf(d), 0));
+        const vat = r3(shown.reduce((t, d) => t + r3(lineTotal(d.items) * n(d.vat_pct) / 100), 0));
+        return (
+          <div className="rp-tiles dx-tiles">
+            <div className="rp-tile">
+              <div className="rp-tile-label">{kind === 'invoice' ? '🧾' : '💵'} Total amount</div>
+              <div className="rp-tile-num"><Omr v={tot} /></div>
+              <div className="rp-tile-sub">{shown.length} {shown.length === 1 ? K.one.toLowerCase() : K.label.toLowerCase()}{q ? ' found' : ''} · {C.short} · with VAT</div>
+            </div>
+            <div className="rp-tile">
+              <div className="rp-tile-label">🧾 VAT 5%</div>
+              <div className="rp-tile-num"><Omr v={vat} /></div>
+              <div className="rp-tile-sub">{vat ? `Inside the total · without VAT ${fmt3(r3(tot - vat))}` : 'No VAT on these'}</div>
+            </div>
+          </div>
+        );
+      })()}
+
       {canEdit && (
         <div className="dx-bar no-print">
           <b>✏️ Edit</b>
@@ -790,26 +809,6 @@ function DocsPage() {
           <span className="muted dx-hint">{picked.length ? `${picked.length} selected` : kind === 'receipt' ? 'Tap a bill to change it · tick rows to delete or move' : 'Tick rows to delete or move'}</span>
         </div>
       )}
-
-
-      {list !== null && shown.length > 0 && (() => {
-        const tot = r3(shown.reduce((t, d) => t + totalOf(d), 0));
-        const vat = r3(shown.reduce((t, d) => t + r3(lineTotal(d.items) * n(d.vat_pct) / 100), 0));
-        return (
-          <div className="rp-tiles dx-tiles">
-            <div className="rp-tile">
-              <div className="rp-tile-label">{kind === 'invoice' ? '🧾' : '💵'} Total amount</div>
-              <div className="rp-tile-num"><Omr v={tot} /></div>
-              <div className="rp-tile-sub">{shown.length} {shown.length === 1 ? K.one.toLowerCase() : K.label.toLowerCase()}{q ? ' found' : ''} · {C.short} · with VAT</div>
-            </div>
-            <div className="rp-tile">
-              <div className="rp-tile-label">🧾 VAT 5%</div>
-              <div className="rp-tile-num"><Omr v={vat} /></div>
-              <div className="rp-tile-sub">{vat ? `Inside the total · without VAT ${fmt3(r3(tot - vat))}` : 'No VAT on these'}</div>
-            </div>
-          </div>
-        );
-      })()}
 
       {list === null ? <div className="loading">Loading...</div> : shown.length === 0 && !(row && !row.id && kind === 'receipt') ? (
         <div className="iv-empty">

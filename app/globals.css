@@ -4443,3 +4443,6 @@ tr.tf-hide { display: none !important; }
 .di-grid .di-dept { display: grid; gap: 3px; font-size: 11.5px; color: var(--muted); font-weight: 600; }
 .di-grid .di-dept select, .di-grid .di-dept input { font-weight: 400; color: var(--heading, inherit); }
 .dp-list li::marker { color: var(--muted); }
+
+/* Bills: Edit bar sits right above the table (4 Nov 2026) */
+.dx-bar + .iv-table-wrap, .dx-bar + .iv-empty { margin-top: 10px; }
