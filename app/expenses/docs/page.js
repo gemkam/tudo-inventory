@@ -34,6 +34,39 @@ const fmtD = (d) => (d ? fmtFullDate(d) : '');
 const lineTotal = (items) => r3((items || []).reduce((t, i) => t + n(i.amount), 0));
 const blankItems = () => [{ desc: '', amount: '' }, { desc: '', amount: '' }, { desc: '', amount: '' }];
 
+/* One bill typed right in the Bills table (no paper page). Columns follow the list: No., Date, Paid to, Receipt No.,
+   Vehicle No., Fuel, VAT No., VAT 5%, Department, Amount (with VAT). */
+function BillRow({ f, set, canPick, co, saving, onSave, onCancel }) {
+  const stop = (e) => e.stopPropagation();
+  const key = (e) => { if (e.key === 'Enter') { e.preventDefault(); onSave(); } if (e.key === 'Escape') onCancel(); };
+  const tot = n(f.amount);
+  const fillVat = () => set('vat', tot > 0 ? String(r3(tot - tot / 1.05)) : '');
+  const inp = (k, ph, extra = {}) => <input className="br-in" value={f[k]} placeholder={ph} onChange={(e) => set(k, e.target.value)} onKeyDown={key} {...extra} />;
+  return (
+    <tr className="br-row" onClick={stop}>
+      {canPick && <td className="dx-c" />}
+      <td className="iv-list-no">{f.doc_no}</td>
+      <td><DateInput className="br-in" value={f.doc_date || ''} onChange={(v) => set('doc_date', v)} /></td>
+      <td>{inp('party', 'Paid to', { autoFocus: !f.id, list: 'br-party' })}</td>
+      <td>{inp('receipt_no', 'Receipt No.')}</td>
+      <td>{inp('vehicle_no', 'Vehicle No.')}</td>
+      <td><select className="br-in" value={f.fuel} onChange={(e) => set('fuel', e.target.value)}><option value="">Not fuel</option>{FUELS.map((x) => <option key={x} value={x}>{x}</option>)}</select></td>
+      <td>{inp('vat_no', 'VAT No.')}</td>
+      <td className="num">
+        <div className="br-vat">{inp('vat', '0.000', { inputMode: 'decimal', style: { textAlign: 'right' } })}
+          <button type="button" className="btn small ghost" title="5% VAT inside the amount" onClick={fillVat} disabled={!(tot > 0)}>5%</button></div>
+      </td>
+      <td>{inp('department', 'Department', { list: `br-dept-${co}` })}
+        <datalist id={`br-dept-${co}`}>{(DEPARTMENTS[co] || []).map((x) => <option key={x} value={x} />)}</datalist></td>
+      <td className="num">{inp('amount', 'With VAT', { inputMode: 'decimal', style: { textAlign: 'right' } })}</td>
+      <td colSpan={2} style={{ whiteSpace: 'nowrap' }}>
+        <button type="button" className="btn small" onClick={onSave} disabled={saving}>{saving ? 'Saving...' : '✓ Save'}</button>{' '}
+        <button type="button" className="btn small ghost" onClick={onCancel} disabled={saving}>✕</button>
+      </td>
+    </tr>
+  );
+}
+
 function DocsPage() {
   const { isAdmin, name: me } = useUser();
   const [co, setCo] = useState(null);
@@ -49,6 +82,8 @@ function DocsPage() {
   const [picked, setPicked] = useState([]); // selected ids in Edit
   const [bulk, setBulk] = useState(null); // { act: 'delete' | 'move', to }
   const [busy, setBusy] = useState(false);
+  const [row, setRow] = useState(null); // Bills: row typed in the table { id|null, ...fields } (no paper page)
+  const [rowSaving, setRowSaving] = useState(false);
   const [undo, setUndo] = useState([]); // ↶ Undo steps this visit: [{ label, run }] newest last, up to 30
   const trash = useRef(new Set()); // papers of deleted docs: kept until ✓ Done so Undo can bring them back
   const timer = useRef(null);
@@ -82,7 +117,7 @@ function DocsPage() {
     if (error) { flash(error.message, 'err'); setList([]); return; }
     setList(data || []);
   }, [co, kind, flash]);
-  useEffect(() => { setList(null); setPicked([]); load(); }, [load]);
+  useEffect(() => { setList(null); setPicked([]); setRow(null); load(); }, [load]);
 
   const C = companyOf(co);
   const K = KINDS[kind];
@@ -195,6 +230,68 @@ function DocsPage() {
     flash(kind === 'receipt' ? `Saved. Added to ${C.short} expenses (All Companies).` : 'Saved');
   }
 
+  /* ---------- Bills: add / change a bill right in the table (Kamran 4 Nov 2026: no paper page for bills) ---------- */
+  function billForm(d) {
+    if (!d) {
+      const last = (list || [])[0];
+      return { id: null, doc_no: nextNo(), doc_date: todayISO(), party: '', receipt_no: '', vehicle_no: '', fuel: '', vat_no: '', vat: '', amount: '',
+        department: last?.department || (DEPARTMENTS[co] || [])[0] || '' };
+    }
+    const x = shortOf(d);
+    const tot = totalOf(d);
+    return { id: d.id, doc_no: d.doc_no, doc_date: d.doc_date || todayISO(), party: d.party || '', receipt_no: x.receipt_no || '', vehicle_no: x.vehicle_no || '',
+      fuel: x.fuel || '', vat_no: x.vat_no || '', vat: n(d.vat_pct) > 0 ? String(r3(tot - lineTotal(d.items))) : '', amount: String(tot), department: d.department || '' };
+  }
+  const startRow = (d) => { if (rowSaving) return; setRow(billForm(d)); };
+  const setR = (k, v) => setRow((f) => ({ ...f, [k]: v }));
+
+  async function saveRow() {
+    const f = row;
+    const total = r3(n(f.amount));
+    const vat = r3(n(f.vat));
+    if (!f.party.trim()) { flash('Type who was paid (Paid to).', 'err'); return; }
+    if (!(total > 0)) { flash('Type the amount (with VAT).', 'err'); return; }
+    if (vat < 0 || vat >= total) { flash('VAT must be less than the amount.', 'err'); return; }
+    const rno = String(f.receipt_no || '').trim();
+    const dup = rno && (list || []).find((d) => d.id !== f.id && String(shortOf(d).receipt_no || '').trim() === rno);
+    if (dup) { flash(`Receipt No. ${rno} is already saved as ${dup.doc_no}.`, 'err'); return; }
+    const before = f.id ? (list || []).find((d) => d.id === f.id) : null;
+    const sub = r3(total - vat);
+    // keep the lines of an existing bill when the amount did not change, else one line with the amount without VAT
+    let items;
+    if (before && Math.abs(lineTotal(before.items) - sub) < 0.0005 && (before.items || []).length) items = before.items;
+    else {
+      const desc = f.fuel || (before ? (before.items || []).map((i) => i.desc).filter(Boolean).join(', ') : '') || 'Purchase';
+      items = [{ desc, amount: sub }];
+    }
+    const pct = vat > 0 ? (Math.abs(r3(sub * 0.05) - vat) < 0.0005 ? 5 : Number(((vat / sub) * 100).toFixed(4))) : 0;
+    const last = (list || [])[0];
+    const rec = {
+      company: co, kind: 'receipt', doc_no: f.doc_no || null, doc_date: f.doc_date || todayISO(), party: f.party.trim(),
+      party_vat: f.vat_no || null, items, vat_pct: pct, department: f.department || null,
+      scan: { ...(before?.scan || {}), receipt_no: rno, vehicle_no: f.vehicle_no.trim(), fuel: f.fuel, vat_no: f.vat_no.trim(), amount: total, vat_amount: vat },
+      updated_at: new Date().toISOString()
+    };
+    if (f.fuel) { rec.head = 'Vehicle Running and Maintenance'; rec.category = f.fuel; }
+    else if (!before) { rec.head = last?.head || 'Office Expenses'; rec.category = null; }
+    if (!before) rec.payment_method = last?.payment_method || 'Cash';
+    setRowSaving(true);
+    const t = sb().from('company_docs');
+    const res = before ? await t.update(rec).eq('id', f.id).select().single() : await t.insert({ ...rec, created_by: me || null }).select().single();
+    setRowSaving(false);
+    if (res.error) { flash(res.error.code === '42501' ? 'You need Full access to save.' : res.error.message, 'err'); return; }
+    const saved = res.data;
+    if (before) {
+      const { id, created_at: _c, ...back } = before;
+      pushUndo(`change ${before.doc_no}`, async () => { const { error } = await sb().from('company_docs').update(back).eq('id', id); if (error) throw new Error(error.message); });
+    } else {
+      pushUndo(`add ${saved.doc_no}`, async () => { const { error } = await sb().from('company_docs').delete().eq('id', saved.id); if (error) throw new Error(error.message); });
+    }
+    setRow(null);
+    load();
+    flash(`${saved.doc_no} saved. Added to ${C.short} expenses (All Companies).`);
+  }
+
   const pushUndo = (label, run) => setUndo((u) => [...u.slice(-29), { label, run }]);
 
   async function doUndo() {
@@ -228,7 +325,7 @@ function DocsPage() {
       if (doc && dirty && !window.confirm('Close without saving?')) { return; }
       if (doc && !doc.id) setDoc(null);
       else if (doc && dirty) openDoc((list || []).find((d) => d.id === doc.id) || doc);
-      setEditing(false); setPicked([]); setBulk(null); setUndo([]);
+      setEditing(false); setPicked([]); setBulk(null); setUndo([]); setRow(null);
       emptyTrash();
       return;
     }
@@ -578,7 +675,7 @@ function DocsPage() {
       {canEdit && (
         <div className="dx-bar no-print">
           <b>✏️ Edit</b>
-          <button type="button" className="btn" onClick={newDoc}>＋ Add {K.one.toLowerCase()}</button>
+          <button type="button" className="btn" onClick={() => (kind === 'receipt' ? startRow(null) : newDoc())} disabled={kind === 'receipt' && !!row && !row.id}>＋ Add {K.one.toLowerCase()}</button>
           <DocImport co={co} coShort={C.short} kind={kind} userName={me} last={(list || [])[0]} nextNo={nextNoFor} flash={flash}
             onDone={(rows) => {
               load();
@@ -603,7 +700,7 @@ function DocsPage() {
             title={undo.length ? `Undo: ${undo[undo.length - 1].label}` : 'Nothing to undo yet'}>
             ↶ Undo{undo.length ? ` ${undo[undo.length - 1].label}` : ''}
           </button>
-          <span className="muted dx-hint">{picked.length ? `${picked.length} selected` : 'Tick rows to delete or move'}</span>
+          <span className="muted dx-hint">{picked.length ? `${picked.length} selected` : kind === 'receipt' ? 'Tap a bill to change it · tick rows to delete or move' : 'Tick rows to delete or move'}</span>
         </div>
       )}
 
@@ -627,7 +724,7 @@ function DocsPage() {
         );
       })()}
 
-      {list === null ? <div className="loading">Loading...</div> : shown.length === 0 ? (
+      {list === null ? <div className="loading">Loading...</div> : shown.length === 0 && !(row && !row.id && kind === 'receipt') ? (
         <div className="iv-empty">
           <div className="iv-empty-mark">{kind === 'invoice' ? '🧾' : '💵'}</div>
           <p>No {K.label.toLowerCase()} yet for {C.short}.</p>
@@ -635,10 +732,14 @@ function DocsPage() {
       ) : (
         <div className="iv-table-wrap">
           <table className="iv-list" style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead><tr>{canEdit && <th className="dx-c"><input type="checkbox" aria-label="Select all" checked={!!shown.length && picked.length === shown.length} onChange={() => setPicked(picked.length === shown.length ? [] : shown.map((d) => d.id))} /></th>}<th>No.</th><th>Date</th><th>{K.party}</th><th>Receipt No.</th><th>Vehicle No.</th><th>Fuel</th><th>VAT No.</th><th className="num">VAT 5%</th>{kind === 'receipt' && <th>Department</th>}<th className="num">Amount OMR</th></tr></thead>
+            <thead><tr>{canEdit && <th className="dx-c"><input type="checkbox" aria-label="Select all" checked={!!shown.length && picked.length === shown.length} onChange={() => setPicked(picked.length === shown.length ? [] : shown.map((d) => d.id))} /></th>}<th>No.</th><th>Date</th><th>{K.party}</th><th>Receipt No.</th><th>Vehicle No.</th><th>Fuel</th><th>VAT No.</th><th className="num">VAT 5%</th>{kind === 'receipt' && <th>Department</th>}<th className="num">Amount OMR</th>{kind === 'receipt' && <th>Bill paper</th>}{kind === 'receipt' && canEdit && <th />}</tr></thead>
             <tbody>
-              {shown.map((d) => (
-                <tr key={d.id} tabIndex={0} className={picked.includes(d.id) ? 'dx-on' : ''} onClick={() => openDoc(d)} onKeyDown={(e) => e.key === 'Enter' && openDoc(d)}>
+              {kind === 'receipt' && row && !row.id && <BillRow f={row} set={setR} canPick={canEdit} co={co} saving={rowSaving} onSave={saveRow} onCancel={() => setRow(null)} />}
+              {shown.map((d) => kind === 'receipt' && row && row.id === d.id ? (
+                <BillRow key={d.id} f={row} set={setR} canPick={canEdit} co={co} saving={rowSaving} onSave={saveRow} onCancel={() => setRow(null)} />
+              ) : (
+                <tr key={d.id} tabIndex={0} className={picked.includes(d.id) ? 'dx-on' : ''} onClick={() => (kind === 'receipt' ? canEdit && startRow(d) : openDoc(d))} onKeyDown={(e) => e.key === 'Enter' && (kind === 'receipt' ? canEdit && startRow(d) : openDoc(d))}
+                  title={kind === 'receipt' ? (canEdit ? 'Tap to change this bill' : '') : 'Open'} style={kind === 'receipt' && !canEdit ? { cursor: 'default' } : undefined}>
                   {canEdit && <td className="dx-c" onClick={(e) => e.stopPropagation()}><input type="checkbox" aria-label={`Select ${d.doc_no}`} checked={picked.includes(d.id)} onChange={() => pickOne(d.id)} /></td>}
                   <td className="iv-list-no">{d.doc_no}{(d.files || []).length ? ' 📎' : ''}</td>
                   <td>{fmtD(d.doc_date)}</td>
@@ -652,10 +753,23 @@ function DocsPage() {
                   <td className="num">{n(d.vat_pct) > 0 ? <Omr v={r3(totalOf(d) - lineTotal(d.items))} /> : <span className="muted">0</span>}</td>
                   {kind === 'receipt' && <td>{d.department || ''}</td>}
                   <td className="num"><Omr v={totalOf(d)} /></td>
+                  {kind === 'receipt' && (
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <DocFiles row={{ id: `company_docs/${d.id}`, owner: d.party, doc_name: d.doc_no, files: d.files || [] }}
+                        canEdit={canEdit} userName={me} flash={flash}
+                        onSave={async (files) => {
+                          const { error } = await sb().from('company_docs').update({ files }).eq('id', d.id);
+                          if (error) { flash(error.message, 'err'); return; }
+                          load();
+                        }} />
+                    </td>
+                  )}
+                  {kind === 'receipt' && canEdit && <td className="muted" style={{ whiteSpace: 'nowrap' }}>✏️</td>}
                 </tr>
               ))}
             </tbody>
           </table>
+          {kind === 'receipt' && <datalist id="br-party">{[...new Set((list || []).map((d) => d.party).filter(Boolean))].map((x) => <option key={x} value={x} />)}</datalist>}
         </div>
       )}
 
