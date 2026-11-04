@@ -728,6 +728,8 @@ function DocsPage() {
             title={undo.length ? `Undo: ${undo[undo.length - 1].label}` : 'Nothing to undo yet'}>
             ↶ Undo{undo.length ? ` ${undo[undo.length - 1].label}` : ''}
           </button>
+          <span className="dx-sep" />
+          <button type="button" className="btn dx-close" onClick={toggleEdit} disabled={busy || rowSaving} title="Stop editing: all Edit buttons turn off">✕ Close Edit</button>
           <span className="muted dx-hint">{picked.length ? `${picked.length} selected` : kind === 'receipt' ? 'Tap a bill to change it · tick rows to delete or move' : 'Tick rows to delete or move'}</span>
         </div>
       )}
