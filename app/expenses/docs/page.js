@@ -38,6 +38,7 @@ const blankItems = () => [{ desc: '', amount: '' }, { desc: '', amount: '' }, { 
    Vehicle No., Fuel, VAT No., VAT 5%, Department, Amount (with VAT). */
 function BillRow({ f, set, canPick, co, saving, onSave, onCancel }) {
   const stop = (e) => e.stopPropagation();
+  const pickRef = useRef(null);
   const key = (e) => { if (e.key === 'Enter') { e.preventDefault(); onSave(); } if (e.key === 'Escape') onCancel(); };
   const tot = n(f.amount);
   const fillVat = () => set('vat', tot > 0 ? String(r3(tot - tot / 1.05)) : '');
@@ -59,7 +60,17 @@ function BillRow({ f, set, canPick, co, saving, onSave, onCancel }) {
       <td>{inp('department', 'Department', { list: `br-dept-${co}` })}
         <datalist id={`br-dept-${co}`}>{(DEPARTMENTS[co] || []).map((x) => <option key={x} value={x} />)}</datalist></td>
       <td className="num">{inp('amount', 'With VAT', { inputMode: 'decimal', style: { textAlign: 'right' } })}</td>
-      <td colSpan={2} style={{ whiteSpace: 'nowrap' }}>
+      <td className="br-paper">
+        {f.oldFiles > 0 && <span className="muted br-has">📎 {f.oldFiles} saved</span>}
+        {(f.newFiles || []).map((x, i) => (
+          <span key={i} className="br-file" title={x.name}>📄 {x.name.length > 18 ? `${x.name.slice(0, 16)}…` : x.name}
+            <button type="button" aria-label={`Remove ${x.name}`} onClick={() => set('newFiles', f.newFiles.filter((_, j) => j !== i))}>×</button></span>
+        ))}
+        <input ref={pickRef} type="file" accept="image/*,application/pdf" multiple hidden
+          onChange={(e) => { const add = [...(e.target.files || [])]; e.target.value = ''; if (add.length) set('newFiles', [...(f.newFiles || []), ...add]); }} />
+        <button type="button" className="btn small ghost" onClick={() => pickRef.current?.click()} disabled={saving}>＋ Add paper</button>
+      </td>
+      <td style={{ whiteSpace: 'nowrap' }}>
         <button type="button" className="btn small" onClick={onSave} disabled={saving}>{saving ? 'Saving...' : '✓ Save'}</button>{' '}
         <button type="button" className="btn small ghost" onClick={onCancel} disabled={saving}>✕</button>
       </td>
@@ -212,6 +223,20 @@ function DocsPage() {
     setDoc({ ...res.data, items: res.data.items.length ? res.data.items : blankItems() });
     setDirty(false);
     const saved = res.data;
+    // papers picked in the row: upload now that the bill has its id
+    const added = [];
+    for (const file of f.newFiles || []) {
+      if (file.size > 15 * 1024 * 1024) { flash(`${file.name} is bigger than 15 MB, not added.`, 'err'); continue; }
+      const path = `company_docs/${saved.id}/${Date.now()}-${String(file.name).replace(/[^\w.\-]+/g, '_')}`;
+      const up = await sb().storage.from('doc-files').upload(path, file, { contentType: file.type || undefined, upsert: false });
+      if (up.error) { flash(`Upload failed: ${up.error.message}`, 'err'); continue; }
+      added.push({ path, name: file.name, size: file.size, type: file.type || '', at: new Date().toISOString(), by: me || '' });
+    }
+    if (added.length) {
+      const { error } = await sb().from('company_docs').update({ files: [...(saved.files || []), ...added] }).eq('id', saved.id);
+      if (error) flash(`Paper uploaded but not linked: ${error.message}`, 'err');
+    }
+    setRowSaving(false);
     if (before) {
       const { id, created_at: _c, ...back } = before;
       pushUndo(`change ${before.doc_no}`, async () => {
@@ -235,12 +260,12 @@ function DocsPage() {
     if (!d) {
       const last = (list || [])[0];
       return { id: null, doc_no: nextNo(), doc_date: todayISO(), party: '', receipt_no: '', vehicle_no: '', fuel: '', vat_no: '', vat: '', amount: '',
-        department: last?.department || (DEPARTMENTS[co] || [])[0] || '' };
+        department: last?.department || (DEPARTMENTS[co] || [])[0] || '', newFiles: [], oldFiles: 0 };
     }
     const x = shortOf(d);
     const tot = totalOf(d);
     return { id: d.id, doc_no: d.doc_no, doc_date: d.doc_date || todayISO(), party: d.party || '', receipt_no: x.receipt_no || '', vehicle_no: x.vehicle_no || '',
-      fuel: x.fuel || '', vat_no: x.vat_no || '', vat: n(d.vat_pct) > 0 ? String(r3(tot - lineTotal(d.items))) : '', amount: String(tot), department: d.department || '' };
+      fuel: x.fuel || '', vat_no: x.vat_no || '', vat: n(d.vat_pct) > 0 ? String(r3(tot - lineTotal(d.items))) : '', amount: String(tot), department: d.department || '', newFiles: [], oldFiles: (d.files || []).length };
   }
   const startRow = (d) => { if (rowSaving) return; setRow(billForm(d)); };
   const setR = (k, v) => setRow((f) => ({ ...f, [k]: v }));
@@ -278,18 +303,21 @@ function DocsPage() {
     setRowSaving(true);
     const t = sb().from('company_docs');
     const res = before ? await t.update(rec).eq('id', f.id).select().single() : await t.insert({ ...rec, created_by: me || null }).select().single();
-    setRowSaving(false);
+    if (res.error) setRowSaving(false);
     if (res.error) { flash(res.error.code === '42501' ? 'You need Full access to save.' : res.error.message, 'err'); return; }
     const saved = res.data;
     if (before) {
       const { id, created_at: _c, ...back } = before;
       pushUndo(`change ${before.doc_no}`, async () => { const { error } = await sb().from('company_docs').update(back).eq('id', id); if (error) throw new Error(error.message); });
     } else {
-      pushUndo(`add ${saved.doc_no}`, async () => { const { error } = await sb().from('company_docs').delete().eq('id', saved.id); if (error) throw new Error(error.message); });
+      pushUndo(`add ${saved.doc_no}`, async () => {
+        const { error } = await sb().from('company_docs').delete().eq('id', saved.id); if (error) throw new Error(error.message);
+        if (added.length) await sb().storage.from('doc-files').remove(added.map((x) => x.path));
+      });
     }
     setRow(null);
     load();
-    flash(`${saved.doc_no} saved. Added to ${C.short} expenses (All Companies).`);
+    flash(`${saved.doc_no} saved${added.length ? ` with ${added.length} paper${added.length === 1 ? '' : 's'}` : ''}. Added to ${C.short} expenses (All Companies).`);
   }
 
   const pushUndo = (label, run) => setUndo((u) => [...u.slice(-29), { label, run }]);
