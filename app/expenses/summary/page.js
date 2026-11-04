@@ -785,7 +785,7 @@ function SalesSheet({ G, periodLabel }) {
           {S.list.length > 15 && <button type="button" className="btn small ghost" style={{ marginTop: 8 }} onClick={() => setAll((v) => !v)}>{all ? 'Show less' : `Show all ${S.list.length}`}</button>}
         </>
       )}
-      <p className="note" style={{ margin: '8px 0 0' }}>Sales = Transport trips (work amount) + invoices made in 🧾 Invoice / Receipt for the 3 companies. VAT 5% is inside the amount and kept aside. Transport invoices are not added again (they bill the same trips).</p>
+      <p className="note" style={{ margin: '8px 0 0' }}>Sales = Transport trips (work amount) + invoices made in 🧾 Invoices for the 3 companies. VAT 5% is inside the amount and kept aside. Transport invoices are not added again (they bill the same trips).</p>
     </section>
   );
 }

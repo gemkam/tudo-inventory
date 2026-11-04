@@ -316,7 +316,6 @@ function ExpensesPage() {
             </select>
           </div>
           <Link href={`/personnel?tab=attendance&co=${co}`} className="btn">🗓 Attendance</Link>
-          <Link href={`/expenses/docs?co=${co}`} className="btn">🧾 Invoice / Receipt</Link>
           <button type="button" className="btn ghost" onClick={doExcel}>📗 Excel</button>
           <button type="button" className="btn ghost" onClick={doPdf}>📕 PDF</button>
           <button type="button" className="btn ghost" onClick={shareIt}>📤 Share</button>
