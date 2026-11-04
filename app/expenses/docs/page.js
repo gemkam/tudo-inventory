@@ -39,14 +39,39 @@ const lineTotal = (items) => r3((items || []).reduce((t, i) => t + n(i.amount), 
 const blankItems = () => [{ desc: '', amount: '' }, { desc: '', amount: '' }, { desc: '', amount: '' }];
 
 /* One bill typed right in the Bills table (no paper page). Columns follow the list: No., Date, Paid to, Receipt No.,
-   Vehicle No., Fuel, VAT No., VAT 5%, Department, Amount (with VAT). */
-function BillRow({ f, set, canPick, co, saving, onSave, onCancel }) {
+   Vehicle No., Fuel, Amount (with VAT), VAT No., VAT 5%, Department.
+   Type-ahead (Kamran 4 Nov 2026): Paid to, Vehicle No. and VAT No. finish the word from earlier bills as you type
+   (Tab or Enter keeps it, keep typing to change it). Picking a saved "Paid to" fills its VAT No., a saved VAT No. fills "Paid to". */
+function finish(e, options, set, k) {
+  const el = e.target;
+  const typed = el.value;
+  const adding = String(e.nativeEvent?.inputType || '').startsWith('insert');
+  const atEnd = el.selectionStart === typed.length;
+  const low = typed.toLowerCase();
+  const hit = adding && atEnd && typed.trim() ? (options || []).find((o) => o.toLowerCase().startsWith(low) && o.length > typed.length) : null;
+  if (!hit) { set(k, typed); return; }
+  const full = typed + hit.slice(typed.length);
+  set(k, full);
+  requestAnimationFrame(() => { try { el.setSelectionRange(typed.length, full.length); } catch { /* ignore */ } });
+}
+
+function BillRow({ f, set, canPick, co, saving, onSave, onCancel, sugg = {} }) {
   const stop = (e) => e.stopPropagation();
   const pickRef = useRef(null);
-  const key = (e) => { if (e.key === 'Enter') { e.preventDefault(); onSave(); } if (e.key === 'Escape') onCancel(); };
+  const key = (e) => {
+    const el = e.target;
+    const sel = el && typeof el.selectionStart === 'number' && el.selectionEnd > el.selectionStart && el.selectionEnd === String(el.value || '').length;
+    if (e.key === 'Enter' && sel) { e.preventDefault(); el.setSelectionRange(el.value.length, el.value.length); return; } // keep the finished word
+    if (e.key === 'Enter') { e.preventDefault(); onSave(); }
+    if (e.key === 'Escape') onCancel();
+  };
   const tot = n(f.amount);
   const fillVat = () => set('vat', tot > 0 ? String(r3(tot - tot / 1.05)) : '');
-  const inp = (k, ph, extra = {}) => <input className="br-in" value={f[k]} placeholder={ph} onChange={(e) => set(k, e.target.value)} onKeyDown={key} {...extra} />;
+  const auto = sugg.auto || {};
+  const inp = (k, ph, extra = {}) => (
+    <input className="br-in" value={f[k]} placeholder={ph} onKeyDown={key} autoComplete="off" {...extra}
+      onChange={(e) => (auto[k] ? finish(e, auto[k], set, k) : set(k, e.target.value))} />
+  );
   return (
     <tr className="br-row" onClick={stop}>
       {canPick && <td className="dx-c" />}
@@ -54,15 +79,15 @@ function BillRow({ f, set, canPick, co, saving, onSave, onCancel }) {
       <td><DateInput className="br-in" value={f.doc_date || ''} onChange={(v) => set('doc_date', v)} /></td>
       <td>{inp('party', 'Paid to', { autoFocus: !f.id, list: 'br-party' })}</td>
       <td>{inp('receipt_no', 'Receipt No.')}</td>
-      <td>{inp('vehicle_no', 'Vehicle No.')}</td>
+      <td>{inp('vehicle_no', 'Vehicle No.', { list: 'br-veh' })}</td>
       <td><select className="br-in" value={f.fuel} onChange={(e) => set('fuel', e.target.value)}><option value="">Not fuel</option>{FUELS.map((x) => <option key={x} value={x}>{x}</option>)}</select></td>
-      <td>{inp('vat_no', 'VAT No.')}</td>
+      <td className="num">{inp('amount', 'With VAT', { inputMode: 'decimal', style: { textAlign: 'right' } })}</td>
+      <td>{inp('vat_no', 'VAT No.', { list: 'br-vatno' })}</td>
       <td className="num">
         <div className="br-vat">{inp('vat', '0.000', { inputMode: 'decimal', style: { textAlign: 'right' } })}
           <button type="button" className="btn small ghost" title="5% VAT inside the amount" onClick={fillVat} disabled={!(tot > 0)}>5%</button></div>
       </td>
       <td><DeptPicker co={co} value={f.department} onChange={(v) => set('department', v)} disabled={saving} /></td>
-      <td className="num">{inp('amount', 'With VAT', { inputMode: 'decimal', style: { textAlign: 'right' } })}</td>
       <td className="br-paper">
         {f.oldFiles > 0 && <span className="muted br-has">📎 {f.oldFiles} saved</span>}
         {(f.newFiles || []).map((x, i) => (
@@ -273,6 +298,34 @@ function DocsPage() {
   }
   const startRow = (d) => { if (rowSaving) return; setRow(billForm(d)); };
   const setR = (k, v) => setRow((f) => ({ ...f, [k]: v }));
+
+  /* Earlier bills of this company: words to finish while typing, and Paid to <-> VAT No. pairs */
+  const sugg = useMemo(() => {
+    const uniq = (arr) => { const seen = new Set(); return arr.filter((x) => { const t = String(x || '').trim(); if (!t || seen.has(t.toLowerCase())) return false; seen.add(t.toLowerCase()); return true; }).map((x) => String(x).trim()); };
+    const rows = (list || []).filter((d) => d.kind === 'receipt');
+    const vatOfParty = {}; const partyOfVat = {};
+    for (const d of rows) { // newest first: keep the latest pair
+      const v = String(shortOf(d).vat_no || d.party_vat || '').trim();
+      const p = String(d.party || '').trim();
+      if (p && v && !vatOfParty[p.toLowerCase()]) vatOfParty[p.toLowerCase()] = v;
+      if (p && v && !partyOfVat[v.toLowerCase()]) partyOfVat[v.toLowerCase()] = p;
+    }
+    return {
+      auto: {
+        party: uniq(rows.map((d) => d.party)),
+        vehicle_no: uniq(rows.map((d) => shortOf(d).vehicle_no)),
+        vat_no: uniq(rows.map((d) => shortOf(d).vat_no || d.party_vat))
+      },
+      vatOfParty, partyOfVat
+    };
+  }, [list]);
+  const setBill = (k, v) => setRow((f) => {
+    const next = { ...f, [k]: v };
+    const key = String(v || '').trim().toLowerCase();
+    if (k === 'party' && key && sugg.vatOfParty[key] && !String(f.vat_no || '').trim()) next.vat_no = sugg.vatOfParty[key];
+    if (k === 'vat_no' && key && sugg.partyOfVat[key] && !String(f.party || '').trim()) next.party = sugg.partyOfVat[key];
+    return next;
+  });
 
   async function saveRow() {
     const f = row;
@@ -766,11 +819,11 @@ function DocsPage() {
       ) : (
         <div className="iv-table-wrap">
           <table className="iv-list" style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead><tr>{canEdit && <th className="dx-c"><input type="checkbox" aria-label="Select all" checked={!!shown.length && picked.length === shown.length} onChange={() => setPicked(picked.length === shown.length ? [] : shown.map((d) => d.id))} /></th>}<th>No.</th><th>Date</th><th>{K.party}</th><th>Receipt No.</th><th>Vehicle No.</th><th>Fuel</th><th>VAT No.</th><th className="num">VAT 5%</th>{kind === 'receipt' && <th>Department</th>}<th className="num">Amount OMR</th>{kind === 'receipt' && <th>Bill paper</th>}{kind === 'receipt' && canEdit && <th />}</tr></thead>
+            <thead><tr>{canEdit && <th className="dx-c"><input type="checkbox" aria-label="Select all" checked={!!shown.length && picked.length === shown.length} onChange={() => setPicked(picked.length === shown.length ? [] : shown.map((d) => d.id))} /></th>}<th>No.</th><th>Date</th><th>{K.party}</th><th>Receipt No.</th><th>Vehicle No.</th><th>Fuel</th><th className="num">Amount OMR</th><th>VAT No.</th><th className="num">VAT 5%</th>{kind === 'receipt' && <th>Department</th>}{kind === 'receipt' && <th>Bill paper</th>}{kind === 'receipt' && canEdit && <th />}</tr></thead>
             <tbody>
-              {kind === 'receipt' && row && !row.id && <BillRow f={row} set={setR} canPick={canEdit} co={co} saving={rowSaving} onSave={saveRow} onCancel={() => setRow(null)} />}
+              {kind === 'receipt' && row && !row.id && <BillRow f={row} set={setBill} sugg={sugg} canPick={canEdit} co={co} saving={rowSaving} onSave={saveRow} onCancel={() => setRow(null)} />}
               {shown.map((d) => kind === 'receipt' && row && row.id === d.id ? (
-                <BillRow key={d.id} f={row} set={setR} canPick={canEdit} co={co} saving={rowSaving} onSave={saveRow} onCancel={() => setRow(null)} />
+                <BillRow key={d.id} f={row} set={setBill} sugg={sugg} canPick={canEdit} co={co} saving={rowSaving} onSave={saveRow} onCancel={() => setRow(null)} />
               ) : (
                 <tr key={d.id} tabIndex={0} className={picked.includes(d.id) ? 'dx-on' : ''} onClick={() => (kind === 'receipt' ? canEdit && startRow(d) : openDoc(d))} onKeyDown={(e) => e.key === 'Enter' && (kind === 'receipt' ? canEdit && startRow(d) : openDoc(d))}
                   title={kind === 'receipt' ? (canEdit ? 'Tap to change this bill' : '') : 'Open'} style={kind === 'receipt' && !canEdit ? { cursor: 'default' } : undefined}>
@@ -782,11 +835,11 @@ function DocsPage() {
                     <td className="dx-rno">{x.receipt_no}</td>
                     <td>{x.vehicle_no}</td>
                     <td>{x.fuel ? <span className={`dx-fuel f-${x.fuel.toLowerCase()}`}>{x.fuel}</span> : ''}</td>
+                    <td className="num"><Omr v={totalOf(d)} /></td>
                     <td className="muted">{x.vat_no}</td>
                   </>); })()}
                   <td className="num">{n(d.vat_pct) > 0 ? <Omr v={r3(totalOf(d) - lineTotal(d.items))} /> : <span className="muted">0</span>}</td>
                   {kind === 'receipt' && <td>{d.department || ''}</td>}
-                  <td className="num"><Omr v={totalOf(d)} /></td>
                   {kind === 'receipt' && (
                     <td onClick={(e) => e.stopPropagation()}>
                       <DocFiles row={{ id: `company_docs/${d.id}`, owner: d.party, doc_name: d.doc_no, files: d.files || [] }}
@@ -803,7 +856,11 @@ function DocsPage() {
               ))}
             </tbody>
           </table>
-          {kind === 'receipt' && <datalist id="br-party">{[...new Set((list || []).map((d) => d.party).filter(Boolean))].map((x) => <option key={x} value={x} />)}</datalist>}
+          {kind === 'receipt' && <>
+            <datalist id="br-party">{sugg.auto.party.map((x) => <option key={x} value={x} />)}</datalist>
+            <datalist id="br-veh">{sugg.auto.vehicle_no.map((x) => <option key={x} value={x} />)}</datalist>
+            <datalist id="br-vatno">{sugg.auto.vat_no.map((x) => <option key={x} value={x} />)}</datalist>
+          </>}
         </div>
       )}
 
