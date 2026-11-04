@@ -845,6 +845,7 @@ function DocsPage() {
         <div className="dx-bar dx-bar-off no-print">
           <EditToggle show on={editing} onClick={toggleEdit} close={false} />
           <span className="muted dx-hint">Press Edit to add, import, delete or move {K.label.toLowerCase()}</span>
+          <span className="dx-right"><EditToggle show on={editing} onClick={toggleEdit} close={false} /></span>
         </div>
       )}
       {canEdit && (
@@ -878,6 +879,7 @@ function DocsPage() {
           <span className="dx-sep" />
           <CloseEdit onClose={toggleEdit} disabled={busy || rowSaving} />
           <span className="muted dx-hint">{picked.length ? `${picked.length} selected` : kind === 'receipt' ? 'Type in any box · a bill saves by itself when you leave its row · Esc puts it back' : 'Tick rows to delete or move'}</span>
+          <span className="dx-right"><CloseEdit onClose={toggleEdit} disabled={busy || rowSaving} /></span>
         </div>
       )}
 

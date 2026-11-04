@@ -4457,3 +4457,5 @@ tr.tf-hide { display: none !important; }
 .br-st.st-dirty { color: #b7791f; }
 .br-st.st-err { color: #c0392b; }
 .br-st.st-saving { color: var(--muted); }
+.dx-bar .dx-right { margin-left: auto; }
+.dx-bar .dx-hint + .dx-right { margin-left: 12px; }
