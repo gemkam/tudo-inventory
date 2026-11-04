@@ -15,6 +15,8 @@ import AttendanceSheet from '@/components/AttendanceSheet';
 import SendSlipLink from '@/components/SendSlipLink';
 import SlipViewer from '@/components/SlipViewer';
 import PaidButton from '@/components/PaidButton';
+import PeopleImport from '@/components/PeopleImport';
+import { doublesIn } from '@/lib/peopleImport';
 import { loadCredits, markPaid, unmarkPaid, creditKey } from '@/lib/salaryCredit';
 import { sb } from '@/lib/supabase';
 import { COMPANIES, n, r3 } from '@/lib/expenses';
@@ -27,6 +29,8 @@ import { fmtAmt, monthLabel, todayISO, exportExcel, exportStamp } from '@/lib/sh
   Office / Site employees = the same people as the All Companies salary sheets (exp_staff, staff_type Office / Site),
   so the Attendance sheet (Attendance tab = components/AttendanceSheet.js) and the salary sheet stay connected to them.
   Drivers = Transport drivers (transport_drivers). Subcontractors = personnel_subcontractors.
+  📥 Import docs (4 Nov 2026, components/PeopleImport.js): add people from Excel / CSV / Word / PDF / photos; doubles are
+  red in the import list and stay red in the table (same passport, resident card No., mobile or name).
   Salary > Allowance > House rent, Utilities (+ Transport Yes/No for office and site). Changing House rent or Utilities
   also changes the Allowance total that the salary sheet uses.
   ⋯ More (same box as the Documents Checklist) for Contract, Passport, Resident card and Salary slip: private bucket
@@ -271,6 +275,9 @@ function PersonnelPage() {
     } else if (step.type === 'add') {
       ({ error: err } = await s.from(step.table).delete().eq('id', step.id));
       if (!err) setterOf(step.table)((l) => (l || []).filter((x) => x.id !== step.id));
+    } else if (step.type === 'addMany') {
+      ({ error: err } = await s.from(step.table).delete().in('id', step.ids));
+      if (!err) setterOf(step.table)((l) => (l || []).filter((x) => !step.ids.includes(x.id)));
     } else if (step.type === 'archive') {
       if (!(await restore(step.table, step.row))) return;
     } else if (step.type === 'delete') {
@@ -279,9 +286,33 @@ function PersonnelPage() {
     }
     if (err) { flash(`Could not undo: ${err.message}`, 'err'); return; }
     setUndo((u) => u.slice(0, -1));
-    flash(step.type === 'patch' ? `Undone: change of ${step.label}` : step.type === 'add' ? `Undone: ${step.label} removed again` : `Undone: ${step.label} is back${step.table === 'exp_staff' ? ' (attendance marks of that person were deleted with him)' : ''}`);
+    flash(step.type === 'addMany' ? `Undone: import of ${step.ids.length} ${step.ids.length === 1 ? 'person' : 'people'} taken back` : step.type === 'patch' ? `Undone: change of ${step.label}` : step.type === 'add' ? `Undone: ${step.label} removed again` : `Undone: ${step.label} is back${step.table === 'exp_staff' ? ' (attendance marks of that person were deleted with him)' : ''}`);
   }
 
+
+  /* 📥 Import docs (components/PeopleImport.js): doubles in each saved list turn the row red (same passport,
+     resident card No., mobile or name, see lib/peopleImport.js doublesIn) */
+  const dupStaff = useMemo(() => doublesIn(staff || [], 'exp_staff'), [staff]);
+  const dupDrivers = useMemo(() => doublesIn(drivers || [], 'transport_drivers'), [drivers]);
+  const dupSubs = useMemo(() => doublesIn(subs || [], 'personnel_subcontractors'), [subs]);
+  const dupOf = (table) => (table === 'exp_staff' ? dupStaff : table === 'transport_drivers' ? dupDrivers : dupSubs);
+  const nameCol = (table, width) => ({
+    key: 'name', label: 'Name', type: 'text', width,
+    render: (r) => (dupOf(table)[r.id]
+      ? <span className="pn-dup-name" title={dupOf(table)[r.id]}>{r.name}<small>⚠ {dupOf(table)[r.id]}</small></span>
+      : r.name)
+  });
+  const dupRow = (table) => (r) => (dupOf(table)[r.id] ? 'pn-dup' : '');
+  const importSaved = (tb) => {
+    const where = (r) => (r.archived_at ? 'Archives' : tb === 'exp_staff' ? (r.staff_type === 'Site' ? 'Site' : 'Office') : tb === 'transport_drivers' ? 'Drivers' : 'Subcontractors');
+    const live = tb === 'exp_staff' ? staff : tb === 'transport_drivers' ? drivers : subs;
+    return [...(live || []), ...archived.filter((a) => a.table === tb).map((a) => a.row)].map((row) => ({ row, table: tb, where: where(row) }));
+  };
+  function onImported(rows, table, doubles) {
+    setterOf(table)((l) => [...(l || []), ...rows]);
+    if (rows.length) remember({ type: 'addMany', table, ids: rows.map((r) => r.id), label: `${rows.length} imported` });
+    flash(`${rows.length} added${doubles ? ` · ${doubles} double${doubles === 1 ? '' : 's'} shown in red` : ''} · ↶ Undo takes the import back`);
+  }
 
   /* ---------- cells ---------- */
   const docCell = (table, doc, label, text) => (row) => (
@@ -361,7 +392,7 @@ function PersonnelPage() {
   function staffColumns(kind) {
     const T = 'exp_staff';
     return [
-      { key: 'name', label: 'Name', type: 'text', width: 200 },
+      nameCol('exp_staff', 200),
       companyColFor('exp_staff'),
       { key: 'designation', label: 'Designation', type: 'text', width: 160, raw: (r) => r.designation || r.department || '', render: (r) => r.designation || r.department || <span className="muted">–</span> },
       { key: 'contract', label: 'Contract', type: 'text', width: 210, placeholder: 'e.g. 2 years, ends 03/2027', render: docCell(T, 'contract', 'Contract', (r) => r.contract) },
@@ -381,7 +412,7 @@ function PersonnelPage() {
     ];
   }
   const driverColumns = [
-    { key: 'name', label: 'Name', type: 'text', width: 180 },
+    nameCol('transport_drivers', 180),
     companyColFor('transport_drivers'),
     { key: 'contract', label: 'Contract', type: 'text', width: 210, placeholder: 'e.g. 2 years, ends 03/2027', render: docCell('transport_drivers', 'contract', 'Contract', (r) => r.contract) },
     { key: 'resident_card_expiry', label: 'Resident Card Expiry', type: 'date', width: 210, render: docCell('transport_drivers', 'resident', 'Resident card', (r) => (r.resident_card_expiry ? <Expiry date={r.resident_card_expiry} /> : '')) },
@@ -395,7 +426,7 @@ function PersonnelPage() {
     { key: 'slip', label: 'Salary slip', type: 'calc', width: 300, render: slipCell('transport_drivers') }
   ];
   const subColumns = [
-    { key: 'name', label: 'Name', type: 'text', width: 200 },
+    nameCol('personnel_subcontractors', 200),
     companyColFor('personnel_subcontractors', 'Works for'),
     { key: 'company_name', label: 'Company name', type: 'text', width: 220 },
     { key: 'contract', label: 'Contract', type: 'text', width: 240, placeholder: 'Work / period / amount', render: docCell('personnel_subcontractors', 'contract', 'Contract', (r) => r.contract) },
@@ -468,7 +499,7 @@ function PersonnelPage() {
     const cols = staffColumns(tab);
     const rows = tab === 'office' ? officeRows : siteRows;
     grid = (
-      <DataGrid columns={cols} groups={salaryGroups(cols)} rows={rows} canEdit={edit && isAdmin} flash={flash}
+      <DataGrid columns={cols} groups={salaryGroups(cols)} rows={rows} canEdit={edit && isAdmin} flash={flash} rowClass={dupRow('exp_staff')}
         onSave={(row, key, value) => onSave('exp_staff', row, key, value)}
         onAdd={edit && isAdmin ? addRow : undefined} addLabel={`+ Add ${tab === 'site' ? 'site' : 'office'} employee${co ? ` (${CO_SHORT[co]})` : ' (Sumptuosity)'}`}
         onDelete={delMode && canDel ? (row) => setDel({ table: 'exp_staff', row }) : undefined} deleting={delMode && canDel}
@@ -477,7 +508,7 @@ function PersonnelPage() {
     );
   } else if (tab === 'drivers') {
     grid = (
-      <DataGrid columns={driverColumns} groups={salaryGroups(driverColumns)} rows={driverRows} canEdit={edit && isAdmin} flash={flash}
+      <DataGrid columns={driverColumns} groups={salaryGroups(driverColumns)} rows={driverRows} canEdit={edit && isAdmin} flash={flash} rowClass={dupRow('transport_drivers')}
         onSave={(row, key, value) => onSave('transport_drivers', row, key, value)}
         onAdd={edit && isAdmin ? addRow : undefined} addLabel="+ Add driver"
         onDelete={delMode && canDel ? (row) => setDel({ table: 'transport_drivers', row }) : undefined} deleting={delMode && canDel}
@@ -485,7 +516,7 @@ function PersonnelPage() {
     );
   } else if (tab === 'sub') {
     grid = (
-      <DataGrid columns={subColumns} rows={subRows} canEdit={edit && isAdmin} flash={flash}
+      <DataGrid columns={subColumns} rows={subRows} canEdit={edit && isAdmin} flash={flash} rowClass={dupRow('personnel_subcontractors')}
         onSave={(row, key, value) => onSave('personnel_subcontractors', row, key, value)}
         onAdd={edit && isAdmin ? addRow : undefined} addLabel="+ Add subcontractor"
         onDelete={delMode && canDel ? (row) => setDel({ table: 'personnel_subcontractors', row }) : undefined} deleting={delMode && canDel}
@@ -564,6 +595,9 @@ function PersonnelPage() {
         )}
         {isAdmin && (tab === 'office' || tab === 'site' || tab === 'drivers') && (
           <button type="button" className="btn" onClick={() => setPayAll(true)} disabled={!salaryOn} title={salaryOn ? '' : 'Locked: ✏️ Edit › Enable salary buttons'}>💵 All {tab === 'office' ? 'Office Employees' : tab === 'site' ? 'Site Employees' : 'Drivers'} Salary Paid</button>
+        )}
+        {isAdmin && TABLE[tab] && (
+          <PeopleImport tab={tab} co={co} companies={allCos} saved={importSaved(TABLE[tab])} flash={flash} onSaved={onImported} disabled={!edit} />
         )}
         {tab === 'drivers' && <Link href="/transport/trip-sheets" className="btn">🚚 Trip sheets</Link>}
         <PrintColumns className="btn" />
