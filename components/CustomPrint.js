@@ -16,22 +16,37 @@ export function printTable({ title, subtitle, columns, rows }) {
     const body = useRows.map((r, i) => `<tr class="${i % 2 ? 'alt' : ''}">${useCols.map((c) => `<td class="${c.num ? 'n' : ''}">${esc(r.cells[c.key])}</td>`).join('')}</tr>`).join('');
     const hasTot = useCols.some((c) => c.num);
     const foot = hasTot ? `<tr class="tot">${useCols.map((c, i) => `<td class="${c.num ? 'n' : ''}">${c.num ? totals[c.key].toFixed(3) : i === 0 ? 'Total' : ''}</td>`).join('')}</tr>` : '';
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>
-      @page { size: A4 landscape; margin: 10mm; }
-      body { font-family: Arial, Helvetica, sans-serif; color: #111; font-size: 11px; }
-      h1 { font-size: 17px; margin: 0 0 2px; } p { margin: 0 0 10px; color: #555; }
-      table { width: 100%; border-collapse: collapse; }
-      th, td { border: 1px solid #bbb; padding: 5px 6px; text-align: left; vertical-align: top; }
-      th { background: #e8f3ef; font-size: 10.5px; text-transform: uppercase; letter-spacing: .3px; }
-      td.n, th.n { text-align: right; white-space: nowrap; }
-      tr.alt td { background: #f7f9f8; } tr.tot td { font-weight: 700; background: #eef; }
-      thead { display: table-header-group; }
-    </style></head><body><h1>${esc(title)}</h1><p>${esc(subtitle || '')} · ${useRows.length} row${useRows.length === 1 ? '' : 's'} · printed ${new Date().toLocaleDateString('en-GB')}</p>
-    <table><thead><tr>${head}</tr></thead><tbody>${body}${foot}</tbody></table></body></html>`;
-    const fr = document.createElement('iframe');
-    fr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
-    document.body.appendChild(fr);
-    fr.srcdoc = html;
-    fr.onload = () => { try { fr.contentWindow.focus(); fr.contentWindow.print(); } catch { /* ignore */ } setTimeout(() => fr.remove(), 60000); };
+    // Printed from the page itself (not a hidden frame) so every browser keeps A4 LANDSCAPE (Kamran 4 Nov 2026)
+    const css = `
+      #cp-print { display: none; }
+      @media print {
+        @page { size: 297mm 210mm; margin: 10mm; }
+        @page cp-land { size: A4 landscape; margin: 10mm; }
+        html, body { width: auto !important; height: auto !important; background: #fff !important; }
+        body.cp-printing > *:not(#cp-print) { display: none !important; }
+        body.cp-printing #cp-print { display: block !important; page: cp-land; }
+        #cp-print { font-family: Arial, Helvetica, sans-serif; color: #111; font-size: 11px; }
+        #cp-print h1 { font-size: 17px; margin: 0 0 2px; } #cp-print p { margin: 0 0 10px; color: #555; }
+        #cp-print table { width: 100%; border-collapse: collapse; }
+        #cp-print th, #cp-print td { border: 1px solid #bbb; padding: 5px 6px; text-align: left; vertical-align: top; }
+        #cp-print th { background: #e8f3ef !important; font-size: 10.5px; text-transform: uppercase; letter-spacing: .3px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        #cp-print td.n, #cp-print th.n { text-align: right; white-space: nowrap; }
+        #cp-print tr.alt td { background: #f7f9f8 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        #cp-print tr.tot td { font-weight: 700; background: #eef !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        #cp-print thead { display: table-header-group; }
+        #cp-print tr { page-break-inside: avoid; }
+      }`;
+    document.getElementById('cp-print')?.remove();
+    document.getElementById('cp-print-css')?.remove();
+    const st = document.createElement('style'); st.id = 'cp-print-css'; st.textContent = css;
+    document.head.appendChild(st); // last in <head>, so its landscape page wins over the app's own print size
+    const box = document.createElement('div'); box.id = 'cp-print';
+    box.innerHTML = `<h1>${esc(title)}</h1><p>${esc(subtitle || '')} · ${useRows.length} row${useRows.length === 1 ? '' : 's'} · printed ${new Date().toLocaleDateString('en-GB')}</p>
+      <table><thead><tr>${head}</tr></thead><tbody>${body}${foot}</tbody></table>`;
+    document.body.appendChild(box);
+    document.body.classList.add('cp-printing');
+    const done = () => { document.body.classList.remove('cp-printing'); box.remove(); st.remove(); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    setTimeout(() => { window.print(); setTimeout(done, 1500); }, 50);
   return true;
 }
