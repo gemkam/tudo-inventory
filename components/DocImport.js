@@ -6,6 +6,7 @@ import DateInput from '@/components/DateInput';
 import Omr from '@/components/Omr';
 import { sb } from '@/lib/supabase';
 import { todayISO } from '@/lib/sheet';
+import DeptPicker from '@/components/DeptPicker';
 import { HEADS, CATEGORIES, PAY_METHODS, DEPARTMENTS, n, r3 } from '@/lib/expenses';
 import { fuelOf, FUELS } from '@/lib/docShort';
 
@@ -297,7 +298,7 @@ export default function DocImport({ co, coShort, kind, userName, last, nextNo, o
                             {f.kind === 'receipt' && (
                               <>
                                 <label><span>Payment</span><input list="di-pay" value={f.payment_method} onChange={(e) => setF(c.id, 'payment_method', e.target.value)} /></label>
-                                <label><span>Department</span><input list="di-dept" value={f.department} onChange={(e) => setF(c.id, 'department', e.target.value)} /></label>
+                                <div className="di-dept"><span>Department</span><DeptPicker co={co} className="" value={f.department} onChange={(v) => setF(c.id, 'department', v)} /></div>
                                 <label><span>Head</span><input list="di-head" value={f.head} onChange={(e) => setF(c.id, 'head', e.target.value)} /></label>
                                 <label><span>Category</span><input list="di-cat" value={f.category} onChange={(e) => setF(c.id, 'category', e.target.value)} /></label>
                               </>
@@ -328,7 +329,6 @@ export default function DocImport({ co, coShort, kind, userName, last, nextNo, o
                 );
               })}
               <datalist id="di-pay">{PAY_METHODS.map((p) => <option key={p} value={p} />)}</datalist>
-              <datalist id="di-dept">{(DEPARTMENTS[co] || []).map((p) => <option key={p} value={p} />)}</datalist>
               <datalist id="di-head">{HEADS.map((p) => <option key={p} value={p} />)}</datalist>
               <datalist id="di-cat">{[...CATEGORIES, 'Diesel'].map((p) => <option key={p} value={p} />)}</datalist>
             </div>

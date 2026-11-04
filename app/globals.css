@@ -4424,3 +4424,22 @@ th.tf-th { padding-right: 26px !important; }
 tr.tf-hide { display: none !important; }
 .tv-cards .tf-btn { display: none !important; }
 @media print { .tf-btn { display: none !important; } th.tf-th { padding-right: 8px !important; } }
+
+/* Department picker + manager (Bills, 4 Nov 2026) */
+.dp-wrap { min-width: 150px; }
+.dp-row { display: flex; gap: 4px; align-items: center; }
+.dp-row select, .dp-row input { flex: 1; min-width: 0; }
+.dp-more { white-space: nowrap; padding-left: 8px; padding-right: 8px; }
+.dp-err { color: #c0392b; font-size: 12px; margin-top: 4px; }
+.dp-ok { color: var(--brown); font-size: 12px; margin-top: 4px; }
+.dp-man { min-width: min(420px, 86vw); }
+.dp-note { font-size: 12px; margin: 0 0 10px; }
+.dp-list { margin: 0 0 10px; padding-left: 22px; max-height: 50vh; overflow: auto; }
+.dp-list li { margin: 0 0 6px; display: flex; gap: 6px; align-items: center; }
+.dp-list li > input { flex: 1; }
+.dp-add { display: flex; gap: 6px; align-items: center; }
+.dp-add input { flex: 1; }
+.dp-actions { display: flex; justify-content: space-between; gap: 8px; margin-top: 14px; }
+.di-grid .di-dept { display: grid; gap: 3px; font-size: 11.5px; color: var(--muted); font-weight: 600; }
+.di-grid .di-dept select, .di-grid .di-dept input { font-weight: 400; color: var(--heading, inherit); }
+.dp-list li::marker { color: var(--muted); }

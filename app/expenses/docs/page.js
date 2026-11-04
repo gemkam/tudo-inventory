@@ -17,6 +17,8 @@ import PaperPreview from '@/components/PaperPreview';
 import { shortOf, hasShort, FUELS } from '@/lib/docShort';
 import { lockEdit } from '@/lib/editLock';
 import DocFiles from '@/components/DocFiles';
+import DeptPicker from '@/components/DeptPicker';
+import { addDept } from '@/lib/departments';
 import { COMPANIES, companyOf, DEPARTMENTS, HEADS, CATEGORIES, PAY_METHODS, n, r3 } from '@/lib/expenses';
 
 /*
@@ -59,8 +61,7 @@ function BillRow({ f, set, canPick, co, saving, onSave, onCancel }) {
         <div className="br-vat">{inp('vat', '0.000', { inputMode: 'decimal', style: { textAlign: 'right' } })}
           <button type="button" className="btn small ghost" title="5% VAT inside the amount" onClick={fillVat} disabled={!(tot > 0)}>5%</button></div>
       </td>
-      <td>{inp('department', 'Department', { list: `br-dept-${co}` })}
-        <datalist id={`br-dept-${co}`}>{(DEPARTMENTS[co] || []).map((x) => <option key={x} value={x} />)}</datalist></td>
+      <td><DeptPicker co={co} value={f.department} onChange={(v) => set('department', v)} disabled={saving} /></td>
       <td className="num">{inp('amount', 'With VAT', { inputMode: 'decimal', style: { textAlign: 'right' } })}</td>
       <td className="br-paper">
         {f.oldFiles > 0 && <span className="muted br-has">📎 {f.oldFiles} saved</span>}
@@ -222,6 +223,7 @@ function DocsPage() {
       : await s.insert({ ...row, created_by: me || null }).select().single();
     setSaving(false);
     if (res.error) { flash(res.error.code === '42501' ? 'You need Full access to save.' : res.error.message, 'err'); return; }
+    if (kind === 'receipt' && row.department) addDept(co, row.department);
     setDoc({ ...res.data, items: res.data.items.length ? res.data.items : blankItems() });
     setDirty(false);
     const saved = res.data;
@@ -308,6 +310,7 @@ function DocsPage() {
     if (res.error) setRowSaving(false);
     if (res.error) { flash(res.error.code === '42501' ? 'You need Full access to save.' : res.error.message, 'err'); return; }
     const saved = res.data;
+    if (rec.department) addDept(co, rec.department); // a new department typed here goes into the list by itself
     if (before) {
       const { id, created_at: _c, ...back } = before;
       pushUndo(`change ${before.doc_no}`, async () => { const { error } = await sb().from('company_docs').update(back).eq('id', id); if (error) throw new Error(error.message); });
@@ -472,7 +475,6 @@ function DocsPage() {
     const sub = lineTotal(doc.items);
     const vat = r3((sub * n(doc.vat_pct)) / 100);
     const tot = r3(sub + vat);
-    const depts = [...new Set([...(DEPARTMENTS[co] || []), doc.department].filter(Boolean))];
     return (
       <>
         <div className="page-tools">
@@ -544,7 +546,8 @@ function DocsPage() {
                 <input className="cd-in" list="cd-pay" value={doc.payment_method || ''} readOnly={ro} onChange={(e) => set('payment_method', e.target.value)} />
               </label>
               <label><span>Department</span>
-                <input className="cd-in" list="cd-dept" value={doc.department || ''} readOnly={ro} onChange={(e) => set('department', e.target.value)} />
+                {ro ? <input className="cd-in" value={doc.department || ''} readOnly />
+                  : <DeptPicker co={co} className="cd-in" value={doc.department || ''} onChange={(v) => set('department', v)} />}
               </label>
               <label className="no-print-soft"><span>Head of account</span>
                 <input className="cd-in" list="cd-head" value={doc.head || ''} readOnly={ro} onChange={(e) => set('head', e.target.value)} />
@@ -553,7 +556,6 @@ function DocsPage() {
                 <input className="cd-in" list="cd-cat" value={doc.category || ''} readOnly={ro} onChange={(e) => set('category', e.target.value)} />
               </label>
               <datalist id="cd-pay">{PAY_METHODS.map((p) => <option key={p} value={p} />)}</datalist>
-              <datalist id="cd-dept">{depts.map((p) => <option key={p} value={p} />)}</datalist>
               <datalist id="cd-head">{HEADS.map((p) => <option key={p} value={p} />)}</datalist>
               <datalist id="cd-cat">{CATEGORIES.map((p) => <option key={p} value={p} />)}</datalist>
             </section>
