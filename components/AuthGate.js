@@ -137,7 +137,9 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
   if (leaving) return <div className="loading">Logging out...</div>;
   if (!user) return <div className="loading">Loading...</div>;
 
-  const nav = user.isEntry ? [['/entry', 'Data entry', 'entry']] : [['/', 'Home', 'home'], ['/sitemap', 'Sitemap', 'map'], ['/timeline', 'Timeline', 'clock']];
+  // Sitemap and Timeline moved to the right side, just before Day / Night (4 Nov 2026)
+  const nav = user.isEntry ? [['/entry', 'Data entry', 'entry']] : [['/', 'Home', 'home']];
+  const sideLinks = user.isEntry ? [] : [['/sitemap', 'Sitemap', 'map'], ['/timeline', 'Timeline', 'clock']];
   // Phone / tablet: quick buttons next to Home (on Home the alerts list pushes the tiles far down)
   // Transport lives inside Office Expense (4th tab), so it has no top bar button of its own
   const quick = user.canRead ? [['/inventory', 'Inventory', 'box'], ['/expenses', 'All Companies', 'receipt']] : [];
@@ -150,6 +152,8 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
   if (user.canRead) quick.push(['/personnel', 'Personnel', 'users']);
   // 📊 Reports & Summary (was the Group Summary tab of All Companies), 1 Nov 2026
   if (user.canRead) quick.push(['/expenses/summary', 'Reports & Summary', 'chart']);
+  // 🏦 Accounts (4 Nov 2026): Bank & Cash ledger, Balance sheet, Money to receive / pay, Assets & loans, just before Admin
+  if (user.canRead) quick.push(['/accounts', 'Accounts', 'bank']);
   if (user.isOwner) quick.push(['/admin', 'Admin', 'shield']);
 
   let blocked = '';
@@ -171,13 +175,18 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
             </Link>
             <div className="tbx-tools">
               {user.canRead && !user.isEntry && <span className="tbx-view"><ViewSwitch /></span>}
+              {sideLinks.map(([href, label, ico]) => (
+                <Link key={href} href={href === '/sitemap' && path !== '/sitemap' ? `/sitemap?from=${encodeURIComponent(path)}` : href} className={`tbx-tlink${path.startsWith(href) ? ' active' : ''}`} title={label} aria-label={label}>
+                  <Ico name={ico} /><span>{label}</span>
+                </Link>
+              ))}
               <ThemeMenu />
               <AccountMenu user={user} onLogout={switchUser} showView={user.canRead && !user.isEntry} />
             </div>
           </div>
           <nav className={`tbx-nav n${nav.length + quick.length}`} aria-label="Main">
             {nav.map(([href, label, ico]) => (
-              <Link key={href} href={href === '/sitemap' && path !== '/sitemap' ? `/sitemap?from=${encodeURIComponent(path)}` : href} className={(href === '/' ? path === '/' : path.startsWith(href)) ? 'active' : ''}>
+              <Link key={href} href={href} className={(href === '/' ? path === '/' : path.startsWith(href)) ? 'active' : ''}>
                 <Ico name={ico} /><span>{label}</span>
               </Link>
             ))}
@@ -239,6 +248,7 @@ const ICONS = {
   entry: <><path d="M8 4h8v3H8z" /><path d="M16 5.5h2.5V21h-13V5.5H8" /><path d="M9 12h6M9 16h4" /></>,
   invoice: <><path d="M6 3h9l3 3v15H6z" /><path d="M15 3v3h3" /><path d="M9 11h6M9 15h6M9 7h3" /></>,
   chart: <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></>,
+  bank: <><path d="M3 9.5 12 4l9 5.5" /><path d="M4 9.5h16" /><path d="M6 10v8M10 10v8M14 10v8M18 10v8" /><path d="M3 20.5h18" /></>,
   shield: <><path d="M12 3 4 6v6c0 4.5 3.4 8.2 8 9 4.6-.8 8-4.5 8-9V6z" /><path d="m9 12 2 2 4-4" /></>,
   gear: <><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1" /></>,
   users: <><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5" /><circle cx="17" cy="9" r="2.5" /><path d="M17 14.5c2.4 0 4 1.5 4.5 4.5" /></>,
