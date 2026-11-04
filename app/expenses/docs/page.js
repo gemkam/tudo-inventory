@@ -19,6 +19,8 @@ import { lockEdit } from '@/lib/editLock';
 import DocFiles from '@/components/DocFiles';
 import DeptPicker from '@/components/DeptPicker';
 import { addDept } from '@/lib/departments';
+import BillColumns from '@/components/BillColumns';
+import { useBillColumns, saveBillCols } from '@/lib/billColumns';
 import { COMPANIES, companyOf, DEPARTMENTS, HEADS, CATEGORIES, PAY_METHODS, n, r3 } from '@/lib/expenses';
 
 /*
@@ -56,7 +58,7 @@ function finish(e, options, set, k) {
   requestAnimationFrame(() => { try { el.setSelectionRange(typed.length, full.length); } catch { /* ignore */ } });
 }
 
-function BillRow({ f, set, canPick, co, saving, onSave, onCancel, sugg = {}, picked = false, onPick = null, paper = null, status = '', onLeave = null }) {
+function BillRow({ f, set, canPick, co, saving, onSave, onCancel, sugg = {}, picked = false, onPick = null, paper = null, status = '', onLeave = null, xcols = [] }) {
   const stop = (e) => e.stopPropagation();
   const pickRef = useRef(null);
   const key = (e) => {
@@ -110,6 +112,10 @@ function BillRow({ f, set, canPick, co, saving, onSave, onCancel, sugg = {}, pic
       <td className="num">{money('amount', 'With VAT', onGrand)}</td>
       <td>{inp('vat_no', 'VAT No.', { list: 'br-vatno' })}</td>
       <td><DeptPicker co={co} value={f.department} onChange={(v) => set('department', v)} disabled={saving} /></td>
+      {xcols.map((c) => (
+        <td key={c.key}><input className="br-in" value={(f.extra || {})[c.key] ?? ''} placeholder={c.name} onKeyDown={key} autoComplete="off"
+          onChange={(e) => set('extra', { ...(f.extra || {}), [c.key]: e.target.value })} /></td>
+      ))}
       {paper ? <td onClick={stop}>{paper}</td> : <td className="br-paper">
         {f.oldFiles > 0 && <span className="muted br-has">📎 {f.oldFiles} saved</span>}
         {(f.newFiles || []).map((x, i) => (
@@ -315,12 +321,12 @@ function DocsPage() {
     if (!d) {
       const last = (list || [])[0];
       return { id: null, doc_no: nextNo(), doc_date: todayISO(), party: '', receipt_no: '', vehicle_no: '', fuel: '', vat_no: '', vat: '', sub: '', amount: '',
-        department: last?.department || (DEPARTMENTS[co] || [])[0] || '', newFiles: [], oldFiles: 0 };
+        department: last?.department || (DEPARTMENTS[co] || [])[0] || '', extra: {}, newFiles: [], oldFiles: 0 };
     }
     const x = shortOf(d);
     const tot = totalOf(d);
     return { id: d.id, doc_no: d.doc_no, doc_date: d.doc_date || todayISO(), party: d.party || '', receipt_no: x.receipt_no || '', vehicle_no: x.vehicle_no || '',
-      fuel: x.fuel || '', vat_no: x.vat_no || '', vat: n(d.vat_pct) > 0 ? r3(tot - lineTotal(d.items)).toFixed(3) : '', sub: r3(lineTotal(d.items)).toFixed(3), amount: r3(tot).toFixed(3), department: d.department || '', newFiles: [], oldFiles: (d.files || []).length };
+      fuel: x.fuel || '', vat_no: x.vat_no || '', vat: n(d.vat_pct) > 0 ? r3(tot - lineTotal(d.items)).toFixed(3) : '', sub: r3(lineTotal(d.items)).toFixed(3), amount: r3(tot).toFixed(3), department: d.department || '', extra: { ...(d.extra || {}) }, newFiles: [], oldFiles: (d.files || []).length };
   }
   const startRow = (d) => { if (rowSaving) return; setRow(billForm(d)); };
   const setR = (k, v) => setRow((f) => ({ ...f, [k]: v }));
@@ -356,6 +362,21 @@ function DocsPage() {
 
   /* Kamran 4 Nov 2026: one ✏️ Edit opens EVERY bill for typing (no separate edit per bill).
      A changed bill saves by itself when you leave its row (or press Enter); Esc puts the row back. */
+  const { cfg: colCfg, cols: xcolsAll, label: colName } = useBillColumns();
+  const xcols = kind === 'receipt' ? xcolsAll : [];
+  const hl = (k, def) => (kind === 'receipt' ? colName(k) : def); // header label
+  const [colsOpen, setColsOpen] = useState(false);
+  const [colBusy, setColBusy] = useState(false);
+  async function changeCols(next, note) {
+    const prev = colCfg;
+    setColBusy(true);
+    const r = await saveBillCols(next);
+    setColBusy(false);
+    if (r.error) { flash(r.error, 'err'); return false; }
+    pushUndo(note, async () => { const x = await saveBillCols(prev); if (x.error) throw new Error(x.error); });
+    flash(`Column change saved: ${note}`);
+    return true;
+  }
   const [forms, setForms] = useState({}); // id -> form being typed
   const formsRef = useRef({});
   const [rowSt, setRowSt] = useState({}); // id -> 'saving' | 'saved' | 'err'
@@ -365,7 +386,8 @@ function DocsPage() {
   const num3 = (v) => (v === '' || v === null || v === undefined ? '' : r3(v).toFixed(3));
   const isDirty = (f, d) => {
     const o = billForm(d);
-    return FORM_KEYS.some((k) => (['vat', 'sub', 'amount'].includes(k) ? num3(f[k]) !== num3(o[k]) : String(f[k] ?? '').trim() !== String(o[k] ?? '').trim()));
+    return FORM_KEYS.some((k) => (['vat', 'sub', 'amount'].includes(k) ? num3(f[k]) !== num3(o[k]) : String(f[k] ?? '').trim() !== String(o[k] ?? '').trim()))
+      || xcols.some((c) => String((f.extra || {})[c.key] ?? '').trim() !== String((o.extra || {})[c.key] ?? '').trim());
   };
   const setBillFor = (d) => (k, v) => {
     updForms((m) => ({ ...m, [d.id]: autofill(m[d.id] || billForm(d), k, v) }));
@@ -411,6 +433,7 @@ function DocsPage() {
     const rec = {
       company: co, kind: 'receipt', doc_no: f.doc_no || null, doc_date: f.doc_date || todayISO(), party: f.party.trim(),
       party_vat: f.vat_no || null, items, vat_pct: pct, department: f.department || null,
+      extra: Object.fromEntries(Object.entries({ ...(before?.extra || {}), ...(f.extra || {}) }).map(([k, v]) => [k, String(v ?? '').trim()]).filter(([, v]) => v)),
       scan: { ...(before?.scan || {}), receipt_no: rno, vehicle_no: f.vehicle_no.trim(), fuel: f.fuel, vat_no: f.vat_no.trim(), amount: total, vat_amount: vat },
       updated_at: new Date().toISOString()
     };
@@ -851,7 +874,8 @@ function DocsPage() {
       {canEdit && (
         <div className="dx-bar no-print">
           <b>✏️ Edit</b>
-          <button type="button" className="btn" onClick={() => (kind === 'receipt' ? startRow(null) : newDoc())} disabled={kind === 'receipt' && !!row && !row.id}>＋ Add {K.one.toLowerCase()}</button>
+          <button type="button" className="btn" onClick={() => (kind === 'receipt' ? startRow(null) : newDoc())} disabled={kind === 'receipt' && !!row && !row.id}>＋ Add {kind === 'receipt' ? 'row' : K.one.toLowerCase()}</button>
+          {kind === 'receipt' && <button type="button" className="btn" onClick={() => setColsOpen(true)}>▥ Columns: add, rename, delete</button>}
           <DocImport co={co} coShort={C.short} kind={kind} userName={me} last={(list || [])[0]} nextNo={nextNoFor} flash={flash}
             onDone={(rows) => {
               load();
@@ -891,11 +915,11 @@ function DocsPage() {
       ) : (
         <div className="iv-table-wrap">
           <table className="iv-list" style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead><tr>{canEdit && <th className="dx-c"><input type="checkbox" aria-label="Select all" checked={!!shown.length && picked.length === shown.length} onChange={() => setPicked(picked.length === shown.length ? [] : shown.map((d) => d.id))} /></th>}<th>No.</th><th>Date</th><th>{K.party}</th><th>Receipt No.</th><th>Vehicle No.</th><th>Fuel</th><th className="num">Subtotal</th><th className="num">VAT 5%</th><th className="num">Grand Total</th><th>VAT No.</th>{kind === 'receipt' && <th>Department</th>}{kind === 'receipt' && <th>Bill paper</th>}{kind === 'receipt' && canEdit && <th />}</tr></thead>
+            <thead><tr>{canEdit && <th className="dx-c"><input type="checkbox" aria-label="Select all" checked={!!shown.length && picked.length === shown.length} onChange={() => setPicked(picked.length === shown.length ? [] : shown.map((d) => d.id))} /></th>}<th>{hl('no', 'No.')}</th><th>{hl('date', 'Date')}</th><th>{hl('party', K.party)}</th><th>{hl('receipt_no', 'Receipt No.')}</th><th>{hl('vehicle_no', 'Vehicle No.')}</th><th>{hl('fuel', 'Fuel')}</th><th className="num">{hl('sub', 'Subtotal')}</th><th className="num">{hl('vat', 'VAT 5%')}</th><th className="num">{hl('grand', 'Grand Total')}</th><th>{hl('vat_no', 'VAT No.')}</th>{kind === 'receipt' && <th>{hl('department', 'Department')}</th>}{xcols.map((c) => <th key={c.key}>{c.name}</th>)}{kind === 'receipt' && <th>{hl('paper', 'Bill paper')}</th>}{kind === 'receipt' && canEdit && <th />}</tr></thead>
             <tbody>
-              {kind === 'receipt' && row && !row.id && <BillRow f={row} set={setBill} sugg={sugg} canPick={canEdit} co={co} saving={rowSaving} onSave={saveRow} onCancel={() => setRow(null)} />}
+              {kind === 'receipt' && row && !row.id && <BillRow f={row} set={setBill} sugg={sugg} xcols={xcols} canPick={canEdit} co={co} saving={rowSaving} onSave={saveRow} onCancel={() => setRow(null)} />}
               {shown.map((d) => kind === 'receipt' && canEdit ? (
-                <BillRow key={d.id} f={forms[d.id] || billForm(d)} set={setBillFor(d)} sugg={sugg} canPick co={co}
+                <BillRow key={d.id} xcols={xcols} f={forms[d.id] || billForm(d)} set={setBillFor(d)} sugg={sugg} canPick co={co}
                   saving={rowSt[d.id] === 'saving'} status={rowSt[d.id] || (forms[d.id] && isDirty(forms[d.id], d) ? 'dirty' : '')}
                   onSave={() => leaveRow(d)} onCancel={() => revertRow(d)} onLeave={() => leaveRow(d)}
                   picked={picked.includes(d.id)} onPick={() => pickOne(d.id)}
@@ -923,6 +947,7 @@ function DocsPage() {
                     <td className="muted">{x.vat_no}</td>
                   </>); })()}
                   {kind === 'receipt' && <td>{d.department || ''}</td>}
+                  {xcols.map((c) => <td key={c.key}>{(d.extra || {})[c.key] || ''}</td>)}
                   {kind === 'receipt' && (
                     <td onClick={(e) => e.stopPropagation()}>
                       <DocFiles row={{ id: `company_docs/${d.id}`, owner: d.party, doc_name: d.doc_no, files: d.files || [] }}
@@ -944,6 +969,11 @@ function DocsPage() {
             <datalist id="br-vatno">{sugg.auto.vat_no.map((x) => <option key={x} value={x} />)}</datalist>
           </>}
         </div>
+      )}
+
+      {colsOpen && kind === 'receipt' && canEdit && (
+        <BillColumns cfg={colCfg} busy={colBusy || busy} onChange={changeCols} onClose={() => setColsOpen(false)}
+          onUndo={doUndo} canUndo={undo.length > 0} />
       )}
 
       {bulk && (() => {
