@@ -16,8 +16,8 @@ import { usePathname } from 'next/navigation';
 */
 
 const KEY = 'tudo-colw';
-const SKIP = '.trip-print, .iv-t, .iv-list, .cd-t, .slip-t, .slip-calc, .pc-sum, .combo-list, .modal, [role="dialog"], .tbx, .no-resize';
-const HIDE_PATHS = [/^\/login/, /^\/f\//, /^\/transport\/invoice/, /^\/expenses\/docs/, /^\/transport\/salary\//, /^\/s\//];
+const SKIP = '.trip-print, .iv-t, .cd-t, .slip-t, .slip-calc, .pc-sum, .combo-list, .modal, [role="dialog"], .tbx, .no-resize';
+const HIDE_PATHS = [/^\/login/, /^\/f\//, /^\/transport\/salary\//, /^\/s\//];
 const MIN = 34;
 
 function readAll() { try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch { return {}; } }
@@ -37,7 +37,7 @@ function cellsOf(row) {
 
 function labelText(th) {
   const clone = th.cloneNode(true);
-  clone.querySelectorAll('.col-rz, .dg-fbtn').forEach((x) => x.remove());
+  clone.querySelectorAll('.col-rz, .dg-fbtn, .tf-btn').forEach((x) => x.remove());
   return (clone.textContent || '').replace(/\s+/g, ' ').trim();
 }
 
