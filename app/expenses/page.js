@@ -16,7 +16,8 @@ import { useShare } from '@/components/ShareModal';
 import { sb } from '@/lib/supabase';
 import StaffPayCards from '@/components/StaffPayCards';
 import { expiryCol } from '@/components/Expiry';
-import { useViewMode } from '@/lib/viewMode';
+import { useTableView } from '@/lib/viewMode';
+import { ViewToggle } from '@/components/TableCards';
 import { hasPaidCols, staffBalance } from '@/lib/payBalance';
 import { num, fmtAmt, monthKey, monthLabel, todayISO, exportExcel, exportPdf, exportStamp, fmtFullDate } from '@/lib/sheet';
 import { HEADS, CATEGORIES, COMPANIES, DEPARTMENTS, SOURCE_LABEL, companyOf, n, r3, staffGross, staffNet } from '@/lib/expenses';
@@ -34,7 +35,7 @@ function ExpensesPage() {
   const [dept, setDept] = useState('');
   const [editRows, setEditRows] = useState(false);
   const [editStaff, setEditStaff] = useState(false);
-  const [view] = useViewMode('cards');
+  const [view] = useTableView('staff', 'cards'); // office staff salary sheet: own cards (StaffPayCards)
   const [del, setDel] = useState(null);
   const [toast, setToast] = useState(null);
   const [error, setError] = useState('');
@@ -421,9 +422,11 @@ function ExpensesPage() {
           {' '}Working days are filled from <Link href={`/personnel?tab=attendance&co=${co}${staffAttMonth ? `&m=${staffAttMonth}` : ''}`}>🗓 Attendance</Link>
           {staffAttMonth ? ` (${monthLabel(staffAttMonth)})` : ''} when it is marked; you can still change them here.
         </p>
+        <ViewToggle id="staff" def="cards" />
         {view === 'cards' ? (
           <StaffPayCards staff={staff} canEdit={isAdmin && editStaff} canPay={isAdmin} onSave={saveStaff} onAdd={addStaff} onDelete={deleteStaff} />
         ) : (
+          <div className="no-cards">
           <DataGrid
             columns={staffCols}
             rows={staff}
@@ -436,6 +439,7 @@ function ExpensesPage() {
             footer={{ net: <Omr v={staffNetTotal} />, ...(staffPaidCols ? { paid_amount: fmtAmt(r3(staff.reduce((a, x) => a + n(x.paid_amount), 0))), unpaid_bal: fmtAmt(r3(staff.reduce((a, x) => a + Math.max(0, staffBalance(x, staffNet(x))), 0))) } : {}) }}
             flash={flash}
           />
+          </div>
         )}
       </section>
 

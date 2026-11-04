@@ -12,7 +12,8 @@ import EditToggle from '@/components/EditToggle';
 import DriverDesk from '@/components/DriverDesk';
 import Omr from '@/components/Omr';
 import DateInput from '@/components/DateInput';
-import { useViewMode } from '@/lib/viewMode';
+import { useTableView } from '@/lib/viewMode';
+import { ViewToggle } from '@/components/TableCards';
 import { sb } from '@/lib/supabase';
 import { num, fmtAmt, monthKey, monthStart, monthLabel, todayISO, exportExcel, exportStamp } from '@/lib/sheet';
 import { SALARY_FIELDS, salaryTotal, salaryPayable } from '@/lib/transport';
@@ -48,7 +49,7 @@ function DriverSheet() {
   const [entries, setEntries] = useState([]);
   const [editSal, setEditSal] = useState(null);
   const [undo, setUndo] = useState({});
-  const [view] = useViewMode('cards');
+  const [view] = useTableView('months', 'cards'); // Salary by month: own cards (PayCard)
   const [editMode, setEditMode] = useState(false);
   const [del, setDel] = useState(null);
   const [toast, setToast] = useState(null);
@@ -208,6 +209,7 @@ function DriverSheet() {
         {byMonth.length > 0 && (
           <>
             <h3 className="pc-h3">Salary by month</h3>
+            <ViewToggle id="months" def="cards" />
             {view === 'cards' ? (
             <div className="pc-grid">
               {byMonth.map((s) => {

@@ -10,7 +10,8 @@ import AllowanceNotes from '@/components/AllowanceNotes';
 import { PayCard, PaySection, PayRow, AmountInput, BalanceBox, PaySummary, money } from '@/components/PayCard';
 import { hasPaidCols, driverBalance } from '@/lib/payBalance';
 import { useSalaryLabels } from '@/lib/labels';
-import { useViewMode } from '@/lib/viewMode';
+import { useTableView } from '@/lib/viewMode';
+import { ViewToggle } from '@/components/TableCards';
 import { omrInWords } from '@/lib/words';
 import { fmtD } from '@/lib/reminders';
 
@@ -39,7 +40,7 @@ function SheetPage() {
   const [month, setMonth] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
-  const [view] = useViewMode('cards');
+  const [view] = useTableView('salaries', 'cards'); // All Drivers Salary Sheet: own cards (PayCard)
 
   const load = useCallback(async () => {
     const s = sb();
@@ -187,6 +188,7 @@ function SheetPage() {
           <div className={balTotal > 0.0005 ? 'due' : 'ok'}><span>Total unpaid balance</span><b>{balTotal > 0.0005 ? money(balTotal) : 'Nil'}</b></div>
         </div>
 
+        {withSal.length > 0 && <ViewToggle id="salaries" def="cards" />}
         {withSal.length === 0 ? (
           <p className="ss-empty">No salaries for {monthLabel(month)} yet.{isAdmin && missing.length ? ' Press "Create salary" above.' : ''}</p>
         ) : (

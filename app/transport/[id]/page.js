@@ -12,7 +12,8 @@ import TripCards, { VatButton } from '@/components/TripCards';
 import TripFiles from '@/components/TripFiles';
 import DateInput from '@/components/DateInput';
 import DataGrid from '@/components/DataGrid';
-import { useViewMode } from '@/lib/viewMode';
+import { useTableView } from '@/lib/viewMode';
+import { ViewToggle } from '@/components/TableCards';
 import Modal from '@/components/Modal';
 import CompanyHeader, { COMPANY_NAME } from '@/components/CompanyHeader';
 import { sb } from '@/lib/supabase';
@@ -61,7 +62,7 @@ function DriverSheet() {
   const [colsOpen, setColsOpen] = useState(false);
   const toastTimer = useRef(null);
   const canChange = isAdmin && editMode;
-  const [view] = useViewMode('cards');
+  const [view] = useTableView('trips', 'cards'); // trip sheet: own cards (TripCards)
 
   const flash = useCallback((text, kind = 'ok') => {
     setToast({ text, kind });
@@ -322,12 +323,6 @@ function DriverSheet() {
           </span>
         );
       }
-    },
-    {
-      key: 'trip_completed', label: 'Trip complete', type: 'calc', width: 150,
-      render: (r) => (r.trip_completed
-        ? <span className="tag ok" title={r.completed_at ? new Date(r.completed_at).toLocaleString('en-GB') : ''}>✅ {r.completed_by && r.completed_by !== 'Old trip sheet' ? r.completed_by : 'Completed'}</span>
-        : <span className="tag warn">Open</span>)
     },
     { key: 'description', label: 'Description', type: 'text', width: 200 },
     { key: 'remarks', label: 'Status', type: 'select', options: ['Completed', 'Loading', 'On the way', 'Done', 'Cancelled'], width: 116 },
@@ -730,6 +725,7 @@ function DriverSheet() {
             {prevOpenTotal > 0 && <small>This month {fmtAmt(totals.driver_allowance)} + previous {fmtAmt(prevOpenTotal)} = <b>{fmtAmt(totals.driver_allowance + prevOpenTotal)}</b> driver allowance due</small>}
           </div>
         )}
+        <ViewToggle id="trips" def="cards" />
         {view === 'cards' ? (
           <TripCards
             rows={rows}

@@ -4369,3 +4369,10 @@ html[data-theme="dark"] .pi-table tr.pi-dup td, html[data-theme="dark"] tr.pn-du
 .ac-hub-v { font-size: 12px; color: var(--muted); margin-top: 2px; }
 .ac-hub-v strong { font-family: var(--display); font-size: 17px; color: var(--brown-deep, var(--brown)); font-variant-numeric: tabular-nums; }
 .ac-hub-go { font-size: 12.5px; font-weight: 600; color: var(--brown); margin-top: 4px; }
+
+/* ===== Per-table ▦ Table | ▤ Cards switch (4 Nov 2026, components/TableCards.js) ===== */
+.tv-tswitch { display: flex; justify-content: flex-end; margin: 0 0 6px; }
+.tv-tswitch .tv-switch { background: var(--card, var(--surface, #fff)); }
+.tv-tswitch .tv-switch button { font-size: 12px; padding: 4px 10px; color: var(--ink); }
+.tv-tswitch .tv-switch button.on { background: var(--brown); color: #fff; }
+@media print { .tv-tswitch { display: none !important; } }
