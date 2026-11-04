@@ -4461,3 +4461,12 @@ tr.tf-hide { display: none !important; }
 .dx-bar .dx-hint + .dx-right { margin-left: 12px; }
 .bc-cap { font-weight: 700; font-size: 13px; margin: 6px 0; }
 .bc-std li .bc-pad { display: inline-block; width: 34px; }
+/* Custom print box (Bills, 4 Nov 2026) */
+.co-switch .co-print { cursor: pointer; font: inherit; }
+.cp-box { min-width: min(560px, 88vw); }
+.cp-cap { font-weight: 700; font-size: 13px; margin: 10px 0 6px; display: flex; justify-content: space-between; gap: 8px; }
+.cp-links { font-weight: 400; font-size: 12.5px; }
+.cp-cols { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.cp-rows { max-height: 38vh; overflow: auto; border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; display: grid; gap: 4px; }
+.cp-chk { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+.cp-chk input { width: auto; }
