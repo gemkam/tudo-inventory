@@ -96,7 +96,7 @@ function BillRow({ f, set, canPick, co, saving, onSave, onCancel, sugg = {}, pic
       onChange={(e) => (auto[k] ? finish(e, auto[k], set, k) : set(k, e.target.value))} />
   );
   return (
-    <tr className={`br-row${picked ? ' dx-on' : ''}${status === 'dirty' ? ' br-dirty' : ''}${status === 'err' ? ' br-errrow' : ''}`} onClick={stop}
+    <tr data-id={f.id || undefined} className={`br-row${picked ? ' dx-on' : ''}${status === 'dirty' ? ' br-dirty' : ''}${status === 'err' ? ' br-errrow' : ''}`} onClick={stop}
       onBlur={(e) => { if (onLeave && !e.currentTarget.contains(e.relatedTarget)) onLeave(); }}>
       {canPick && <td className="dx-c">{onPick && <input type="checkbox" aria-label={`Select ${f.doc_no}`} checked={picked} onChange={onPick} />}</td>}
       <td className="iv-list-no">{f.doc_no}</td>
@@ -367,7 +367,16 @@ function DocsPage() {
   const xcols = kind === 'receipt' ? xcolsAll : [];
   const hl = (k, def) => (kind === 'receipt' ? colName(k) : def); // header label
   const [colsOpen, setColsOpen] = useState(false);
-  const [cpOpen, setCpOpen] = useState(false);
+  const [cpOpen, setCpOpen] = useState(false); // false | [ids of the rows showing on screen]
+  /* Custom print takes ONLY the rows showing now: the search, plus any ▾ column filter (rows it hides are not printed) */
+  const openCustomPrint = () => {
+    let ids = null;
+    try {
+      const trs = [...document.querySelectorAll('table.iv-list tbody tr[data-id]')];
+      if (trs.length) ids = trs.filter((t) => !t.classList.contains('tf-hide')).map((t) => t.dataset.id);
+    } catch { /* ignore */ }
+    setCpOpen(ids || shown.map((d) => d.id));
+  };
   const [colBusy, setColBusy] = useState(false);
   async function changeCols(next, note) {
     const prev = colCfg;
@@ -605,7 +614,7 @@ function DocsPage() {
       <span className="co-tab on" role="tab" aria-selected="true">🧾 Bills</span>
       <Link href={`/expenses/salary?co=${co}`} className="co-tab">💰 Salary</Link>
       <Link href="/expenses/vat" className="co-tab co-sum co-vat">🧾 VAT return</Link>
-      {!doc && <button type="button" className="co-tab co-print" onClick={() => setCpOpen(true)} disabled={!(list || []).length}>🖨 Custom print</button>}
+      {!doc && <button type="button" className="co-tab co-print" onClick={openCustomPrint} disabled={!(list || []).length}>🖨 Custom print</button>}
     </div>
   );
 
@@ -934,7 +943,7 @@ function DocsPage() {
                       load();
                     }} />} />
               ) : (
-                <tr key={d.id} tabIndex={0} className={picked.includes(d.id) ? 'dx-on' : ''} onClick={() => kind !== 'receipt' && openDoc(d)} onKeyDown={(e) => e.key === 'Enter' && kind !== 'receipt' && openDoc(d)}
+                <tr key={d.id} data-id={d.id} tabIndex={0} className={picked.includes(d.id) ? 'dx-on' : ''} onClick={() => kind !== 'receipt' && openDoc(d)} onKeyDown={(e) => e.key === 'Enter' && kind !== 'receipt' && openDoc(d)}
                   title={kind === 'receipt' ? '' : 'Open'} style={kind === 'receipt' && !canEdit ? { cursor: 'default' } : undefined}>
                   {canEdit && <td className="dx-c" onClick={(e) => e.stopPropagation()}><input type="checkbox" aria-label={`Select ${d.doc_no}`} checked={picked.includes(d.id)} onChange={() => pickOne(d.id)} /></td>}
                   <td className="iv-list-no">{d.doc_no}{(d.files || []).length ? ' 📎' : ''}</td>
@@ -984,15 +993,15 @@ function DocsPage() {
           ...(kind === 'receipt' ? [{ key: 'department', label: hl('department', 'Department') }] : []),
           ...xcols.map((c) => ({ key: `x:${c.key}`, label: c.name }))
         ];
-        const rows = shown.map((d) => {
+        const rows = shown.filter((d) => cpOpen.includes(d.id)).map((d) => {
           const x = shortOf(d); const sub = lineTotal(d.items); const tot = totalOf(d); const vt = n(d.vat_pct) > 0 ? r3(tot - sub) : 0;
           const cells = { no: d.doc_no, date: fmtD(d.doc_date), party: d.party, receipt_no: x.receipt_no, vehicle_no: x.vehicle_no, fuel: x.fuel,
             sub: f3(sub), vat: f3(vt), grand: f3(tot), vat_no: x.vat_no, department: d.department || '' };
           xcols.forEach((c) => { cells[`x:${c.key}`] = (d.extra || {})[c.key] || ''; });
           return { id: d.id, label: `${d.doc_no} · ${fmtD(d.doc_date)} · ${d.party || ''} · ${f3(tot)}`, cells, nums: { sub, vat: vt, grand: tot } };
         });
-        return <CustomPrint title={`${C.name} · ${K.label}`} subtitle={q ? `Search: ${q}` : 'All shown'} columns={columns} rows={rows}
-          preselect={picked.filter((id) => shown.some((d) => d.id === id))} storeKey={kind} onClose={() => setCpOpen(false)} />;
+        return <CustomPrint title={`${C.name} · ${K.label}`} subtitle={q ? `Search: ${q}` : 'As shown on screen'} columns={columns} rows={rows}
+          preselect={picked.filter((id) => cpOpen.includes(id))} storeKey={kind} onClose={() => setCpOpen(false)} />;
       })()}
 
       {colsOpen && kind === 'receipt' && canEdit && (

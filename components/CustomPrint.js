@@ -7,7 +7,7 @@ import Modal from '@/components/Modal';
 /*
   🖨 Custom print (Kamran 4 Nov 2026): tick the rows and the columns you want, then Print.
   columns: [{ key, label, num }]  rows: [{ id, cells: { key: text }, nums: { key: number } }]
-  Numeric columns get a total line. Prints through a hidden frame (A4, landscape when many columns).
+  Numeric columns get a total line. Always A4 landscape. Rows = only those showing on screen (search and ▾ filters).
 */
 const esc = (v) => String(v ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const STORE = 'tudo-custom-print-cols';
@@ -19,7 +19,6 @@ export default function CustomPrint({ title, subtitle, columns, rows, preselect 
     return columns.map((c) => c.key);
   });
   const [ids, setIds] = useState(() => (preselect.length ? preselect : rows.map((r) => r.id)));
-  const [land, setLand] = useState(false);
   useEffect(() => setMounted(true), []);
   useEffect(() => { try { const all = JSON.parse(localStorage.getItem(STORE) || '{}'); all[storeKey] = cols; localStorage.setItem(STORE, JSON.stringify(all)); } catch { /* ignore */ } }, [cols, storeKey]);
 
@@ -30,13 +29,12 @@ export default function CustomPrint({ title, subtitle, columns, rows, preselect 
 
   function doPrint() {
     if (!useCols.length || !useRows.length) return;
-    const wide = land || useCols.length > 8;
     const head = useCols.map((c) => `<th class="${c.num ? 'n' : ''}">${esc(c.label)}</th>`).join('');
     const body = useRows.map((r, i) => `<tr class="${i % 2 ? 'alt' : ''}">${useCols.map((c) => `<td class="${c.num ? 'n' : ''}">${esc(r.cells[c.key])}</td>`).join('')}</tr>`).join('');
     const hasTot = useCols.some((c) => c.num);
     const foot = hasTot ? `<tr class="tot">${useCols.map((c, i) => `<td class="${c.num ? 'n' : ''}">${c.num ? totals[c.key].toFixed(3) : i === 0 ? 'Total' : ''}</td>`).join('')}</tr>` : '';
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>
-      @page { size: A4 ${wide ? 'landscape' : 'portrait'}; margin: 12mm; }
+      @page { size: A4 landscape; margin: 10mm; }
       body { font-family: Arial, Helvetica, sans-serif; color: #111; font-size: 11px; }
       h1 { font-size: 17px; margin: 0 0 2px; } p { margin: 0 0 10px; color: #555; }
       table { width: 100%; border-collapse: collapse; }
@@ -74,7 +72,7 @@ export default function CustomPrint({ title, subtitle, columns, rows, preselect 
             <label key={r.id} className="cp-chk"><input type="checkbox" checked={ids.includes(r.id)} onChange={() => flip(ids, setIds, r.id)} /> {r.label}</label>
           ))}
         </div>
-        <label className="cp-chk" style={{ marginTop: 8 }}><input type="checkbox" checked={land} onChange={(e) => setLand(e.target.checked)} /> Landscape (wide page)</label>
+        <p className="muted" style={{ fontSize: 12, margin: '8px 0 0' }}>Only the rows showing on screen (your search and ▾ filters) are listed. Prints on A4 landscape.</p>
         <div className="modal-actions">
           <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
           <button type="button" className="btn" disabled={!useCols.length || !useRows.length} onClick={doPrint}>🖨 Print / PDF</button>
