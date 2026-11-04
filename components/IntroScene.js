@@ -8,6 +8,7 @@
 //       - TUDO NUM GROUP container truck driving left on the far side
 //       - a white pickup overtaking in the inner lane
 // Pure SVG + CSS (is-sc-* / is-veh classes in app/globals.css). Drawn in a 1600 x 380 box.
+// 4 Nov 2026: vehicles sit on .is-road (screen sized) instead of the wide stage, so they never start off screen.
 
 const SKIN = ['#c98d62', '#e0ac82', '#a8714c', '#d79b70'];
 
@@ -362,6 +363,11 @@ export default function IntroScene() {
           <rect x="0" y="352" width="1600" height="28" fill="url(#isFade)" />
         </svg>
 
+      </div>
+
+      {/* Vehicles (4 Nov 2026): own layer the size of the screen, so on a phone or PC both trucks are already in view
+          when the intro starts and the two trailers cross each other in front of the office tower (~2.3 s) */}
+      <div className="is-road">
         {/* far carriageway: Tudo Num container truck driving left */}
         <div className="is-veh t2"><svg viewBox="-24 -14 600 172"><g transform="translate(552 0) scale(-1 1)"><Truck id="tv2" kind="container" mirrored cab="#e9edf1" cabDark="#b9c3cc" /></g></svg></div>
         {/* inner near lane: white pickup overtaking */}

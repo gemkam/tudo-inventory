@@ -1,27 +1,28 @@
 'use client';
-// Opening animation (1 Nov 2026, white look).
-// Plays every time the MAIN page (/) is opened or refreshed, and again from the "▶ Intro" button on the Home page:
-//   0. at the bottom, the logistics + office scene (components/IntroScene.js): trucks with trailers drive across,
-//      staff work at their desks in the Tudo Num office
-//   1. white stage fades in (soft moving light), the Tudo Num Group logo comes into focus
-//      and its green arrow draws itself up, a shine runs over it
-//   2. "TUDO NUM GROUP" letters rise one by one out of a blur, then a light runs across them
-//   3. "OFFICE SYSTEMS" closes in from wide letter spacing, gold lines draw out on both sides
-//   4. "Powered by KS TECH LLC" rises at the bottom with a glowing line
-//   5. everything fades away and the normal page comes forward
-// Tap / click / any key skips it. Not shown to people who ask their device for less motion.
+// Opening animation. Plays every time the MAIN page (/) is opened or refreshed, and again from the "▶ Intro" button
+// on the Home page. Tap / click / any key skips it.
+//
+// Story v3 (4 Nov 2026, Kamran):
+//   0.0 s  the office scene is on screen at once and BOTH trucks are already in view (also on phones),
+//          driving towards each other on the highway in front of the Tudo Num office tower
+//   ~2.3 s the two trailers cross each other in front of the building
+//   2.6 s  the camera tilts up: the scene slides down, the sky turns from day blue to deep night blue
+//          with twinkling stars, a faint Milky Way and a shooting star (components/IntroSky.js)
+//   3.4 s  the Tudo Num Group logo (on a white card) comes into focus, TUDO NUM GROUP, OFFICE SYSTEMS
+//   6.4 s  a crowd rises at the bottom and claps while "Powered by" and then "KS TECH LLC" appear
+//   ~12 s  everything fades and the normal page comes forward
 // The overlay is in the server HTML so the page never flashes before it; INTRO_BOOT
 // (lib/intro.js, run in app/layout.js <head>) hides it at once on every page except the main page.
+// Styles: "Intro story v3" block at the end of app/globals.css (older intro blocks above it still give the base look).
 import { useEffect, useRef, useState } from 'react';
 import { INTRO_REPLAY } from '@/lib/intro';
 import IntroScene from '@/components/IntroScene';
+import { IntroSky, IntroCrowd } from '@/components/IntroSky';
 
-// Story (2 Nov 2026): 0-5 s the scene (office at work, trucks passing) fills the screen; at 5 s the camera
-// tilts up (scene slides down and away); at 5.6 s the logo, title, OFFICE SYSTEMS, Powered by, KS TECH LLC come in.
-const CAM_AT = 5000;   // camera goes up
-const BRAND_AT = 5600; // logo part starts (its own animation delays count from here)
-const OUT_AT = 13900;  // KS TECH LLC done ~5.8 s after BRAND_AT, holds ~2.5 s, then fade out
-const OUT_MS = 900;    // length of the fade out
+const CAM_AT = 2600;    // trailers have just crossed: camera goes up
+const BRAND_AT = 3400;  // logo part starts (its own animation delays count from here)
+const OUT_AT = 12000;   // KS TECH LLC done ~6.4 s after BRAND_AT, holds ~2 s, then fade out
+const OUT_MS = 900;     // length of the fade out
 
 function Letters({ text, start, step, glint, className }) {
   let i = 0;
@@ -49,6 +50,14 @@ export default function IntroSplash() {
 
   const clear = () => { timers.current.forEach(clearTimeout); timers.current = []; };
 
+  const schedule = () => {
+    timers.current.push(
+      setTimeout(() => setPhase('cam'), CAM_AT),
+      setTimeout(() => setPhase('brand'), BRAND_AT),
+      setTimeout(leave, OUT_AT),
+    );
+  };
+
   const leave = () => {
     if (leaving.current) return;
     leaving.current = true;
@@ -71,7 +80,7 @@ export default function IntroSplash() {
     setRun((r) => r + 1);
     setState('play');
     setPhase('scene');
-    timers.current.push(setTimeout(() => setPhase('cam'), CAM_AT), setTimeout(() => setPhase('brand'), BRAND_AT), setTimeout(leave, OUT_AT));
+    schedule();
   };
 
   useEffect(() => {
@@ -79,7 +88,7 @@ export default function IntroSplash() {
     if (root.classList.contains('intro-done')) setState('gone');
     else {
       root.classList.add('intro-playing');
-      timers.current.push(setTimeout(() => setPhase('cam'), CAM_AT), setTimeout(() => setPhase('brand'), BRAND_AT), setTimeout(leave, OUT_AT));
+      schedule();
     }
 
     const onKey = () => { if (!leaving.current && root.classList.contains('intro-playing')) leave(); };
@@ -96,40 +105,49 @@ export default function IntroSplash() {
 
   if (state === 'gone') return null;
 
+  const camUp = phase !== 'scene';
+
   return (
-    <div key={run} className={`intro-splash story ph-${phase}${state === 'out' ? ' is-out' : ''}`} role="presentation" onClick={leave}>
-      <div className="is-aurora" aria-hidden="true">
-        <i className="a1" /><i className="a2" /><i className="a3" />
-      </div>
-      {phase !== 'brand' && <IntroScene />}
+    <div
+      key={run}
+      className={`intro-splash story v3 ph-${phase}${camUp ? ' cam-up' : ''}${state === 'out' ? ' is-out' : ''}`}
+      role="presentation"
+      onClick={leave}
+    >
+      <IntroSky />
+      <IntroScene />
 
       {phase === 'brand' && (<>
-      <div className="is-center">
-        <div className="is-logo-wrap">
-          <span className="is-halo" aria-hidden="true" />
-          <span className="is-logo" role="img" aria-label="Tudo Num Group">
-            <img className="is-lg-base" src="/brand-base.png" alt="" />
-            <img className="is-lg-arrow" src="/brand-arrow.png" alt="" />
-            <span className="is-logo-shine" aria-hidden="true" />
-          </span>
+        <div className="is-center">
+          <div className="is-logo-wrap">
+            <span className="is-halo" aria-hidden="true" />
+            <span className="is-logo-card">
+              <span className="is-logo" role="img" aria-label="Tudo Num Group">
+                <img className="is-lg-base" src="/brand-base.png" alt="" />
+                <img className="is-lg-arrow" src="/brand-arrow.png" alt="" />
+                <span className="is-logo-shine" aria-hidden="true" />
+              </span>
+            </span>
+          </div>
+
+          <h1 className="is-title" aria-label="Tudo Num Group">
+            <Letters text="TUDO NUM GROUP" start={1450} step={55} glint={2750} className="is-title-in" />
+          </h1>
+
+          <div className="is-sub" aria-label="Office Systems">
+            <span className="is-line l" aria-hidden="true" />
+            <span className="is-sub-text" aria-hidden="true">OFFICE SYSTEMS</span>
+            <span className="is-line r" aria-hidden="true" />
+          </div>
+
+          <div className="is-powered" aria-label="Powered by KS TECH LLC">
+            <span className="is-pw-small">Powered by</span>
+            <Letters text="KS TECH LLC" start={4900} step={60} className="is-pw-name" />
+            <span className="is-pw-glow" aria-hidden="true" />
+          </div>
         </div>
 
-        <h1 className="is-title" aria-label="Tudo Num Group">
-          <Letters text="TUDO NUM GROUP" start={1450} step={55} glint={2750} className="is-title-in" />
-        </h1>
-
-        <div className="is-sub" aria-label="Office Systems">
-          <span className="is-line l" aria-hidden="true" />
-          <span className="is-sub-text" aria-hidden="true">OFFICE SYSTEMS</span>
-          <span className="is-line r" aria-hidden="true" />
-        </div>
-      </div>
-
-      <div className="is-powered" aria-label="Powered by KS TECH LLC">
-        <span className="is-pw-small">Powered by</span>
-        <Letters text="KS TECH LLC" start={4500} step={55} className="is-pw-name" />
-        <span className="is-pw-glow" aria-hidden="true" />
-      </div>
+        <IntroCrowd />
       </>)}
 
       <span className="is-skip" aria-hidden="true">Tap to skip</span>
