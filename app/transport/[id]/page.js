@@ -41,6 +41,7 @@ function DriverSheet() {
   const { id } = useParams();
   const { isAdmin, name: userName } = useUser() || {};
   const [driver, setDriver] = useState(null);
+  const [allDrivers, setAllDrivers] = useState([]); // for the Payment credit in drop-down
   const [entries, setEntries] = useState([]);
   const [salMonths, setSalMonths] = useState({}); // salary receipt id -> YYYY-MM
   const [salaries, setSalaries] = useState([]);
@@ -72,13 +73,15 @@ function DriverSheet() {
 
   const load = useCallback(async () => {
     const s = sb();
-    const [d, e, sa, pt, ex] = await Promise.all([
+    const [d, e, sa, pt, ex, ad] = await Promise.all([
       s.from('transport_drivers').select('*').eq('id', id).single(),
       s.from('transport_entries').select('*').eq('driver_id', id).order('entry_date').order('sort').order('created_at'),
       s.from('transport_salaries').select('*').eq('driver_id', id),
       s.from('transport_profit_taken').select('*').eq('driver_id', id).order('taken_on').order('created_at'),
-      s.from('transport_extras').select('*').eq('driver_id', id)
+      s.from('transport_extras').select('*').eq('driver_id', id),
+      s.from('transport_drivers').select('id, name, status').order('name')
     ]);
+    setAllDrivers(ad.error ? [] : (ad.data || []));
     setExtras(ex.error ? [] : (ex.data || []));
     setTaken(pt.error ? [] : (pt.data || []));
     setSalMonths(Object.fromEntries((sa.data || []).map((x) => [x.id, monthKey(x.month)])));
@@ -326,7 +329,11 @@ function DriverSheet() {
     },
     { key: 'description', label: 'Description', type: 'text', width: 200 },
     { key: 'remarks', label: 'Status', type: 'select', options: ['Completed', 'Loading', 'On the way', 'Done', 'Cancelled'], width: 116 },
-    { key: 'credit_in', label: 'Payment credit in', type: 'text', width: 140 },
+    // Payment credit in: Company Account + Mobile Payment for every driver (new drivers appear by themselves)
+    {
+      key: 'credit_in', label: 'Payment credit in', type: 'select', width: 190,
+      options: ['Company Account', ...allDrivers.filter((x) => !/inactive/i.test(x.status || '')).map((x) => `Mobile Payment ${x.name}`)]
+    },
     { key: 'entered_by', label: 'Entered by', type: 'text', width: 120 }
   ];
 
