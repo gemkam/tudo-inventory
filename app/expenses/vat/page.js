@@ -63,22 +63,22 @@ function VatReturnPage() {
       const drv = Object.fromEntries((dr.data || []).map((x) => [x.id, x.name]));
       const sales = [
         ...(t.data || []).filter((r) => n(r.rent) > 0).map((r) => ({
-          src: 'transport', date: r.entry_date, month: mk(r.entry_date), ref: drv[r.driver_id] || 'Trip',
+          src: 'transport', date: r.entry_date, month: mk(r.entry_date), ref: drv[r.driver_id] || 'Trip', from: `Transport · trip sheet of ${drv[r.driver_id] || 'driver'}`,
           text: [r.from_place, r.to_place].filter(Boolean).join(' → ') || 'Trip', amount: r3(r.rent), vat: vatOf(r)
         })),
         ...(d.data || []).map((x) => {
           const sub = r3((Array.isArray(x.items) ? x.items : []).reduce((a, it) => a + n(it.amount), 0));
           const vat = r3((sub * n(x.vat_pct)) / 100);
-          return { src: x.company || 'modern-city', date: x.doc_date, month: mk(x.doc_date), ref: x.doc_no || 'Invoice', text: x.party || '', amount: r3(sub + vat), vat };
+          return { src: x.company || 'modern-city', date: x.doc_date, month: mk(x.doc_date), ref: x.doc_no || 'Invoice', from: `Invoices · ${labelOf(x.company || 'modern-city')}`, text: x.party || '', amount: r3(sub + vat), vat };
         }).filter((x) => x.amount && x.date)
       ];
       const bills = (e.data || []).filter((b) => b.entry_date && !SKIP_KINDS.includes(b.source_kind)).map((b) => ({
-        src: b.company, date: b.entry_date, month: mk(b.entry_date), ref: b.bill_no || '', text: b.description || '',
+        src: b.company, date: b.entry_date, month: mk(b.entry_date), ref: b.bill_no || '', from: b.source_kind === 'receipt' ? `Bills · ${labelOf(b.company)}` : b.source_kind === 'maint' ? `Transport · Vehicles maintenance (${labelOf(b.company)})` : `All Companies bills · ${labelOf(b.company)}`, text: b.description || '',
         amount: r3(n(b.paid) + n(b.unpaid)), vat: r3(b.vat), vatNo: b.vat_reg_no || ''
       }));
       // diesel on the trip sheets: 5% VAT is always inside the fuel price, so it is input VAT of Transport
       (t.data || []).filter((r) => n(r.diesel) > 0 && r.entry_date).forEach((r) => bills.push({
-        src: 'transport', date: r.entry_date, month: mk(r.entry_date), ref: drv[r.driver_id] || 'Trip',
+        src: 'transport', date: r.entry_date, month: mk(r.entry_date), ref: drv[r.driver_id] || 'Trip', from: `Transport · trip sheet diesel of ${drv[r.driver_id] || 'driver'}`,
         text: `Diesel · ${[r.from_place, r.to_place].filter(Boolean).join(' → ') || 'Trip'}`, amount: r3(r.diesel), vat: dieselVat(r), vatNo: ''
       }));
       const months = [...new Set([...sales, ...bills].map((x) => x.month).filter(Boolean))].sort();
@@ -138,8 +138,8 @@ function VatReturnPage() {
         rows: rows.map(({ s, r }) => [s.label, ...cols.map(([k]) => r[k])]), totalsRow: ['Total', ...cols.map(([k]) => T[k])], numCols: cols.map((_, i) => i + 1), widths: [18, ...cols.map(() => 18)] });
       if (opt.months) sheets.push({ name: 'By month', title: `VAT by month · ${pLabel}`, subtitle: sub, head: ['Month', 'Company', ...cols.map((c) => c[1])],
         rows: byMonth.map(({ m, s, r }) => [monthLabel(m), s.label, ...cols.map(([k]) => r[k])]), numCols: cols.map((_, i) => i + 2), widths: [16, 16, ...cols.map(() => 18)] });
-      if (opt.lines) sheets.push({ name: 'VAT lines', title: `Sales and bills with VAT · ${pLabel}`, subtitle: sub, head: ['Date', 'Company', 'Type', 'Ref / Bill no.', 'Details', 'Amount', 'VAT'],
-        rows: lines.map((x) => [dmy(x.date), labelOf(x.src), x.type, x.ref, x.text, x.amount, x.vat]), numCols: [5, 6], widths: [12, 14, 14, 16, 34, 12, 10] });
+      if (opt.lines) sheets.push({ name: 'VAT lines', title: `Sales and bills with VAT · ${pLabel}`, subtitle: sub, head: ['Date', 'Company', 'Type', 'From (where the VAT comes from)', 'Ref / Bill no.', 'Details', 'Amount', 'VAT'],
+        rows: lines.map((x) => [dmy(x.date), labelOf(x.src), x.type, x.from || '', x.ref, x.text, x.amount, x.vat]), numCols: [6, 7], widths: [12, 14, 14, 28, 16, 34, 12, 10] });
       if (!sheets.length) { flash('Pick at least one part in Print options', 'err'); return; }
       await exportExcel(`VAT return ${period}.xlsx`, sheets);
       flash('Excel file downloaded');
@@ -154,8 +154,8 @@ function VatReturnPage() {
         totalsRow: ['Total', ...cols.map(([k]) => (k === 'net' ? netText(T[k]) : fmtAmt(T[k])))], numCols: cols.map((_, i) => i + 1) });
       if (opt.months) sections.push({ heading: 'By month', head: ['Month', 'Company', ...cols.map((c) => c[1])],
         rows: byMonth.map(({ m, s, r }) => [monthLabel(m), s.label, ...cols.map(([k]) => fmtAmt(r[k]))]), numCols: cols.map((_, i) => i + 2), fontSize: 9 });
-      if (opt.lines) sections.push({ heading: 'Sales and bills with VAT', head: ['Date', 'Company', 'Type', 'Ref / Bill no.', 'Details', 'Amount', 'VAT'],
-        rows: lines.length ? lines.map((x) => [dmy(x.date), labelOf(x.src), x.type, x.ref, x.text, fmtAmt(x.amount), fmtAmt(x.vat)]) : [['', '', '', '', 'No sales or bills with VAT in this period', '', '']], numCols: [5, 6], fontSize: 9 });
+      if (opt.lines) sections.push({ heading: 'Sales and bills with VAT', head: ['Date', 'Company', 'Type', 'From', 'Ref / Bill no.', 'Details', 'Amount', 'VAT'],
+        rows: lines.length ? lines.map((x) => [dmy(x.date), labelOf(x.src), x.type, x.from || '', x.ref, x.text, fmtAmt(x.amount), fmtAmt(x.vat)]) : [['', '', '', '', '', 'No sales or bills with VAT in this period', '', '']], numCols: [6, 7], fontSize: 9 });
       if (!sections.length) { flash('Pick at least one part in Print options', 'err'); return; }
       await exportPdf(`VAT return ${period}.pdf`, { title: `VAT return · ${pLabel}`, subtitle: `${shownSrc.map((s) => s.label).join(', ')}  |  File and pay by ${dmy(fileBy)}  |  Exported ${exportStamp()}  |  OMR`, sections });
       flash('PDF downloaded');
@@ -236,8 +236,8 @@ function VatReturnPage() {
           {lines.length === 0 ? <p className="muted" style={{ margin: 0 }}>No sales or bills with VAT in {pLabel}. Trips count only when "VAT 5% added" is on.</p> : (
             <div className="table-wrap">
               <table className="ats-table">
-                <thead><tr><th>Date</th><th>Company</th><th>Type</th><th>Ref / Bill no.</th><th>Details</th><th className="num">Amount</th><th className="num">VAT</th></tr></thead>
-                <tbody>{lines.map((x, i) => <tr key={i}><td>{dmy(x.date)}</td><td>{labelOf(x.src)}</td><td>{x.type}</td><td>{x.ref}</td><td>{x.text}</td><td className="num">{fmtAmt(x.amount)}</td><td className="num">{fmtAmt(x.vat)}</td></tr>)}</tbody>
+                <thead><tr><th>Date</th><th>Company</th><th>Type</th><th>From</th><th>Ref / Bill no.</th><th>Details</th><th className="num">Amount</th><th className="num">VAT</th></tr></thead>
+                <tbody>{lines.map((x, i) => <tr key={i}><td>{dmy(x.date)}</td><td>{labelOf(x.src)}</td><td>{x.type}</td><td>{x.from}</td><td>{x.ref}</td><td>{x.text}</td><td className="num">{fmtAmt(x.amount)}</td><td className="num">{fmtAmt(x.vat)}</td></tr>)}</tbody>
               </table>
             </div>
           )}

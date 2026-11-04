@@ -635,7 +635,7 @@ function DocsPage() {
       ) : (
         <div className="iv-table-wrap">
           <table className="iv-list" style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead><tr>{canEdit && <th className="dx-c"><input type="checkbox" aria-label="Select all" checked={!!shown.length && picked.length === shown.length} onChange={() => setPicked(picked.length === shown.length ? [] : shown.map((d) => d.id))} /></th>}<th>No.</th><th>Date</th><th>{K.party}</th><th>Receipt No.</th><th>Vehicle No.</th><th>Fuel</th><th>VAT No.</th>{kind === 'receipt' && <th>Department</th>}<th className="num">Amount OMR</th></tr></thead>
+            <thead><tr>{canEdit && <th className="dx-c"><input type="checkbox" aria-label="Select all" checked={!!shown.length && picked.length === shown.length} onChange={() => setPicked(picked.length === shown.length ? [] : shown.map((d) => d.id))} /></th>}<th>No.</th><th>Date</th><th>{K.party}</th><th>Receipt No.</th><th>Vehicle No.</th><th>Fuel</th><th>VAT No.</th><th className="num">VAT 5%</th>{kind === 'receipt' && <th>Department</th>}<th className="num">Amount OMR</th></tr></thead>
             <tbody>
               {shown.map((d) => (
                 <tr key={d.id} tabIndex={0} className={picked.includes(d.id) ? 'dx-on' : ''} onClick={() => openDoc(d)} onKeyDown={(e) => e.key === 'Enter' && openDoc(d)}>
@@ -649,6 +649,7 @@ function DocsPage() {
                     <td>{x.fuel ? <span className={`dx-fuel f-${x.fuel.toLowerCase()}`}>{x.fuel}</span> : ''}</td>
                     <td className="muted">{x.vat_no}</td>
                   </>); })()}
+                  <td className="num">{n(d.vat_pct) > 0 ? <Omr v={r3(totalOf(d) - lineTotal(d.items))} /> : <span className="muted">0</span>}</td>
                   {kind === 'receipt' && <td>{d.department || ''}</td>}
                   <td className="num"><Omr v={totalOf(d)} /></td>
                 </tr>
