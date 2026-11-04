@@ -18,6 +18,8 @@ import {
 
 /*
   🏦 Accounts (/accounts, top bar button before Admin, 4 Nov 2026). Tabs (?tab=):
+  all      = 📚 All accounts (default): every money page of the app in one place (sales, invoices, bills, payroll,
+             tax, reports), with live totals; tiles open the page (Reports & Summary parts open with ?open=)
   bank     = Bank & Cash: accounts with balance, ledger per account (money in / out, running balance,
              ✓ cleared for bank reconciliation), ＋ Money in / out, ⇄ Transfer, month filter, Excel / PDF
   balance  = Balance sheet as on a date: assets, loans and amounts owed, capital, profit kept (balancing figure)
@@ -29,6 +31,7 @@ import {
 */
 
 const TABS = [
+  ['all', '📚 All accounts'],
   ['bank', '🏦 Bank & Cash'],
   ['balance', '⚖ Balance sheet'],
   ['receive', '📥 Money to receive'],
@@ -42,7 +45,7 @@ function AccountsPage() {
   const user = useUser();
   const router = useRouter();
   const q = useSearchParams();
-  const tab = TABS.some(([k]) => k === q.get('tab')) ? q.get('tab') : 'bank';
+  const tab = TABS.some(([k]) => k === q.get('tab')) ? q.get('tab') : 'all';
   const [co, setCo] = useState(q.get('co') || 'all');
   const [D, setD] = useState(null);
   const [err, setErr] = useState('');
@@ -115,6 +118,7 @@ function AccountsPage() {
 
       {err && <div className="error">{err}</div>}
 
+      {tab === 'all' && <HubTab {...P} goTab={goTab} />}
       {tab === 'bank' && <BankTab {...P} />}
       {tab === 'balance' && <BalanceTab {...P} goTab={goTab} />}
       {tab === 'receive' && <ReceiveTab {...P} />}
@@ -122,6 +126,98 @@ function AccountsPage() {
       {tab === 'items' && <ItemsTab {...P} />}
 
       {toast && <div className={`toast ${toast.kind}`} role="status">{toast.text}</div>}
+    </>
+  );
+}
+
+/* ---------------- 📚 All accounts: every money page of the app ---------------- */
+function HubTab({ D, co, coName, goTab }) {
+  const c1 = co === 'all' ? '' : co;
+  const cq = c1 ? `co=${c1}` : '';
+  const withCo = (base) => (cq ? `${base}${base.includes('?') ? '&' : '?'}${cq}` : base);
+  const docCo = c1 || COMPANIES[0].key;
+  const today = todayISO();
+  const B = balanceSheet(D, co, today);
+  const accs = D.accounts.filter((a) => co === 'all' || a.company === co);
+  const bankTotal = r3(accs.reduce((s, a) => s + accountBalance(a, D.txns).balance, 0));
+  const recTotal = r3(B.rec.reduce((s, x) => s + x.balance, 0));
+  const match = (k) => co === 'all' || (k || 'modern-city') === co;
+  const thisMonth = today.slice(0, 7);
+  const invMonth = D.invoices.filter((x) => match(x.company) && String(x.doc_date).slice(0, 7) === thisMonth).length;
+  const billsMonth = r3(D.bills.filter((b) => match(b.company) && String(b.entry_date).slice(0, 7) === thisMonth).reduce((s, b) => s + n(b.paid) + n(b.unpaid), 0));
+  const mcOnly = co === 'all' || co === 'modern-city';
+
+  const GROUPS = [
+    ['🏦 Bank, cash and position', [
+      { t: 'Bank & Cash', d: 'Bank and cash accounts, ledger, transfers, bank reconciliation', v: money(bankTotal), s: `${accs.length} account(s)`, tab: 'bank' },
+      { t: 'Balance sheet', d: 'What the company has, what it owes, capital, net worth', v: money(B.netWorth), s: 'net worth today', tab: 'balance' },
+      { t: 'Assets, loans & capital', d: 'Vehicles, equipment, deposits, loans, owner capital', v: String(D.items.filter((x) => match(x.company)).length), s: 'item(s) typed', tab: 'items' },
+      { t: 'Cash forecast', d: 'Money in and out for the next 30 days, week by week', href: '/expenses/summary?open=cash' }
+    ]],
+    ['💰 Sales and money to receive', [
+      { t: 'Money to receive', d: 'Trips not fully paid, by age', v: money(recTotal), s: `${B.rec.length} trip(s)`, tab: 'receive', hide: !mcOnly },
+      { t: 'Sales', d: 'Everything earned: trips and company invoices, by month', href: '/expenses/summary?open=sales' },
+      { t: 'Company invoices', d: 'Invoices to customers on the company letterhead', v: String(invMonth), s: 'this month', href: `/expenses/docs?co=${docCo}&kind=invoice` },
+      { t: 'Transport invoices', d: 'Transportation Invoice, Tax Invoice, Interim Payment Application', href: '/transport/invoice', hide: !mcOnly },
+      { t: 'Trip sheets', d: 'Rent, received, balance and received date of every trip', href: '/transport/trip-sheets', hide: !mcOnly }
+    ]],
+    ['📤 Expenses and money to pay', [
+      { t: 'Money to pay', d: 'Unpaid bills, salaries not paid, staff balances', v: money(B.pay.total), s: 'to pay', tab: 'pay' },
+      { t: 'Bills (All Companies)', d: 'Every bill: paid, unpaid, VAT, department, head', v: money(billsMonth), s: 'this month', href: withCo('/expenses') },
+      { t: 'Payment receipts', d: 'Supplier bills and purchase receipts, 📥 Import documents', href: `/expenses/docs?co=${docCo}&kind=receipt` },
+      { t: 'Unpaid bills by age', d: '0-30, 31-60, 61-90, 90+ days, oldest first', href: '/expenses/summary?open=unpaid' },
+      { t: 'Vehicle maintenance & PDC', d: 'Work, charges, PDC cheque dates, Pending / Paid', href: '/transport/vehicles', hide: !mcOnly },
+      { t: 'Utility bills', d: 'Electricity, water, dispenser, internet payments', href: '/bills' },
+      { t: 'Budgets', d: 'Monthly budget vs actual by head of account', href: '/expenses/summary?open=budget' }
+    ]],
+    ['👥 Salaries and payroll', [
+      { t: 'Salary slips', d: 'Monthly slips, approve, 💵 Salary paid, send to employee', href: withCo('/expenses/salary') },
+      { t: 'All Drivers Salary Sheet', d: 'Driver salaries, driver allowance, paid / unpaid', href: '/transport/salary-sheet', hide: !mcOnly },
+      { t: 'Office staff salary sheet', d: 'Basic, allowances, working days, deductions', href: withCo('/expenses') },
+      { t: 'Attendance', d: 'Absent and half days that lower the salary', href: withCo('/personnel?tab=attendance') }
+    ]],
+    ['🧾 Tax', [
+      { t: 'VAT return', d: 'Output VAT, input VAT, net to pay or claim, by quarter', v: money(Math.abs(B.vat.net)), s: B.vat.net >= 0 ? 'VAT to pay (all time)' : 'VAT to claim (all time)', href: '/expenses/vat' },
+      { t: 'Profit and Loss', d: 'Sales, direct costs, gross profit, salaries, expenses, net profit, 15% tax estimate', href: '/expenses/summary?open=pl' }
+    ]],
+    ['📊 Reports and checks', [
+      { t: 'Cash flow', d: 'Money in vs money spent, by month', href: '/expenses/summary?open=cashflow' },
+      { t: 'Checks', d: 'Double bills, same amount twice, diesel too high, trips unpaid 60+ days', href: '/expenses/summary?open=checks' },
+      { t: 'Analytics', d: 'Spending pace, biggest changes, by department, biggest bills', href: '/expenses/summary?open=analytics' },
+      { t: 'Reports & Summary', d: 'Whole group: by company, by head, by month, PDF', href: '/expenses/summary' },
+      { t: 'Transport reports', d: 'Trips, costs and profit by month and driver', href: '/transport/reports', hide: !mcOnly },
+      { t: 'Report by dates', d: 'Any From / To dates, Print or Excel', href: '/transport?do=range', hide: !mcOnly }
+    ]]
+  ];
+
+  return (
+    <>
+      <div className="kpi-row">
+        <div className="kpi hero"><span>Bank and cash</span><strong>{money(bankTotal)}</strong><small>OMR · {coName}</small></div>
+        <div className="kpi"><span>To receive</span><strong>{money(mcOnly ? recTotal : 0)}</strong><small>trips not fully paid</small></div>
+        <div className="kpi"><span>To pay</span><strong>{money(B.pay.total)}</strong><small>bills and salaries</small></div>
+        <div className="kpi"><span>{B.vat.net >= 0 ? 'VAT to pay' : 'VAT to claim'}</span><strong>{money(Math.abs(B.vat.net))}</strong><small>all time, less VAT paid</small></div>
+      </div>
+      {GROUPS.map(([title, list]) => (
+        <section key={title} className="panel">
+          <h2 className="ac-hub-h">{title}</h2>
+          <div className="ac-hub">
+            {list.filter((x) => !x.hide).map((x) => {
+              const inner = (
+                <>
+                  <b>{x.t}</b>
+                  <small>{x.d}</small>
+                  {x.v !== undefined && <span className="ac-hub-v"><strong>{x.v}</strong> {x.s}</span>}
+                  <span className="ac-hub-go">{x.tab ? 'Open here ›' : 'Open ›'}</span>
+                </>
+              );
+              return x.tab
+                ? <button key={x.t} type="button" className="ac-hub-tile here" onClick={() => goTab(x.tab)}>{inner}</button>
+                : <Link key={x.t} href={x.href} className="ac-hub-tile">{inner}</Link>;
+            })}
+          </div>
+        </section>
+      ))}
     </>
   );
 }

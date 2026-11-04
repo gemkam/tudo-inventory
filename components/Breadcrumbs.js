@@ -61,8 +61,8 @@ function trail(path, q, names) {
     return [HOME, ['Personnel', '/personnel'], ['Employees', '/personnel'], [t || 'Office Employees', path]];
   }
   if (seg[0] === 'accounts') {
-    const t = { bank: 'Bank & Cash', balance: 'Balance sheet', receive: 'Money to receive', pay: 'Money to pay', items: 'Assets, loans & capital' }[q.get('tab') || 'bank'];
-    return [HOME, ['Accounts', '/accounts'], [t || 'Bank & Cash', path]];
+    const t = { all: 'All accounts', bank: 'Bank & Cash', balance: 'Balance sheet', receive: 'Money to receive', pay: 'Money to pay', items: 'Assets, loans & capital' }[q.get('tab') || 'all'];
+    return [HOME, ['Accounts', '/accounts'], [t || 'All accounts', path]];
   }
   if (seg[0] === 'admin' && seg[1] === 'power') return [HOME, ADMIN, ['Power Editor', path]];
   if (seg[0] === 'admin') return [HOME, ADMIN];

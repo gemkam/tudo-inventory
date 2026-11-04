@@ -90,6 +90,17 @@ function SummaryPage() {
 
   const G = useMemo(() => (data && period ? computeGroup({ lines, income, budgets: data.budgets, pick, period, today, docSales }) : null), [data, lines, income, pick, period, today, docSales]);
 
+  /* ?open= from 🏦 Accounts (4 Nov 2026): sales | vat | cash | checks (top tabs), pl, budget, cashflow, unpaid, analytics (sections) */
+  const opened = useRef(false);
+  useEffect(() => {
+    if (!G || opened.current) return;
+    const key = new URLSearchParams(window.location.search).get('open');
+    if (!key) return;
+    opened.current = true;
+    const ids = { pl: 'pl-statement', budget: 'gs-budget', cashflow: 'gs-cashflow', unpaid: 'gs-unpaid', analytics: 'gs-analytics' };
+    setTimeout(() => { if (['sales', 'vat', 'cash', 'checks'].includes(key)) openTab(key); else if (ids[key]) jumpTo(ids[key]); }, 400);
+  }, [G]);
+
   const AN = useMemo(() => (G && data ? computeAnalytics({ G, lines, income, ts: data.ts, drivers: data.drivers, pick, period, today }) : null), [G, data, lines, income, pick, period, today]);
 
   // Attendance of office staff (companies only, Fri and Sat off) for the chosen period
@@ -306,7 +317,7 @@ function SummaryPage() {
                 onPick={(i, s) => (s.label === 'Everything else' ? openDrill(`Other heads · ${periodLabel}`, (l) => !headTop.some((h) => h.head === l.head)) : drillHead(s.label))} />
             </div>
 
-            <div className="rp-card rp-wide">
+            <div className="rp-card rp-wide" id="gs-budget">
               <div className="rp-card-title">🎯 Budget vs actual <span className="rp-card-note">({G.nMonths} month{G.nMonths === 1 ? '' : 's'} of budget)</span></div>
               {G.budgetHeads.length ? (
                 <>
@@ -334,7 +345,7 @@ function SummaryPage() {
               )}
             </div>
 
-            <div className="rp-card rp-wide">
+            <div className="rp-card rp-wide" id="gs-cashflow">
               <div className="rp-card-title">💵 Cash flow <span className="rp-card-note">(money in from transport vs money spent, by month)</span></div>
               <div className="rp-takeaway">
                 {G.cash.months.length ? `${G.cash.totalNet >= 0 ? 'More came in than went out' : 'More went out than came in'}: ${fmtO(Math.abs(G.cash.totalNet))} over ${G.cash.months.length} month${G.cash.months.length === 1 ? '' : 's'}.${cashNetIdx >= 0 ? ` ${monthLabel(G.cash.months[cashNetIdx])}: ${G.cash.net[cashNetIdx] >= 0 ? '+' : ''}${fmtAmt(G.cash.net[cashNetIdx])}.` : ''}` : ' '}
@@ -384,7 +395,7 @@ function SummaryPage() {
               </div>
             )}
 
-            <div className="rp-card">
+            <div className="rp-card" id="gs-unpaid">
               <div className="rp-card-title">⏳ Unpaid bills by age</div>
               <div className="rp-takeaway">{G.unpaidBills.length ? `${G.unpaidBills.length} unpaid bill${G.unpaidBills.length === 1 ? '' : 's'}: ${fmtO(G.unpaidAll)}. Pay the oldest first.` : 'No unpaid bills. 👍'}</div>
               <div className="age-bars">
@@ -438,7 +449,7 @@ function SummaryPage() {
 
           {AN && (
             <>
-              <h2 className="an-h2">📊 Analytics <span>{periodLabel}</span></h2>
+              <h2 className="an-h2" id="gs-analytics">📊 Analytics <span>{periodLabel}</span></h2>
               <div className="rp-grid">
                 <div className="rp-card">
                   <div className="rp-card-title">⏱ Spending pace <span className="rp-card-note">({monthLabel(AN.pace.thisMonth)})</span></div>
