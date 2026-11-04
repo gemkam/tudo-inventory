@@ -746,7 +746,6 @@ function DocsPage() {
         <Link href={`/expenses?co=${co}`} className="crumb">← All Companies</Link>
         <div className="tools">
           <input className="iv-search" type="search" placeholder="Search anything: vehicle, receipt no., petrol, amount, date..." value={q} onChange={(e) => setQ(e.target.value)} />
-          <EditToggle show={isAdmin} on={editing} onClick={toggleEdit} close={false} />
         </div>
       </div>
 
@@ -776,6 +775,12 @@ function DocsPage() {
         );
       })()}
 
+      {isAdmin && !canEdit && (
+        <div className="dx-bar dx-bar-off no-print">
+          <EditToggle show on={editing} onClick={toggleEdit} close={false} />
+          <span className="muted dx-hint">Press Edit to add, import, delete or move {K.label.toLowerCase()}</span>
+        </div>
+      )}
       {canEdit && (
         <div className="dx-bar no-print">
           <b>✏️ Edit</b>
