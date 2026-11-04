@@ -20,10 +20,10 @@ import { FIELDS, TAB_FIELDS, DATE_FIELDS, NUM_FIELDS, mapTable, cleanPerson, mak
      ↶ Undo in the ✏️ Edit menu takes the whole import back.
 */
 
-const ACCEPT = '.xlsx,.xls,.xlsm,.ods,.csv,.tsv,.txt,.docx,.doc,.pdf,image/*';
+export const ACCEPT = '.xlsx,.xls,.xlsm,.ods,.csv,.tsv,.txt,.docx,.doc,.pdf,image/*';
 const MAX_SIDE = 1800;
 const ext = (f) => (String(f.name || '').toLowerCase().match(/\.([a-z0-9]+)$/) || [])[1] || '';
-const kindOf = (f) => {
+export const kindOf = (f) => {
   const e = ext(f);
   if (['xlsx', 'xls', 'xlsm', 'ods'].includes(e)) return 'sheet';
   if (['csv', 'tsv', 'txt'].includes(e) || /text\/(csv|plain)/.test(f.type || '')) return 'csvtext';
@@ -33,9 +33,9 @@ const kindOf = (f) => {
   if (/^image\//.test(f.type || '') || ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'heic', 'heif'].includes(e)) return 'image';
   return 'other';
 };
-const ICON = { sheet: '📗', csvtext: '📄', docx: '📘', doc: '📘', pdf: '📕', image: '🖼', other: '📎' };
+export const ICON = { sheet: '📗', csvtext: '📄', docx: '📘', doc: '📘', pdf: '📕', image: '🖼', other: '📎' };
 
-function loadPdfJs() {
+export function loadPdfJs() {
   if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
   return new Promise((ok, bad) => {
     const s = document.createElement('script');
@@ -48,7 +48,7 @@ function loadPdfJs() {
     document.head.appendChild(s);
   });
 }
-function toJpeg(canvas) {
+export function toJpeg(canvas) {
   const scale = Math.min(1, MAX_SIDE / Math.max(canvas.width, canvas.height));
   const out = document.createElement('canvas');
   out.width = Math.round(canvas.width * scale);
@@ -58,7 +58,7 @@ function toJpeg(canvas) {
   g.drawImage(canvas, 0, 0, out.width, out.height);
   return out.toDataURL('image/jpeg', 0.85);
 }
-async function imageToJpeg(file) {
+export async function imageToJpeg(file) {
   const url = URL.createObjectURL(file);
   try {
     const img = await new Promise((ok, bad) => {

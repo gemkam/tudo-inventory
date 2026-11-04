@@ -7,6 +7,7 @@ import AuthGate, { useUser } from '@/components/AuthGate';
 import Modal from '@/components/Modal';
 import DateInput from '@/components/DateInput';
 import EditToggle from '@/components/EditToggle';
+import AccImport from '@/components/AccImport';
 import { sb } from '@/lib/supabase';
 import { COMPANIES } from '@/lib/expenses';
 import { fmtAmt, monthLabel, exportStamp, exportExcel, exportPdf, todayISO } from '@/lib/sheet';
@@ -50,6 +51,7 @@ function AccountsPage() {
   const [D, setD] = useState(null);
   const [err, setErr] = useState('');
   const [edit, setEdit] = useState(false);
+  const [lastImport, setLastImport] = useState(null); // { accounts, txns, items } ids made by the last 📥 Import documents (this visit)
   const [toast, setToast] = useState(null);
   const timer = useRef(null);
   const flash = useCallback((text, kind = 'ok') => { setToast({ text, kind }); clearTimeout(timer.current); timer.current = setTimeout(() => setToast(null), 2600); }, []);
@@ -84,6 +86,18 @@ function AccountsPage() {
     router.replace(`/accounts?${p.toString()}`, { scroll: false });
   }
 
+  async function undoImport() {
+    if (!lastImport || !confirm('Take back everything added by the last import?')) return;
+    const s = sb();
+    const steps = [
+      lastImport.txns.length && s.from('acc_txns').delete().in('id', lastImport.txns),
+      lastImport.items.length && s.from('acc_items').delete().in('id', lastImport.items)
+    ].filter(Boolean);
+    for (const st of steps) { const r = await st; if (r.error) { flash(r.error.message, 'err'); return; } }
+    if (lastImport.accounts.length) { const r = await s.from('acc_accounts').delete().in('id', lastImport.accounts); if (r.error) { flash(r.error.message, 'err'); return; } }
+    setLastImport(null); await load(); flash('Import taken back');
+  }
+
   if (!D) return <div className="loading">Loading accounts...</div>;
   const coName = co === 'all' ? 'All companies' : coLabel(co);
   const P = { D, co, coName, edit, user, flash, reload: load };
@@ -99,6 +113,17 @@ function AccountsPage() {
       <div className="page-tools">
         <div className="tools">
           <EditToggle on={edit} onClick={() => setEdit((v) => !v)} show={user.isAdmin} />
+          {user.isAdmin && (
+            <AccImport D={D} co={co} companies={COMPANIES} user={user} flash={flash} disabled={!edit}
+              onSaved={async (made, c) => {
+                setLastImport(made);
+                await load();
+                if (c) flash(`Added ${c.txns} money line${c.txns === 1 ? '' : 's'}${c.items ? `, ${c.items} asset / loan / capital` : ''}${c.accounts ? `, ${c.accounts} new account${c.accounts === 1 ? '' : 's'}` : ''}${c.doubles ? ` (${c.doubles} double${c.doubles === 1 ? '' : 's'})` : ''}`);
+              }} />
+          )}
+          {lastImport && edit && user.canDelete !== false && (
+            <button type="button" className="btn ghost" onClick={undoImport} title="Take the last import back">↶ Undo import</button>
+          )}
           <Link href="/expenses/summary#pl-statement" className="btn">📑 Profit and Loss</Link>
           <Link href="/expenses/vat" className="btn">🧾 VAT return</Link>
         </div>
