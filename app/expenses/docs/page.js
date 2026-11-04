@@ -70,20 +70,22 @@ function BillRow({ f, set, canPick, co, saving, onSave, onCancel, sugg = {} }) {
   const sub = n(f.sub);
   const f3 = (v) => r3(v).toFixed(3);
   const num = (v) => String(v).replace(/[^\d.]/g, '');
-  const onSub = (v) => { v = num(v); set('sub', v); if (v !== '') set('amount', f3(n(v) + n(f.vat))); };
+  // Kamran 4 Nov 2026: type Subtotal -> VAT 5% added, Grand Total written. Type Grand Total -> VAT 5% taken out, Subtotal written.
+  // Typing VAT by hand (e.g. 0 for a bill with no VAT) keeps the Subtotal and changes the Grand Total.
+  const onSub = (v) => { v = num(v); set('sub', v); if (v === '') return; const vt = r3(n(v) * 0.05); set('vat', f3(vt)); set('amount', f3(n(v) + vt)); };
   const onVat = (v) => {
     v = num(v); set('vat', v);
     if (f.sub !== '' && f.sub !== undefined) set('amount', f3(sub + n(v)));
     else if (tot > 0) set('sub', f3(tot - n(v)));
   };
-  const onGrand = (v) => { v = num(v); set('amount', v); if (v !== '') set('sub', f3(n(v) - n(f.vat))); };
+  const onGrand = (v) => { v = num(v); set('amount', v); if (v === '') return; const vt = r3(n(v) - n(v) / 1.05); set('vat', f3(vt)); set('sub', f3(n(v) - vt)); };
   const fillVat = () => {
     if (sub > 0) { const vt = r3(sub * 0.05); set('vat', f3(vt)); set('amount', f3(sub + vt)); return; }
     if (tot > 0) { const vt = r3(tot - tot / 1.05); set('vat', f3(vt)); set('sub', f3(tot - vt)); }
   };
   const money = (k, ph, fn) => (
     <input className="br-in" value={f[k] ?? ''} placeholder={ph} inputMode="decimal" style={{ textAlign: 'right' }} autoComplete="off" onKeyDown={key}
-      onChange={(e) => fn(e.target.value)} onBlur={(e) => e.target.value !== '' && fn(f3(n(e.target.value)))} />
+      onChange={(e) => fn(e.target.value)} onBlur={(e) => e.target.value !== '' && set(k, f3(n(e.target.value)))} />
   );
   const auto = sugg.auto || {};
   const inp = (k, ph, extra = {}) => (
