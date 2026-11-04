@@ -39,7 +39,8 @@ const lineTotal = (items) => r3((items || []).reduce((t, i) => t + n(i.amount), 
 const blankItems = () => [{ desc: '', amount: '' }, { desc: '', amount: '' }, { desc: '', amount: '' }];
 
 /* One bill typed right in the Bills table (no paper page). Columns follow the list: No., Date, Paid to, Receipt No.,
-   Vehicle No., Fuel, Amount (with VAT), VAT No., VAT 5%, Department.
+   Vehicle No., Fuel, Subtotal, VAT 5%, Grand Total, VAT No., Department. Subtotal + VAT 5% = Grand Total (Kamran 4 Nov 2026):
+   change any one of the three and the others follow.
    Type-ahead (Kamran 4 Nov 2026): Paid to, Vehicle No. and VAT No. finish the word from earlier bills as you type
    (Tab or Enter keeps it, keep typing to change it). Picking a saved "Paid to" fills its VAT No., a saved VAT No. fills "Paid to". */
 function finish(e, options, set, k) {
@@ -66,7 +67,24 @@ function BillRow({ f, set, canPick, co, saving, onSave, onCancel, sugg = {} }) {
     if (e.key === 'Escape') onCancel();
   };
   const tot = n(f.amount);
-  const fillVat = () => set('vat', tot > 0 ? String(r3(tot - tot / 1.05)) : '');
+  const sub = n(f.sub);
+  const f3 = (v) => r3(v).toFixed(3);
+  const num = (v) => String(v).replace(/[^\d.]/g, '');
+  const onSub = (v) => { v = num(v); set('sub', v); if (v !== '') set('amount', f3(n(v) + n(f.vat))); };
+  const onVat = (v) => {
+    v = num(v); set('vat', v);
+    if (f.sub !== '' && f.sub !== undefined) set('amount', f3(sub + n(v)));
+    else if (tot > 0) set('sub', f3(tot - n(v)));
+  };
+  const onGrand = (v) => { v = num(v); set('amount', v); if (v !== '') set('sub', f3(n(v) - n(f.vat))); };
+  const fillVat = () => {
+    if (sub > 0) { const vt = r3(sub * 0.05); set('vat', f3(vt)); set('amount', f3(sub + vt)); return; }
+    if (tot > 0) { const vt = r3(tot - tot / 1.05); set('vat', f3(vt)); set('sub', f3(tot - vt)); }
+  };
+  const money = (k, ph, fn) => (
+    <input className="br-in" value={f[k] ?? ''} placeholder={ph} inputMode="decimal" style={{ textAlign: 'right' }} autoComplete="off" onKeyDown={key}
+      onChange={(e) => fn(e.target.value)} onBlur={(e) => e.target.value !== '' && fn(f3(n(e.target.value)))} />
+  );
   const auto = sugg.auto || {};
   const inp = (k, ph, extra = {}) => (
     <input className="br-in" value={f[k]} placeholder={ph} onKeyDown={key} autoComplete="off" {...extra}
@@ -81,12 +99,13 @@ function BillRow({ f, set, canPick, co, saving, onSave, onCancel, sugg = {} }) {
       <td>{inp('receipt_no', 'Receipt No.')}</td>
       <td>{inp('vehicle_no', 'Vehicle No.', { list: 'br-veh' })}</td>
       <td><select className="br-in" value={f.fuel} onChange={(e) => set('fuel', e.target.value)}><option value="">Not fuel</option>{FUELS.map((x) => <option key={x} value={x}>{x}</option>)}</select></td>
-      <td className="num">{inp('amount', 'With VAT', { inputMode: 'decimal', style: { textAlign: 'right' } })}</td>
-      <td>{inp('vat_no', 'VAT No.', { list: 'br-vatno' })}</td>
+      <td className="num">{money('sub', 'Without VAT', onSub)}</td>
       <td className="num">
-        <div className="br-vat">{inp('vat', '0.000', { inputMode: 'decimal', style: { textAlign: 'right' } })}
-          <button type="button" className="btn small ghost" title="5% VAT inside the amount" onClick={fillVat} disabled={!(tot > 0)}>5%</button></div>
+        <div className="br-vat">{money('vat', '0.000', onVat)}
+          <button type="button" className="btn small ghost" title="VAT 5%: of the Subtotal, or inside the Grand Total" onClick={fillVat} disabled={!(sub > 0 || tot > 0)}>5%</button></div>
       </td>
+      <td className="num">{money('amount', 'With VAT', onGrand)}</td>
+      <td>{inp('vat_no', 'VAT No.', { list: 'br-vatno' })}</td>
       <td><DeptPicker co={co} value={f.department} onChange={(v) => set('department', v)} disabled={saving} /></td>
       <td className="br-paper">
         {f.oldFiles > 0 && <span className="muted br-has">📎 {f.oldFiles} saved</span>}
@@ -288,13 +307,13 @@ function DocsPage() {
   function billForm(d) {
     if (!d) {
       const last = (list || [])[0];
-      return { id: null, doc_no: nextNo(), doc_date: todayISO(), party: '', receipt_no: '', vehicle_no: '', fuel: '', vat_no: '', vat: '', amount: '',
+      return { id: null, doc_no: nextNo(), doc_date: todayISO(), party: '', receipt_no: '', vehicle_no: '', fuel: '', vat_no: '', vat: '', sub: '', amount: '',
         department: last?.department || (DEPARTMENTS[co] || [])[0] || '', newFiles: [], oldFiles: 0 };
     }
     const x = shortOf(d);
     const tot = totalOf(d);
     return { id: d.id, doc_no: d.doc_no, doc_date: d.doc_date || todayISO(), party: d.party || '', receipt_no: x.receipt_no || '', vehicle_no: x.vehicle_no || '',
-      fuel: x.fuel || '', vat_no: x.vat_no || '', vat: n(d.vat_pct) > 0 ? String(r3(tot - lineTotal(d.items))) : '', amount: String(tot), department: d.department || '', newFiles: [], oldFiles: (d.files || []).length };
+      fuel: x.fuel || '', vat_no: x.vat_no || '', vat: n(d.vat_pct) > 0 ? r3(tot - lineTotal(d.items)).toFixed(3) : '', sub: r3(lineTotal(d.items)).toFixed(3), amount: r3(tot).toFixed(3), department: d.department || '', newFiles: [], oldFiles: (d.files || []).length };
   }
   const startRow = (d) => { if (rowSaving) return; setRow(billForm(d)); };
   const setR = (k, v) => setRow((f) => ({ ...f, [k]: v }));
@@ -762,14 +781,19 @@ function DocsPage() {
         return (
           <div className="rp-tiles dx-tiles">
             <div className="rp-tile">
-              <div className="rp-tile-label">{kind === 'invoice' ? '🧾' : '💵'} Total amount</div>
+              <div className="rp-tile-label">{kind === 'invoice' ? '🧾' : '💵'} Grand Total</div>
               <div className="rp-tile-num"><Omr v={tot} /></div>
               <div className="rp-tile-sub">{shown.length} {shown.length === 1 ? K.one.toLowerCase() : K.label.toLowerCase()}{q ? ' found' : ''} · {C.short} · with VAT</div>
             </div>
             <div className="rp-tile">
               <div className="rp-tile-label">🧾 VAT 5%</div>
               <div className="rp-tile-num"><Omr v={vat} /></div>
-              <div className="rp-tile-sub">{vat ? `Inside the total · without VAT ${fmt3(r3(tot - vat))}` : 'No VAT on these'}</div>
+              <div className="rp-tile-sub">{vat ? 'Inside the Grand Total' : 'No VAT on these'}</div>
+            </div>
+            <div className="rp-tile">
+              <div className="rp-tile-label">🧮 Subtotal</div>
+              <div className="rp-tile-num"><Omr v={r3(tot - vat)} /></div>
+              <div className="rp-tile-sub">Grand Total minus VAT 5%</div>
             </div>
           </div>
         );
@@ -823,7 +847,7 @@ function DocsPage() {
       ) : (
         <div className="iv-table-wrap">
           <table className="iv-list" style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead><tr>{canEdit && <th className="dx-c"><input type="checkbox" aria-label="Select all" checked={!!shown.length && picked.length === shown.length} onChange={() => setPicked(picked.length === shown.length ? [] : shown.map((d) => d.id))} /></th>}<th>No.</th><th>Date</th><th>{K.party}</th><th>Receipt No.</th><th>Vehicle No.</th><th>Fuel</th><th className="num">Amount OMR</th><th>VAT No.</th><th className="num">VAT 5%</th>{kind === 'receipt' && <th>Department</th>}{kind === 'receipt' && <th>Bill paper</th>}{kind === 'receipt' && canEdit && <th />}</tr></thead>
+            <thead><tr>{canEdit && <th className="dx-c"><input type="checkbox" aria-label="Select all" checked={!!shown.length && picked.length === shown.length} onChange={() => setPicked(picked.length === shown.length ? [] : shown.map((d) => d.id))} /></th>}<th>No.</th><th>Date</th><th>{K.party}</th><th>Receipt No.</th><th>Vehicle No.</th><th>Fuel</th><th className="num">Subtotal</th><th className="num">VAT 5%</th><th className="num">Grand Total</th><th>VAT No.</th>{kind === 'receipt' && <th>Department</th>}{kind === 'receipt' && <th>Bill paper</th>}{kind === 'receipt' && canEdit && <th />}</tr></thead>
             <tbody>
               {kind === 'receipt' && row && !row.id && <BillRow f={row} set={setBill} sugg={sugg} canPick={canEdit} co={co} saving={rowSaving} onSave={saveRow} onCancel={() => setRow(null)} />}
               {shown.map((d) => kind === 'receipt' && row && row.id === d.id ? (
@@ -839,10 +863,11 @@ function DocsPage() {
                     <td className="dx-rno">{x.receipt_no}</td>
                     <td>{x.vehicle_no}</td>
                     <td>{x.fuel ? <span className={`dx-fuel f-${x.fuel.toLowerCase()}`}>{x.fuel}</span> : ''}</td>
-                    <td className="num"><Omr v={totalOf(d)} /></td>
+                    <td className="num"><Omr v={lineTotal(d.items)} /></td>
+                    <td className="num">{n(d.vat_pct) > 0 ? <Omr v={r3(totalOf(d) - lineTotal(d.items))} /> : <span className="muted">0</span>}</td>
+                    <td className="num dx-grand"><Omr v={totalOf(d)} /></td>
                     <td className="muted">{x.vat_no}</td>
                   </>); })()}
-                  <td className="num">{n(d.vat_pct) > 0 ? <Omr v={r3(totalOf(d) - lineTotal(d.items))} /> : <span className="muted">0</span>}</td>
                   {kind === 'receipt' && <td>{d.department || ''}</td>}
                   {kind === 'receipt' && (
                     <td onClick={(e) => e.stopPropagation()}>

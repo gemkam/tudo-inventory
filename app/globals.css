@@ -4448,3 +4448,4 @@ tr.tf-hide { display: none !important; }
 .dx-bar + .iv-table-wrap, .dx-bar + .iv-empty { margin-top: 10px; }
 .dx-bar-off { border-style: solid; }
 .dx-bar-off + .iv-table-wrap, .dx-bar-off + .iv-empty { margin-top: 10px; }
+.iv-list td.dx-grand { font-weight: 700; }
