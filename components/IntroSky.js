@@ -111,8 +111,8 @@ export function IntroCrowd() {
     <div className="is-crowd" aria-hidden="true">
       <span className="is-crowd-glow" />
       <svg viewBox="0 0 1600 260" preserveAspectRatio="xMidYMax slice">
-        <g>{CROWD.back.map((p, i) => <Person key={`b${i}`} {...p} tone="#0e1d3d" />)}</g>
-        <g>{CROWD.front.map((p, i) => <Person key={`f${i}`} {...p} tone="#060c1a" />)}</g>
+        <g>{CROWD.back.map((p, i) => <Person key={`b${i}`} {...p} tone="#3d5689" />)}</g>
+        <g>{CROWD.front.map((p, i) => <Person key={`f${i}`} {...p} tone="#25385f" />)}</g>
       </svg>
     </div>
   );
