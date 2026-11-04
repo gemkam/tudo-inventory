@@ -1,5 +1,7 @@
 'use client';
 
+import CloseEdit from '@/components/CloseEdit';
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -217,6 +219,7 @@ function DriverSheet() {
                     {isAdmin && (
                       <div className="pc-act no-print">
                         <button type="button" className={`btn small ${editing ? 'in' : ''}`} onClick={async () => { if (editing) { lockEdit(); setEditSal(null); } else if (await requestEditPassword()) setEditSal(s.id); }}>{editing ? '✓ Done' : '✏️ Edit'}</button>
+                        {editing && <CloseEdit small onClose={() => setEditSal(null)} />}
                         {(undo[s.id] || []).length > 0 && <button type="button" className="btn small ghost" onClick={() => undoSal(s)}>↶ Undo{undo[s.id].length > 1 ? ` (${undo[s.id].length})` : ''}</button>}
                         {hasPaidCols(s) && due > 0.0005 && <button type="button" className="btn small in" onClick={() => savePaid(s, salaryPayable(s))}>✓ Mark paid</button>}
                         {hasPaidCols(s) && s.paid_amount != null && <button type="button" className="btn small ghost" onClick={() => savePaid(s, null)}>✗ Not paid</button>}

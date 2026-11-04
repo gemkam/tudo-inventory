@@ -4262,5 +4262,6 @@ textarea.pw-in { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px;
 .br-paper .br-has { display: block; font-size: 12px; margin-bottom: 4px; }
 .br-file { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 2px 4px 2px 8px; margin: 0 4px 4px 0; }
 .br-file button { border: 0; background: none; cursor: pointer; font-size: 14px; line-height: 1; color: var(--muted); padding: 0 4px; }
-.dx-bar .dx-close { border-color: #c0392b; color: #c0392b; }
-.dx-bar .dx-close:hover:not(:disabled) { background: #c0392b; color: #fff; }
+.dx-close { border-color: #c0392b; color: #c0392b; }
+.dx-close:hover:not(:disabled) { background: #c0392b; color: #fff; }
+.pn-edit > .dx-close { margin-left: 6px; }

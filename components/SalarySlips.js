@@ -1,5 +1,7 @@
 'use client';
 
+import CloseEdit from '@/components/CloseEdit';
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Modal from '@/components/Modal';
 import SlipPaper from '@/components/SlipPaper';
@@ -511,6 +513,7 @@ function SlipEditMenu({ isAdmin, editOn, delOn, undoCount, undoLabel, onEdit, on
   return (
     <div className="pn-edit" ref={box}>
       <button type="button" className={`btn${on ? ' in' : ''}`} aria-pressed={on} aria-haspopup="menu" aria-expanded={open} onClick={async () => { if (open) { setOpen(false); return; } if (await requestEditPassword()) setOpen(true); }}>✏️ Edit <span aria-hidden="true">▾</span></button>
+      {on && <CloseEdit onClose={() => { setOpen(false); onDone(); }} />}
       {open && (
         <div className="pn-menu" role="menu">
           {isAdmin && <button type="button" role="menuitem" className={editOn ? 'on' : ''} onClick={act(onEdit)}>✏️ {editOn ? 'Stop editing' : 'Edit slips'}<small>Deductions, Regenerate, Approve on each row</small></button>}

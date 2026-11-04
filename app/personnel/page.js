@@ -1,5 +1,7 @@
 'use client';
 
+import CloseEdit from '@/components/CloseEdit';
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import PrintColumns from '@/components/PrintColumns';
@@ -688,6 +690,7 @@ function EditMenu({ edit, delMode, undoCount, canDel, delNote, onEdit, onAdd, on
       <button type="button" className={`btn${on ? ' in' : ''}`} aria-pressed={on} aria-haspopup="menu" aria-expanded={open} onClick={async () => { if (open) { setOpen(false); return; } if (await requestEditPassword()) setOpen(true); }}>
         ✏️ Edit <span aria-hidden="true">▾</span>
       </button>
+      {on && <CloseEdit onClose={() => { setOpen(false); onDone(); }} />}
       {open && (
         <div className="pn-menu" role="menu">
           {/* every option works the same way: Enable (turns on, ✓ shown) / Disable; ✓ Done disables all */}

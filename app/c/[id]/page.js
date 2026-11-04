@@ -1,5 +1,7 @@
 'use client';
 
+import CloseEdit from '@/components/CloseEdit';
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -701,6 +703,7 @@ function SheetPage() {
               {editMode ? '✓ Done editing' : 'Edit'}
             </button>
           )}
+          {isAdmin && editMode && <CloseEdit onClose={() => toggleEditMode()} />}
           {isAdmin && <button type="button" className="btn ghost" onClick={newItem}>+ New item</button>}
           <button type="button" className="btn ghost" onClick={exportExcel}>📗 Excel</button>
           <button type="button" className="btn ghost" onClick={exportPdf}>📕 PDF</button>

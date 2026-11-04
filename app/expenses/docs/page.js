@@ -1,5 +1,7 @@
 'use client';
 
+import CloseEdit from '@/components/CloseEdit';
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import AuthGate, { useUser } from '@/components/AuthGate';
@@ -689,7 +691,7 @@ function DocsPage() {
         <Link href={`/expenses?co=${co}`} className="crumb">← All Companies</Link>
         <div className="tools">
           <input className="iv-search" type="search" placeholder="Search anything: vehicle, receipt no., petrol, amount, date..." value={q} onChange={(e) => setQ(e.target.value)} />
-          <EditToggle show={isAdmin} on={editing} onClick={toggleEdit} />
+          <EditToggle show={isAdmin} on={editing} onClick={toggleEdit} close={false} />
         </div>
       </div>
 
@@ -729,7 +731,7 @@ function DocsPage() {
             ↶ Undo{undo.length ? ` ${undo[undo.length - 1].label}` : ''}
           </button>
           <span className="dx-sep" />
-          <button type="button" className="btn dx-close" onClick={toggleEdit} disabled={busy || rowSaving} title="Stop editing: all Edit buttons turn off">✕ Close Edit</button>
+          <CloseEdit onClose={toggleEdit} disabled={busy || rowSaving} />
           <span className="muted dx-hint">{picked.length ? `${picked.length} selected` : kind === 'receipt' ? 'Tap a bill to change it · tick rows to delete or move' : 'Tick rows to delete or move'}</span>
         </div>
       )}

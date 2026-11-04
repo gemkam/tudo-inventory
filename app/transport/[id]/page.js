@@ -1,5 +1,7 @@
 'use client';
 
+import CloseEdit from '@/components/CloseEdit';
+
 import RangeReport from '@/components/RangeReport';
 import { transportReport } from '@/lib/rangeReports';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -643,6 +645,7 @@ function DriverSheet() {
               {editMode ? '✓ Done editing' : 'Edit'}
             </button>
           )}
+          {isAdmin && editMode && <CloseEdit onClose={() => setEditMode(false)} />}
           <button type="button" className="btn ghost" onClick={() => setColsOpen(true)} title="Choose which columns to print or export">☑ Columns</button>
           <button type="button" className="btn ghost" onClick={printChosen} title="Print the chosen columns">🖨 Print</button>
           <button type="button" className="btn ghost" onClick={doExcel}>📗 Excel</button>
