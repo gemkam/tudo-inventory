@@ -6,7 +6,7 @@ import AuthGate from '@/components/AuthGate';
 import Modal from '@/components/Modal';
 import { sb } from '@/lib/supabase';
 import { COMPANIES } from '@/lib/expenses';
-import { vatOf } from '@/lib/transport';
+import { vatOf, dieselVat } from '@/lib/transport';
 import { fmtAmt, monthLabel, exportStamp, exportExcel, exportPdf } from '@/lib/sheet';
 import { quarterOf, quarterMonths, quarterLabel, addDays, dmy } from '@/lib/groupTools';
 
@@ -14,7 +14,8 @@ import { quarterOf, quarterMonths, quarterLabel, addDays, dmy } from '@/lib/grou
   VAT return only (/expenses/vat): opened by the 🧾 VAT return tab next to 📋 Checklist and the All Companies side menu.
   Per source: Modern City, Abu Wasif, Sumptuosity, Transport (Modern City Transport Division).
   Output VAT = VAT inside sales: trips with "VAT 5% added" (Transport) and company invoices with VAT (company_docs kind invoice).
-  Input VAT  = VAT typed on company bills (exp_entries.vat). Auto rows copied from Transport trips/salary/extras are left out
+  Input VAT  = VAT typed on company bills (exp_entries.vat) + VAT 5% inside diesel on the trip sheets (Transport, 4 Nov 2026).
+  Auto rows copied from Transport trips/salary/extras are left out
   (they are Transport costs, not company purchases). Quarter or one month. 🖨 Print options chooses the parts and columns
   (saved on this device, localStorage tudo-vat-print). The Reports & Summary keeps its own VAT return tab unchanged.
 */
@@ -55,7 +56,7 @@ function VatReturnPage() {
       const s = sb();
       const [e, t, d, dr] = await Promise.all([
         s.from('exp_entries').select('id, company, entry_date, bill_no, description, paid, unpaid, vat, vat_reg_no, source_kind'),
-        s.from('transport_entries').select('id, driver_id, entry_date, from_place, to_place, rent, vat_included'),
+        s.from('transport_entries').select('id, driver_id, entry_date, from_place, to_place, rent, vat_included, diesel'),
         s.from('company_docs').select('id, company, kind, doc_no, doc_date, party, items, vat_pct').eq('kind', 'invoice'),
         s.from('transport_drivers').select('id, name')
       ]);
@@ -74,6 +75,11 @@ function VatReturnPage() {
       const bills = (e.data || []).filter((b) => b.entry_date && !SKIP_KINDS.includes(b.source_kind)).map((b) => ({
         src: b.company, date: b.entry_date, month: mk(b.entry_date), ref: b.bill_no || '', text: b.description || '',
         amount: r3(n(b.paid) + n(b.unpaid)), vat: r3(b.vat), vatNo: b.vat_reg_no || ''
+      }));
+      // diesel on the trip sheets: 5% VAT is always inside the fuel price, so it is input VAT of Transport
+      (t.data || []).filter((r) => n(r.diesel) > 0 && r.entry_date).forEach((r) => bills.push({
+        src: 'transport', date: r.entry_date, month: mk(r.entry_date), ref: drv[r.driver_id] || 'Trip',
+        text: `Diesel · ${[r.from_place, r.to_place].filter(Boolean).join(' → ') || 'Trip'}`, amount: r3(r.diesel), vat: dieselVat(r), vatNo: ''
       }));
       const months = [...new Set([...sales, ...bills].map((x) => x.month).filter(Boolean))].sort();
       setData({ sales, bills, months });
