@@ -23,11 +23,16 @@ export default function EditPasswordHost() {
     if (await checkEditPassword(val)) close(true);
     else { setErr('Wrong password'); setVal(''); inputRef.current?.focus(); }
   }
+  // 4 Nov 2026 (Kamran): no need to press Enter / Unlock, the edit options open as soon as the right password is typed
+  async function typed(v) {
+    setVal(v); setErr('');
+    if (v && await checkEditPassword(v)) close(true);
+  }
   return (
     <Modal title="🔒 Edit password" onClose={() => close(false)}>
       <form onSubmit={submit} style={{ display: 'grid', gap: 12 }}>
-        <p className="muted" style={{ margin: 0 }}>Type the edit password to make changes.</p>
-        <input ref={inputRef} className="drv-input" type="password" inputMode="numeric" autoComplete="off" value={val} onChange={(e) => { setVal(e.target.value); setErr(''); }} aria-label="Edit password" />
+        <p className="muted" style={{ margin: 0 }}>Type the edit password. Editing opens by itself when it is right.</p>
+        <input ref={inputRef} className="drv-input" type="password" inputMode="numeric" autoComplete="off" value={val} onChange={(e) => typed(e.target.value)} aria-label="Edit password" />
         {err && <div className="error">{err}</div>}
         <div className="modal-actions">
           <button type="button" className="btn ghost" onClick={() => close(false)}>Cancel</button>
