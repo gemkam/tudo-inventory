@@ -31,6 +31,7 @@ function Combined() {
   const [drivers, setDrivers] = useState(null);
   const [entries, setEntries] = useState([]);
   const [month, setMonth] = useState(null);
+  const [pick, setPick] = useState('all'); // driver buttons: 'all' or driver id
   const [editMode, setEditMode] = useState(false);
   const [viewIds, setViewIds] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -68,10 +69,10 @@ function Combined() {
 
   // rows of the month, sorted by date then driver (the ▾ filters can sort again)
   const rows = useMemo(() => entries
-    .filter((e) => month === 'all' || monthKey(e.entry_date) === month)
+    .filter((e) => (month === 'all' || monthKey(e.entry_date) === month) && (pick === 'all' || e.driver_id === pick))
     .map((e) => ({ ...e, driver_name: nameOf[e.driver_id] || '' }))
     .sort((a, b) => String(a.entry_date).localeCompare(String(b.entry_date)) || a.driver_name.localeCompare(b.driver_name) || (a.sort || 0) - (b.sort || 0)),
-  [entries, month, nameOf]);
+  [entries, month, nameOf, pick]);
 
   const onView = useCallback((ids) => setViewIds(ids), []);
   const shown = useMemo(() => {
@@ -193,8 +194,8 @@ function Combined() {
       };
       const numCols = columns.map((c, i) => (c.type === 'number' || c.type === 'calc' ? i : -1)).filter((i) => i >= 0);
       const totalsRow = xcols.map((k, i) => (i === 0 ? 'Total' : i === 1 ? `${T.trips} trips` : (T[k] !== undefined && k !== 'trips' ? T[k] : '')));
-      await exportExcel(`All drivers combined sheet ${period}.xlsx`, [{
-        name: 'Combined sheet', title: `All Drivers Combined Sheet · ${period}`,
+      await exportExcel(`${pick === 'all' ? 'All drivers' : nameOf[pick]} combined sheet ${period}.xlsx`, [{
+        name: 'Combined sheet', title: `${pick === 'all' ? 'All Drivers' : nameOf[pick]} Combined Sheet · ${period}`,
         subtitle: `${COMPANY_NAME} · Transport Division · ${shown.length} of ${rows.length} rows · Exported ${exportStamp()} · OMR`,
         head: columns.map((c) => c.label), rows: shown.map((r) => columns.map((c) => val(r, c))), totalsRow, numCols,
         widths: columns.map((c) => Math.max(10, Math.min(30, Math.round((c.width || 110) / 7))))
@@ -221,7 +222,16 @@ function Combined() {
         </div>
       </div>
 
-      <CompanyHeader title="All Drivers Combined Sheet" detail={`Period: ${period}  |  ${drivers.length} drivers  |  ${shown.length} of ${rows.length} rows shown  |  Currency: OMR`} />
+      <CompanyHeader title={pick === 'all' ? 'All Drivers Combined Sheet' : `${nameOf[pick]} · Combined Sheet`} detail={`Period: ${period}  |  ${pick === 'all' ? `${drivers.length} drivers` : `Driver: ${nameOf[pick]}`}  |  ${shown.length} of ${rows.length} rows shown  |  Currency: OMR`} />
+
+      <div className="ats-chips no-print" role="group" aria-label="Choose driver">
+        <button type="button" className={`rp-chip ${pick === 'all' ? 'active' : ''}`} onClick={() => { setPick('all'); setViewIds(null); }}>All drivers</button>
+        {drivers.map((d) => (
+          <button key={d.id} type="button" className={`rp-chip ${pick === d.id ? 'active' : ''}`} onClick={() => { setPick(d.id); setViewIds(null); }}>
+            {d.name}{d.status === 'Inactive' ? ' (inactive)' : ''}
+          </button>
+        ))}
+      </div>
 
       <div className="kpi-row">
         <div className="kpi"><span>Trips</span><strong>{T.trips}</strong><small>Rows shown</small></div>
@@ -234,7 +244,7 @@ function Combined() {
 
       <section className="panel">
         <div className="section-head">
-          <h2>🚚 Trips of all drivers <small className="muted">· ▾ on a column to filter or sort · drag a column edge to change its width</small></h2>
+          <h2>🚚 {pick === 'all' ? 'Trips of all drivers' : `Trips of ${nameOf[pick]}`} <small className="muted">· ▾ on a column to filter or sort · drag a column edge to change its width</small></h2>
         </div>
         <DataGrid
           columns={columns}
