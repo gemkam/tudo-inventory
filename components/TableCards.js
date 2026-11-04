@@ -17,8 +17,8 @@ import { useViewMode, useTableView, getTableMode, setTableMode, VIEW_EVENT } fro
   salary slip, print-only tables) stay as they are. CSS: tv-* in app/globals.css.
 */
 
-const HIDE_PATHS = [/^\/$/, /^\/login/, /^\/entry/, /^\/f\//, /^\/transport\/invoice/, /^\/expenses\/docs/, /^\/transport\/salary\//, /^\/c\//];
-const SKIP = '.no-cards, .trip-print, .iv-t, .iv-list, .cd-t, .slip-t, .slip-calc, .pc-sum, .combo-list, .modal, [role="dialog"], .tbx';
+const HIDE_PATHS = [/^\/$/, /^\/login/, /^\/entry/, /^\/f\//, /^\/transport\/salary\//, /^\/c\//];
+const SKIP = '.no-cards, .trip-print, .iv-t, .cd-t, .slip-t, .slip-calc, .pc-sum, .combo-list, .modal, [role="dialog"], .tbx';
 
 function headerLabels(table) {
   const head = table.tHead;

@@ -16,7 +16,7 @@ import { evaluate, num, fmtAmt } from '@/lib/sheet';
   footer: { [key]: node } shown in a totals row
   groups: optional header rows above the labels (Personnel: Salary > Allowance)
   deleting: Delete mode without Edit mode: a red 🗑 in place of the row number, at the start of each row (Personnel)
-  filters: Excel-style ▾ on every column header (sort A→Z / Z→A, search, tick the values to show). col.text(row) gives
+  filters (on by default, filters={false} to turn off): Excel-style ▾ on every column header (sort A→Z / Z→A, search, tick the values to show). col.text(row) gives
     the text to filter on for 'calc' columns (calc columns without text get no ▾); col.filter === false hides it.
   onView(ids): called with the ids of the rows now shown (after filters / sort), so the page can total only those.
   Column widths: drag the edge of any header (components/ColumnResize.js, for every table in the app).
@@ -106,7 +106,7 @@ function ComboEditor({ options, placeholder, value, typed, onChange, onPick, onK
   );
 }
 
-export default function DataGrid({ columns, rows: allRows, filters = false, onView, canEdit, onSave, onAdd, addLabel = '+ Add new row', onDelete, footer, rowClass, emptyText = 'Nothing here yet.', flash, groups, deleting = false }) {
+export default function DataGrid({ columns, rows: allRows, filters = true, onView, canEdit, onSave, onAdd, addLabel = '+ Add new row', onDelete, footer, rowClass, emptyText = 'Nothing here yet.', flash, groups, deleting = false }) {
   /* ---------- Excel filters (filters prop) ---------- */
   const [flt, setFlt] = useState({}); // { colKey: Set of shown texts }
   const [sortBy, setSortBy] = useState(null); // { key, dir }

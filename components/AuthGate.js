@@ -2,6 +2,7 @@
 
 import TableCards, { ViewSwitch } from '@/components/TableCards';
 import ColumnResize from '@/components/ColumnResize';
+import TableFilter from '@/components/TableFilter';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import TransportSideNav, { showTransportSide } from '@/components/TransportSideNav';
 import ExpenseSideNav, { showExpenseSide } from '@/components/ExpenseSideNav';
@@ -225,6 +226,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
       <LookApplier />
       {user.canRead && !blocked && <TableCards />}
       {user.canRead && !blocked && <ColumnResize />}
+      {user.canRead && !blocked && <TableFilter />}
       {user.canRead && (
         <RaufAssistant
           context={pageAi?.context || ''}

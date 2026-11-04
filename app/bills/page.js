@@ -9,6 +9,9 @@ import Modal from '@/components/Modal';
 import { sb, fmtOMR, fmtDate } from '@/lib/supabase';
 import Omr from '@/components/Omr';
 import DateInput from '@/components/DateInput';
+import DataGrid from '@/components/DataGrid';
+import EditToggle from '@/components/EditToggle';
+import { fmtAmt } from '@/lib/sheet';
 
 function today() {
   const d = new Date();
@@ -16,7 +19,8 @@ function today() {
 }
 
 function BillsPage() {
-  const { isAdmin } = useUser();
+  const { isAdmin, canDelete } = useUser() || {};
+  const [editMode, setEditMode] = useState(false);
   const [accounts, setAccounts] = useState([]);
   const [payments, setPayments] = useState([]);
   const [error, setError] = useState('');
@@ -56,6 +60,22 @@ function BillsPage() {
     if (error) { setError(error.message); return; }
     setForm({ ...form, amount: '', period: '', note: '' });
     flash('Payment saved');
+    load();
+  }
+
+  /* ✏️ Edit: change any saved payment in the table (4 Nov 2026) */
+  async function savePayment(row, key, value) {
+    let patch;
+    if (key === 'bill') {
+      const acc = accounts.find((a) => a.name === value);
+      if (!acc) { setError('Pick a bill'); return; }
+      patch = { account_id: acc.id };
+    } else if (key === 'amount') patch = { amount: Number(value || 0) };
+    else patch = { [key]: value || null };
+    setError('');
+    const { error } = await sb().from('bill_payments').update(patch).eq('id', row.id);
+    if (error) { setError(error.message); load(); return; }
+    flash('Saved');
     load();
   }
 
@@ -145,25 +165,23 @@ function BillsPage() {
             </select>
           </div>
         </div>
-        {shown.length === 0 ? <p className="empty">No payments recorded yet.</p> : (
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>Paid on</th><th>Bill</th><th>For month</th><th className="num">Amount</th><th>Note</th>{isAdmin && <th></th>}</tr></thead>
-              <tbody>
-                {shown.map((p) => (
-                  <tr key={p.id}>
-                    <td>{fmtDate(p.paid_on)}</td>
-                    <td>{p.bill_accounts?.name}</td>
-                    <td>{p.period || ''}</td>
-                    <td className="num"><Omr v={p.amount} /></td>
-                    <td>{p.note || ''}</td>
-                    {isAdmin && <td><div className="actions"><button className="btn small ghost" onClick={() => setDel(p)}>Delete</button></div></td>}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        {isAdmin && <div className="tools" style={{ margin: '0 0 10px' }}><EditToggle show={isAdmin} on={editMode} onClick={() => setEditMode((v) => !v)} /></div>}
+        <DataGrid
+          rows={shown.map((p) => ({ ...p, bill: p.bill_accounts?.name || '' }))}
+          canEdit={isAdmin && editMode}
+          onSave={savePayment}
+          onDelete={canDelete ? (r) => setDel(r) : undefined}
+          emptyText="No payments recorded yet."
+          flash={(t) => setError(t)}
+          footer={{ paid_on: 'Total', amount: fmtAmt(sum(shown)) }}
+          columns={[
+            { key: 'paid_on', label: 'Paid on', type: 'date', width: 124, render: (r) => fmtDate(r.paid_on) },
+            { key: 'bill', label: 'Bill', type: 'select', width: 190, options: accounts.map((a) => a.name) },
+            { key: 'period', label: 'For month', type: 'text', width: 120 },
+            { key: 'amount', label: 'Amount', type: 'number', min: 0, width: 120, render: (r) => <Omr v={r.amount} /> },
+            { key: 'note', label: 'Note', type: 'text', width: 260 }
+          ]}
+        />
       </section>
 
       {del && (

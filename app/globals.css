@@ -4414,3 +4414,13 @@ table[data-rz-on] td:has(input, select, .combo-list) { overflow: visible; }
 .dg-fact { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
 .dg-fbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: var(--tint); font-size: 13px; }
 .dg-fbar .rp-chip { padding: 4px 10px; font-size: 12px; }
+
+/* ▾ value drop-down on every plain table (components/TableFilter.js); menu shares .dg-fmenu styles */
+th.tf-th { padding-right: 26px !important; }
+.tf-btn { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; padding: 0; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); cursor: pointer; z-index: 5; line-height: 16px; font-size: 11px; color: var(--heading); }
+.tf-btn::before { content: '▾'; }
+.tf-btn:hover { border-color: var(--brown); color: var(--brown); }
+.tf-btn.on { background: var(--brown); border-color: var(--brown); color: #fff; }
+tr.tf-hide { display: none !important; }
+.tv-cards .tf-btn { display: none !important; }
+@media print { .tf-btn { display: none !important; } th.tf-th { padding-right: 8px !important; } }
