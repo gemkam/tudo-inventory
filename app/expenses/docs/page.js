@@ -23,9 +23,11 @@ import { COMPANIES, companyOf, DEPARTMENTS, HEADS, CATEGORIES, PAY_METHODS, n, r
   (sync_transport_exp): change or delete the receipt and the expense line follows.
 */
 
+/* Bills (kind 'receipt', our purchases) FIRST, Invoices (our sales) second. "Payment receipts" renamed "Bills" 4 Nov 2026.
+   DB value stays 'receipt' and numbers stay PR-.. so saved bills are not changed. */
 const KINDS = {
-  invoice: { label: 'Invoices', one: 'Invoice', title: 'INVOICE', prefix: 'INV', party: 'Bill to', partyPh: 'Client name' },
-  receipt: { label: 'Payment receipts', one: 'Payment receipt', title: 'PAYMENT RECEIPT', prefix: 'PR', party: 'Paid to', partyPh: 'Name of person or company paid' }
+  receipt: { label: 'Bills', one: 'Bill', title: 'BILL', prefix: 'PR', party: 'Paid to', partyPh: 'Name of person or company paid' },
+  invoice: { label: 'Invoices', one: 'Invoice', title: 'INVOICE', prefix: 'INV', party: 'Bill to', partyPh: 'Client name' }
 };
 const CO_CODE = { 'modern-city': 'MC', 'abu-wasif': 'AW', sumptuosity: 'ST' };
 const fmtD = (d) => (d ? fmtFullDate(d) : '');
@@ -35,7 +37,7 @@ const blankItems = () => [{ desc: '', amount: '' }, { desc: '', amount: '' }, { 
 function DocsPage() {
   const { isAdmin, name: me } = useUser();
   const [co, setCo] = useState(null);
-  const [kind, setKind] = useState('invoice');
+  const [kind, setKind] = useState('receipt');
   const [list, setList] = useState(null);
   const [doc, setDoc] = useState(null); // open document (editor)
   const [dirty, setDirty] = useState(false);
@@ -331,7 +333,7 @@ function DocsPage() {
       ))}
       <Link href="/transport" className="co-tab co-tr">🚚 Transport</Link>
       <Link href="/docs" className="co-tab co-sum">📋 Checklist</Link>
-      <span className="co-tab on" role="tab" aria-selected="true">🧾 Invoices</span>
+      <span className="co-tab on" role="tab" aria-selected="true">🧾 Bills</span>
       <Link href={`/expenses/salary?co=${co}`} className="co-tab">💰 Salary</Link>
       <Link href="/expenses/vat" className="co-tab co-sum co-vat">🧾 VAT return</Link>
     </div>
@@ -356,7 +358,7 @@ function DocsPage() {
             {canEdit && doc.id && <button type="button" className="btn ghost danger-text" onClick={() => setDel(true)}>Delete</button>}
           </div>
         </div>
-        {kind === 'receipt' && <p className="cd-hint no-print">When you save, this receipt is added to <b>{C.short}</b> expenses in All Companies{doc.department ? <> (department <b>{doc.department}</b>)</> : ''} by itself. Change or delete it here and the expense follows.</p>}
+        {kind === 'receipt' && <p className="cd-hint no-print">When you save, this bill is added to <b>{C.short}</b> expenses in All Companies{doc.department ? <> (department <b>{doc.department}</b>)</> : ''} by itself. Change or delete it here and the expense follows.</p>}
 
         {kind === 'receipt' && (doc.files || []).length > 0 && (
           <div className="pp-wrap">
@@ -367,10 +369,10 @@ function DocsPage() {
 
         <article className={`cd-paper k-${kind}${ro ? ' ro' : ''}${kind === 'receipt' ? ' cd-purchase' : ''}`}>
           {kind === 'receipt' ? (
-            /* Payment receipt = our purchase: NO letterhead (no logo, CR, address), just the record */
+            /* Bill = our purchase: NO letterhead (no logo, CR, address), just the record */
             <header className="cd-head cd-head-plain">
               <div className="cd-co">
-                <b>Payment receipt</b>
+                <b>Bill</b>
                 <span>Purchase by {C.short}</span>
               </div>
               <div className="cd-title">
@@ -555,7 +557,7 @@ function DocsPage() {
       <div className="company-head ch-top">
         <span className="company-name">{C.name}</span>
         <h1>{K.label}</h1>
-        <p className="sub">{kind === 'receipt' ? 'Each receipt is added to All Companies by itself' : 'S.No, description and amount'}</p>
+        <p className="sub">{kind === 'receipt' ? 'Each bill is added to All Companies by itself' : 'S.No, description and amount'}</p>
       </div>
 
       <div className="page-tools">
@@ -689,7 +691,7 @@ function DocsPage() {
             {bulk.to === co && bulk.toKind === kind ? <p className="di-warn">Pick another type or another company.</p> : (
               <p className="muted" style={{ margin: 0 }}>
                 They get the next number there ({KINDS[bulk.toKind].prefix}-{CO_CODE[bulk.to] || 'X'}-...).
-                {bulk.toKind === 'receipt' && kind !== 'receipt' && <> As payment receipts they are added to <b>{companyOf(bulk.to).short}</b> expenses in All Companies.</>}
+                {bulk.toKind === 'receipt' && kind !== 'receipt' && <> As bills they are added to <b>{companyOf(bulk.to).short}</b> expenses in All Companies.</>}
                 {bulk.toKind !== 'receipt' && kind === 'receipt' && <> As invoices they are removed from All Companies expenses.</>}
                 {bulk.toKind === 'receipt' && kind === 'receipt' && bulk.to !== co && <> Their expense lines move to <b>{companyOf(bulk.to).short}</b> too.</>}
               </p>

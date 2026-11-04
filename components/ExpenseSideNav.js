@@ -40,7 +40,7 @@ export default function ExpenseSideNav({ isAdmin = false }) {
   useEffect(() => { setPhoneOpen(false); }, [path, co]);
 
   const onSummary = path === '/expenses/summary';
-  const isOn = (p, c, k = '') => !onSummary && path === p && co === c && (!k || kind === k || (!kind && k === 'invoice'));
+  const isOn = (p, c, k = '') => !onSummary && path === p && co === c && (!k || kind === k || (!kind && k === 'receipt'));
   const Btn = ({ href, on, icon, children, sub }) => (
     <Link href={href} className={`tsn-btn${sub ? ' sub' : ''}${on ? ' on' : ''}`} aria-current={on ? 'page' : undefined}>
       {icon && <span className="tsn-ic" aria-hidden="true">{icon}</span>}<span className="tsn-tx">{children}</span>
@@ -67,8 +67,8 @@ export default function ExpenseSideNav({ isAdmin = false }) {
               <div className="tsn-kids">
                 <Btn href={`/expenses?co=${c.key}`} on={isOn('/expenses', c.key)} sub>Bills &amp; salary</Btn>
                 <Btn href={`/personnel?tab=attendance&co=${c.key}`} on={isOn('/expenses/attendance', c.key)} sub>Attendance</Btn>
+                <Btn href={`/expenses/docs?co=${c.key}&kind=receipt`} on={isOn('/expenses/docs', c.key, 'receipt')} sub>Bills</Btn>
                 <Btn href={`/expenses/docs?co=${c.key}&kind=invoice`} on={isOn('/expenses/docs', c.key, 'invoice')} sub>Invoice</Btn>
-                <Btn href={`/expenses/docs?co=${c.key}&kind=receipt`} on={isOn('/expenses/docs', c.key, 'receipt')} sub>Payment receipt</Btn>
               </div>
             )}
           </div>

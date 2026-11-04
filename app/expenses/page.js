@@ -178,7 +178,7 @@ function ExpensesPage() {
       ))}
       <Link href="/transport" className="co-tab co-tr">🚚 Transport</Link>
       <Link href="/docs" className="co-tab co-sum">📋 Checklist</Link>
-      <Link href={`/expenses/docs?co=${co}&kind=invoice`} className="co-tab">🧾 Invoices</Link>
+      <Link href={`/expenses/docs?co=${co}&kind=receipt`} className="co-tab">🧾 Bills</Link>
       <Link href={`/expenses/salary?co=${co}`} className="co-tab">💰 Salary</Link>
       <Link href="/expenses/vat" className="co-tab co-sum co-vat">🧾 VAT return</Link>
       {isAdmin && <AddCompany flash={flash} onAdded={(k) => switchCo(k)} />}

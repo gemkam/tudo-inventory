@@ -47,7 +47,7 @@ function trail(path, q, names) {
     if (s1 === 'salary') return [HOME, OFFICE, ...(coStep ? [coStep] : []), ['Salary', path]];
     if (s1 === 'summary') return q.get('tab') === 'vat' ? [HOME, ['Reports & Summary', path], ['VAT return', `${path}?tab=vat`]] : [HOME, ['Reports & Summary', path]];
     if (s1 === 'attendance') return [HOME, OFFICE, ...(coStep ? [coStep] : []), ['Attendance', path]];
-    if (s1 === 'docs') return [HOME, OFFICE, ...(coStep ? [coStep] : []), [q.get('kind') === 'receipt' ? 'Payment receipt' : 'Invoice', path]];
+    if (s1 === 'docs') return [HOME, OFFICE, ...(coStep ? [coStep] : []), [q.get('kind') === 'invoice' ? 'Invoice' : 'Bills', path]];
     return [HOME, OFFICE];
   }
   if (seg[0] === 'docs') return [HOME, OFFICE, ['Documents Checklist', path]];

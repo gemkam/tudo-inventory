@@ -275,7 +275,7 @@ export default function DocImport({ co, coShort, kind, userName, last, nextNo, o
                           <div className="di-top">
                             <label className="di-tick"><input type="checkbox" checked={f.save} onChange={(e) => setF(c.id, 'save', e.target.checked)} /> Save this</label>
                             <select value={f.kind} onChange={(e) => setF(c.id, 'kind', e.target.value)}>
-                              <option value="receipt">Payment receipt (expense)</option>
+                              <option value="receipt">Bill (expense)</option>
                               <option value="invoice">Invoice (our sale)</option>
                             </select>
                             {f.scan.confidence && <span className={`di-conf c-${f.scan.confidence}`}>{f.scan.confidence === 'high' ? 'Clear' : f.scan.confidence === 'medium' ? 'Check' : 'Unclear'}</span>}
