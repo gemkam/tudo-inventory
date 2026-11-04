@@ -20,7 +20,7 @@ import DocFiles from '@/components/DocFiles';
 import DeptPicker from '@/components/DeptPicker';
 import { addDept } from '@/lib/departments';
 import BillColumns from '@/components/BillColumns';
-import CustomPrint from '@/components/CustomPrint';
+import { printTable } from '@/components/CustomPrint';
 import { useBillColumns, saveBillCols } from '@/lib/billColumns';
 import { COMPANIES, companyOf, DEPARTMENTS, HEADS, CATEGORIES, PAY_METHODS, n, r3 } from '@/lib/expenses';
 
@@ -367,15 +367,33 @@ function DocsPage() {
   const xcols = kind === 'receipt' ? xcolsAll : [];
   const hl = (k, def) => (kind === 'receipt' ? colName(k) : def); // header label
   const [colsOpen, setColsOpen] = useState(false);
-  const [cpOpen, setCpOpen] = useState(false); // false | [ids of the rows showing on screen]
-  /* Custom print takes ONLY the rows showing now: the search, plus any ▾ column filter (rows it hides are not printed) */
+
+  /* 🖨 Custom print: prints straight away ONLY the rows showing now (the search, plus any ▾ column filter), all columns, A4 landscape */
   const openCustomPrint = () => {
-    let ids = null;
+    let onScreen = null;
     try {
       const trs = [...document.querySelectorAll('table.iv-list tbody tr[data-id]')];
-      if (trs.length) ids = trs.filter((t) => !t.classList.contains('tf-hide')).map((t) => t.dataset.id);
+      if (trs.length) onScreen = trs.filter((t) => !t.classList.contains('tf-hide')).map((t) => t.dataset.id);
     } catch { /* ignore */ }
-    setCpOpen(ids || shown.map((d) => d.id));
+    const cpOpen = onScreen || shown.map((d) => d.id);
+    const f3 = (v) => r3(v).toFixed(3);
+    const columns = [
+      { key: 'no', label: hl('no', 'No.') }, { key: 'date', label: hl('date', 'Date') }, { key: 'party', label: hl('party', K.party) },
+      { key: 'receipt_no', label: hl('receipt_no', 'Receipt No.') }, { key: 'vehicle_no', label: hl('vehicle_no', 'Vehicle No.') }, { key: 'fuel', label: hl('fuel', 'Fuel') },
+      { key: 'sub', label: hl('sub', 'Subtotal'), num: true }, { key: 'vat', label: hl('vat', 'VAT 5%'), num: true }, { key: 'grand', label: hl('grand', 'Grand Total'), num: true },
+      { key: 'vat_no', label: hl('vat_no', 'VAT No.') },
+      ...(kind === 'receipt' ? [{ key: 'department', label: hl('department', 'Department') }] : []),
+      ...xcols.map((c) => ({ key: `x:${c.key}`, label: c.name }))
+    ];
+    const rows = shown.filter((d) => cpOpen.includes(d.id)).map((d) => {
+      const x = shortOf(d); const sub = lineTotal(d.items); const tot = totalOf(d); const vt = n(d.vat_pct) > 0 ? r3(tot - sub) : 0;
+      const cells = { no: d.doc_no, date: fmtD(d.doc_date), party: d.party, receipt_no: x.receipt_no, vehicle_no: x.vehicle_no, fuel: x.fuel,
+        sub: f3(sub), vat: f3(vt), grand: f3(tot), vat_no: x.vat_no, department: d.department || '' };
+      xcols.forEach((c) => { cells[`x:${c.key}`] = (d.extra || {})[c.key] || ''; });
+      return { id: d.id, label: `${d.doc_no} · ${fmtD(d.doc_date)} · ${d.party || ''} · ${f3(tot)}`, cells, nums: { sub, vat: vt, grand: tot } };
+    });
+    const ok = printTable({ title: `${C.name} · ${K.label}`, subtitle: q ? `Search: ${q}` : 'As shown on screen', columns, rows });
+    if (!ok) flash('Nothing showing to print.', 'err');
   };
   const [colBusy, setColBusy] = useState(false);
   async function changeCols(next, note) {
@@ -983,26 +1001,6 @@ function DocsPage() {
         </div>
       )}
 
-      {cpOpen && (() => {
-        const f3 = (v) => r3(v).toFixed(3);
-        const columns = [
-          { key: 'no', label: hl('no', 'No.') }, { key: 'date', label: hl('date', 'Date') }, { key: 'party', label: hl('party', K.party) },
-          { key: 'receipt_no', label: hl('receipt_no', 'Receipt No.') }, { key: 'vehicle_no', label: hl('vehicle_no', 'Vehicle No.') }, { key: 'fuel', label: hl('fuel', 'Fuel') },
-          { key: 'sub', label: hl('sub', 'Subtotal'), num: true }, { key: 'vat', label: hl('vat', 'VAT 5%'), num: true }, { key: 'grand', label: hl('grand', 'Grand Total'), num: true },
-          { key: 'vat_no', label: hl('vat_no', 'VAT No.') },
-          ...(kind === 'receipt' ? [{ key: 'department', label: hl('department', 'Department') }] : []),
-          ...xcols.map((c) => ({ key: `x:${c.key}`, label: c.name }))
-        ];
-        const rows = shown.filter((d) => cpOpen.includes(d.id)).map((d) => {
-          const x = shortOf(d); const sub = lineTotal(d.items); const tot = totalOf(d); const vt = n(d.vat_pct) > 0 ? r3(tot - sub) : 0;
-          const cells = { no: d.doc_no, date: fmtD(d.doc_date), party: d.party, receipt_no: x.receipt_no, vehicle_no: x.vehicle_no, fuel: x.fuel,
-            sub: f3(sub), vat: f3(vt), grand: f3(tot), vat_no: x.vat_no, department: d.department || '' };
-          xcols.forEach((c) => { cells[`x:${c.key}`] = (d.extra || {})[c.key] || ''; });
-          return { id: d.id, label: `${d.doc_no} · ${fmtD(d.doc_date)} · ${d.party || ''} · ${f3(tot)}`, cells, nums: { sub, vat: vt, grand: tot } };
-        });
-        return <CustomPrint title={`${C.name} · ${K.label}`} subtitle={q ? `Search: ${q}` : 'As shown on screen'} columns={columns} rows={rows}
-          preselect={picked.filter((id) => cpOpen.includes(id))} storeKey={kind} onClose={() => setCpOpen(false)} />;
-      })()}
 
       {colsOpen && kind === 'receipt' && canEdit && (
         <BillColumns cfg={colCfg} busy={colBusy || busy} onChange={changeCols} onClose={() => setColsOpen(false)}
