@@ -655,7 +655,7 @@ function DriverSheet() {
           <button type="button" className="btn" onClick={() => { setSlipEdit(null); setSlipOpen(true); }} title="Salary slip of this month: print, edit, PDF">🧾 Salary slip</button>
           {isAdmin && <button type="button" className="btn" onClick={openTake} title="Write profit taken from this driver's trips">💰 Profit taken</button>}
           <RangeReport title={`Trip report · ${driver.name}`} company="Modern City for Express Services LLC · Transport Division" landscape
-            build={(from, to) => transportReport({ entries, drivers: [driver], salaries, from, to, driverId: driver.id })} label="🖨 Report by dates" />
+            build={(from, to) => transportReport({ entries, drivers: [driver], salaries, from, to, driverId: driver.id })} label="🖨 Report by dates" vatSources={['transport']} vatDriverId={driver.id} />
           <button type="button" className="btn" onClick={doDriverCopy} title="PDF for the driver: trips, allowance and diesel only. No rent, received or profit.">🚚 Driver copy</button>
         </div>
       </div>

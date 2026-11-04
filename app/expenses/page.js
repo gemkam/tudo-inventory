@@ -321,7 +321,7 @@ function ExpensesPage() {
           <button type="button" className="btn ghost" onClick={doPdf}>📕 PDF</button>
           <button type="button" className="btn ghost" onClick={shareIt}>📤 Share</button>
           <RangeReport title={`Office expense report · ${companyOf(co).short || ''}`} company={EXP_COMPANY} landscape
-            build={(from, to) => expenseReport({ rows: rows || [], from, to })} label="🖨 Report by dates" />
+            build={(from, to) => expenseReport({ rows: rows || [], from, to })} label="🖨 Report by dates" vatSources={[co]} />
           <PrintColumns className="btn ghost" />
         </div>
       </div>

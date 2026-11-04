@@ -1,6 +1,8 @@
 'use client';
 
 import RangeReport from '@/components/RangeReport';
+import VatPanel from '@/components/VatPanel';
+import { boundsDates, vatPdfTables, vatExcelSheets } from '@/lib/vatReport';
 import { inventoryReport } from '@/lib/rangeReports';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -23,6 +25,7 @@ function InventoryReports() {
   const [range, setRange] = useState('month');
   const [busy, setBusy] = useState('');
   const areaRef = useRef(null);
+  const [vatV, setVatV] = useState(null); // 🧾 VAT report of the same period (for PDF / Excel)
 
   useEffect(() => {
     (async () => {
@@ -114,7 +117,8 @@ function InventoryReports() {
         tables: [
           { heading: `Reorder list (${r.reorder.length})`, head: ['Item', 'Category', 'Present', 'Minimum', 'Short by', 'Unit'], rows: reorderRows, numCols: [2, 3, 4] },
           { heading: `Stock movements in this period (${r.pm.length})`, head: ['Date', 'Item', 'Category', 'Type', 'Qty', 'Unit', 'Note'], rows: movementRows, numCols: [4], totalsRow: ['', '', '', 'In / Out', `${r.inQ} / ${r.outQ}`, '', ''] },
-          { heading: `Bills paid in this period (${r.pb.length})`, head: ['Paid on', 'Bill', 'For month', 'Amount (OMR)', 'Note'], rows: billRows.map((x) => [x[0], x[1], x[2], x[3].toFixed(3), x[4]]), numCols: [3], totalsRow: ['', 'Total', '', r.billTotal.toFixed(3), ''] }
+          { heading: `Bills paid in this period (${r.pb.length})`, head: ['Paid on', 'Bill', 'For month', 'Amount (OMR)', 'Note'], rows: billRows.map((x) => [x[0], x[1], x[2], x[3].toFixed(3), x[4]]), numCols: [3], totalsRow: ['', 'Total', '', r.billTotal.toFixed(3), ''] },
+          ...vatPdfTables(vatV)
         ]
       });
     } catch (e) {
@@ -142,7 +146,8 @@ function InventoryReports() {
         },
         { name: 'Reorder list', title: 'Reorder list', subtitle: 'Items at or below their minimum', head: ['Item', 'Category', 'Present', 'Minimum', 'Short by', 'Unit'], rows: reorderRows, numCols: [2, 3, 4], widths: [28, 18, 10, 10, 10, 10] },
         { name: 'Movements', title: `Stock movements · ${RANGES[range]}`, subtitle: rangeNote(range), head: ['Date', 'Item', 'Category', 'Type', 'Qty', 'Unit', 'Note'], rows: movementRows, numCols: [4], widths: [14, 26, 18, 8, 8, 10, 30] },
-        { name: 'Bills', title: `Bills paid · ${RANGES[range]}`, subtitle: rangeNote(range), head: ['Paid on', 'Bill', 'For month', 'Amount (OMR)', 'Note'], rows: billRows, numCols: [3], widths: [14, 16, 14, 14, 30], totalsRow: ['', 'Total', '', r.billTotal, ''] }
+        { name: 'Bills', title: `Bills paid · ${RANGES[range]}`, subtitle: rangeNote(range), head: ['Paid on', 'Bill', 'For month', 'Amount (OMR)', 'Note'], rows: billRows, numCols: [3], widths: [14, 16, 14, 14, 30], totalsRow: ['', 'Total', '', r.billTotal, ''] },
+        ...vatExcelSheets(vatV, rangeNote(range))
       ]);
     } catch (e) {
       console.error(e);
@@ -239,6 +244,7 @@ function InventoryReports() {
             </div>
           </div>
         </div>
+        <VatPanel {...boundsDates(rangeBounds(range))} onData={setVatV} />
       </div>
 
       <section className="panel">

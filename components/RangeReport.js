@@ -5,6 +5,8 @@ import { createPortal } from 'react-dom';
 import Modal from '@/components/Modal';
 import DateInput from '@/components/DateInput';
 import { fmtAmt, todayISO, exportExcel } from '@/lib/sheet';
+import { vatFor } from '@/components/VatPanel';
+import { vatRangeParts } from '@/lib/vatReport';
 
 /*
   "📊 Report" button used on every page that needs a report.
@@ -16,6 +18,9 @@ import { fmtAmt, todayISO, exportExcel } from '@/lib/sheet';
     count: number of records (optional)
   }
   Dates are 'YYYY-MM-DD', both days included. Helper inDates(date, from, to) is exported.
+  VAT (4 Nov 2026): every report also gets the 🧾 VAT report for the same dates (same numbers as the VAT return page),
+  added after the page's own parts. vatSources = company keys (default all + Transport), vatDriverId = one driver only,
+  vat={false} to leave it out.
   CSS rr-* at the end of app/globals.css.
 */
 
@@ -77,7 +82,7 @@ function Sheet({ title, company, from, to, data }) {
   );
 }
 
-export default function RangeReport({ title = 'Report', company, build, label = '📊 Report', className = 'btn', landscape = false, defaultPreset = 'This month', openEvent = '' }) {
+export default function RangeReport({ title = 'Report', company, build, label = '📊 Report', className = 'btn', landscape = false, defaultPreset = 'This month', openEvent = '', vat = true, vatSources = null, vatDriverId = null }) {
   const P = useMemo(presets, []);
   const start = P.find((p) => p[0] === defaultPreset) || P[2];
   const [open, setOpen] = useState(false);
@@ -101,6 +106,13 @@ export default function RangeReport({ title = 'Report', company, build, label = 
     let alive = true;
     setData(null);
     Promise.resolve().then(() => build(from, to))
+      .then(async (d) => {
+        if (!vat || !d) return d;
+        try {
+          const v = vatRangeParts(await vatFor({ from, to, sources: vatSources, driverId: vatDriverId }));
+          return { ...d, count: d.count ?? d.sections.reduce((t, s) => t + s.rows.length, 0), summary: [...(d.summary || []), ...v.summary], sections: [...d.sections, ...v.sections] };
+        } catch { return d; }
+      })
       .then((d) => { if (alive) setData(d); })
       .catch((e) => { if (alive) setData({ error: e?.message || 'Could not build the report', sections: [] }); });
     return () => { alive = false; };

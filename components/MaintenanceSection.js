@@ -97,7 +97,7 @@ export default function MaintenanceSection({ vehicles, isAdmin, flash }) {
       <div className="section-head">
         <h2>🔧 Maintenance (units and trailers)</h2>
         <RangeReport title="Vehicle maintenance report" company="Modern City for Express Services LLC · Transport Division" landscape className="btn small"
-          build={(from, to) => maintenanceReport({ rows: rows || [], labelOf, from, to })} label="🖨 Report by dates" />
+          build={(from, to) => maintenanceReport({ rows: rows || [], labelOf, from, to })} label="🖨 Report by dates" vatSources={['modern-city', 'transport']} />
         <EditToggle show={isAdmin} on={editOn} onClick={() => setEditOn((v) => !v)} />
         <p className="note">
           Total charges <b>{fmtAmt(total)} OMR</b> · {pdcOpen.length} PDC cheque{pdcOpen.length === 1 ? '' : 's'} not paid yet
