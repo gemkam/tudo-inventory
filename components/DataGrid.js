@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import DateInput from '@/components/DateInput';
-import { evaluate, num } from '@/lib/sheet';
+import { evaluate, num, fmtAmt } from '@/lib/sheet';
 
 /*
   Excel-style grid used by the Transport pages.
@@ -16,7 +16,54 @@ import { evaluate, num } from '@/lib/sheet';
   footer: { [key]: node } shown in a totals row
   groups: optional header rows above the labels (Personnel: Salary > Allowance)
   deleting: Delete mode without Edit mode: a red 🗑 in place of the row number, at the start of each row (Personnel)
+  filters: Excel-style ▾ on every column header (sort A→Z / Z→A, search, tick the values to show). col.text(row) gives
+    the text to filter on for 'calc' columns (calc columns without text get no ▾); col.filter === false hides it.
+  onView(ids): called with the ids of the rows now shown (after filters / sort), so the page can total only those.
+  Column widths: drag the edge of any header (components/ColumnResize.js, for every table in the app).
 */
+const BLANK = '(Blanks)';
+const dmy = (d) => { const [y, m, day] = String(d).slice(0, 10).split('-'); return day ? `${day}/${m}/${y}` : String(d); };
+
+/* Excel filter box for one column */
+function FilterMenu({ col, values, selected, sorted, pos, onApply, onSort, onClose }) {
+  const [q, setQ] = useState('');
+  const [pick, setPick] = useState(() => new Set(selected || values.map((v) => v[0])));
+  const boxRef = useRef(null);
+  useEffect(() => {
+    const out = (e) => { if (boxRef.current && !boxRef.current.contains(e.target) && !e.target.closest?.('.dg-fbtn')) onClose(); };
+    const esc = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('mousedown', out);
+    document.addEventListener('touchstart', out);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('mousedown', out); document.removeEventListener('touchstart', out); document.removeEventListener('keydown', esc); };
+  }, [onClose]);
+  const shown = q ? values.filter(([v]) => v.toLowerCase().includes(q.toLowerCase())) : values;
+  const allOn = shown.length > 0 && shown.every(([v]) => pick.has(v));
+  const toggleAll = () => setPick((p) => { const n = new Set(p); shown.forEach(([v]) => (allOn ? n.delete(v) : n.add(v))); return n; });
+  const toggle = (v) => setPick((p) => { const n = new Set(p); if (n.has(v)) n.delete(v); else n.add(v); return n; });
+  const left = Math.max(8, Math.min(pos.left, (typeof window !== 'undefined' ? window.innerWidth : 400) - 268));
+  return createPortal(
+    <div ref={boxRef} className="dg-fmenu" style={{ left, top: pos.top }} role="dialog" aria-label={`Filter ${col.label}`}>
+      <div className="dg-fhead">{col.label}</div>
+      <button type="button" className={`dg-fsort ${sorted === 'asc' ? 'on' : ''}`} onClick={() => onSort('asc')}>↑ Sort A → Z{col.type === 'number' ? ' (small to big)' : ''}</button>
+      <button type="button" className={`dg-fsort ${sorted === 'desc' ? 'on' : ''}`} onClick={() => onSort('desc')}>↓ Sort Z → A{col.type === 'number' ? ' (big to small)' : ''}</button>
+      <input className="dg-fsearch" placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
+      <div className="dg-flist">
+        <label className="dg-fall"><input type="checkbox" checked={allOn} onChange={toggleAll} /> (Select all{q ? ' shown' : ''})</label>
+        {shown.map(([v, n]) => (
+          <label key={v}><input type="checkbox" checked={pick.has(v)} onChange={() => toggle(v)} /> <span>{v}</span> <small>{n}</small></label>
+        ))}
+        {shown.length === 0 && <p className="muted">Nothing matches</p>}
+      </div>
+      <div className="dg-fact">
+        <button type="button" className="btn small ghost" onClick={() => onApply(null)}>Clear filter</button>
+        <button type="button" className="btn small ghost" onClick={onClose}>Cancel</button>
+        <button type="button" className="btn small in" disabled={pick.size === 0} onClick={() => onApply(pick.size >= values.length && values.every(([v]) => pick.has(v)) ? null : pick)}>OK</button>
+      </div>
+    </div>,
+    document.body
+  );
+}
 /* Pick-or-type cell: shows ALL saved choices; typing narrows the list; any new text is kept */
 function ComboEditor({ options, placeholder, value, typed, onChange, onPick, onKeyDown, onBlur }) {
   const inputRef = useRef(null);
@@ -59,7 +106,75 @@ function ComboEditor({ options, placeholder, value, typed, onChange, onPick, onK
   );
 }
 
-export default function DataGrid({ columns, rows, canEdit, onSave, onAdd, addLabel = '+ Add new row', onDelete, footer, rowClass, emptyText = 'Nothing here yet.', flash, groups, deleting = false }) {
+export default function DataGrid({ columns, rows: allRows, filters = false, onView, canEdit, onSave, onAdd, addLabel = '+ Add new row', onDelete, footer, rowClass, emptyText = 'Nothing here yet.', flash, groups, deleting = false }) {
+  /* ---------- Excel filters (filters prop) ---------- */
+  const [flt, setFlt] = useState({}); // { colKey: Set of shown texts }
+  const [sortBy, setSortBy] = useState(null); // { key, dir }
+  const [fmenu, setFmenu] = useState(null); // { key, left, top }
+  const canFilter = (col) => filters && col.filter !== false && (col.type !== 'calc' || !!col.text);
+  const textOf = (row, col) => {
+    let t;
+    if (col.text) t = col.text(row);
+    else {
+      const v = row[col.key];
+      if (v === null || v === undefined || v === '') t = '';
+      else if (col.type === 'number') t = Number(v) ? fmtAmt(v) : '';
+      else if (col.type === 'date') t = dmy(v);
+      else t = String(v);
+    }
+    t = String(t ?? '').trim();
+    return t || BLANK;
+  };
+  const sortVal = (row, col) => {
+    if (col.sortValue) return col.sortValue(row);
+    const v = row[col.key];
+    if (col.type === 'number') return Number(v || 0);
+    if (col.type === 'date') return String(v || '');
+    return textOf(row, col).toLowerCase();
+  };
+  const passes = (row, skipKey) => Object.entries(flt).every(([k, set]) => {
+    if (k === skipKey || !set) return true;
+    const col = columns.find((c) => c.key === k);
+    return !col || set.has(textOf(row, col));
+  });
+  const rows = useMemo(() => {
+    if (!filters) return allRows;
+    let list = allRows.filter((r) => passes(r));
+    if (sortBy) {
+      const col = columns.find((c) => c.key === sortBy.key);
+      if (col) {
+        const d = sortBy.dir === 'desc' ? -1 : 1;
+        list = [...list].sort((a, b) => { const x = sortVal(a, col); const y = sortVal(b, col); return x < y ? -d : x > y ? d : 0; });
+      }
+    }
+    return list;
+  }, [allRows, flt, sortBy, columns, filters]); // eslint-disable-line react-hooks/exhaustive-deps
+  const lastIds = useRef('');
+  useEffect(() => {
+    if (!onView) return;
+    const ids = rows.map((r) => r.id);
+    const key = ids.join(',');
+    if (key !== lastIds.current) { lastIds.current = key; onView(ids); }
+  }, [rows, onView]);
+  const activeFilters = Object.keys(flt).filter((k) => flt[k]);
+  function openFilter(e, col) {
+    e.stopPropagation();
+    if (fmenu?.key === col.key) { setFmenu(null); return; }
+    const r = e.currentTarget.getBoundingClientRect();
+    setFmenu({ key: col.key, left: r.right - 250, top: r.bottom + 4 });
+  }
+  function filterValues(col) {
+    const count = new Map();
+    allRows.filter((r) => passes(r, col.key)).forEach((r) => { const t = textOf(r, col); count.set(t, (count.get(t) || 0) + 1); });
+    const list = [...count.entries()];
+    const sample = new Map(allRows.map((r) => [textOf(r, col), r]));
+    return list.sort((a, b) => {
+      if (a[0] === BLANK) return 1; if (b[0] === BLANK) return -1;
+      const x = sortVal(sample.get(a[0]), col); const y = sortVal(sample.get(b[0]), col);
+      return x < y ? -1 : x > y ? 1 : 0;
+    });
+  }
+
   const [sel, setSel] = useState({ r: 0, c: 0 });
   const [editing, setEditingState] = useState(null);
   const editingRef = useRef(null);
@@ -252,7 +367,24 @@ export default function DataGrid({ columns, rows, canEdit, onSave, onAdd, addLab
   const showAdd = canEdit && onAdd;
   const span = columns.length + (showDelete ? 1 : 0);
 
+  const fcol = fmenu && columns.find((c) => c.key === fmenu.key);
   return (
+    <>
+    {filters && (activeFilters.length > 0 || sortBy) && (
+      <div className="dg-fbar no-print">
+        <span>🔽 Showing <b>{rows.length}</b> of {allRows.length} rows</span>
+        {activeFilters.map((k) => { const c = columns.find((x) => x.key === k); return c ? <button key={k} type="button" className="rp-chip" onClick={() => setFlt((f) => ({ ...f, [k]: null }))} title="Remove this filter">{c.label} ✕</button> : null; })}
+        {sortBy && <button type="button" className="rp-chip" onClick={() => setSortBy(null)}>Sort: {columns.find((x) => x.key === sortBy.key)?.label} {sortBy.dir === 'asc' ? '↑' : '↓'} ✕</button>}
+        <button type="button" className="btn small ghost" onClick={() => { setFlt({}); setSortBy(null); }}>Clear all</button>
+      </div>
+    )}
+    {fcol && (
+      <FilterMenu key={fcol.key} col={fcol} values={filterValues(fcol)} selected={flt[fcol.key] ? [...flt[fcol.key]] : null}
+        sorted={sortBy?.key === fcol.key ? sortBy.dir : null} pos={fmenu}
+        onSort={(dir) => { setSortBy({ key: fcol.key, dir }); setFmenu(null); }}
+        onApply={(set) => { setFlt((f) => ({ ...f, [fcol.key]: set })); setFmenu(null); }}
+        onClose={() => setFmenu(null)} />
+    )}
     <div className="dg-outer">
     {canLeft && <button type="button" className="dg-arrow left" aria-label="Move table left" title="Move left" onClick={() => slide(-1)}>‹</button>}
     {canRight && <button type="button" className="dg-arrow right" aria-label="Move table right" title="Move right" onClick={() => slide(1)}>›</button>}
@@ -274,13 +406,21 @@ export default function DataGrid({ columns, rows, canEdit, onSave, onAdd, addLab
           ))}
           <tr className="labels">
             <th className="corner" />
-            {columns.map((c) => <th key={c.key} className={`a-${c.align || (c.type === 'number' || c.type === 'calc' ? 'right' : 'left')} col-${c.key}`}>{c.label}</th>)}
+            {columns.map((c) => (
+              <th key={c.key} className={`a-${c.align || (c.type === 'number' || c.type === 'calc' ? 'right' : 'left')} col-${c.key}${canFilter(c) ? ' dg-fth' : ''}`}>
+                {c.label}
+                {canFilter(c) && (
+                  <button type="button" className={`dg-fbtn no-print${flt[c.key] || sortBy?.key === c.key ? ' on' : ''}`} aria-label={`Filter ${c.label}`}
+                    title={flt[c.key] ? 'Filtered: tap to change' : 'Filter and sort'} onClick={(e) => openFilter(e, c)}>▾</button>
+                )}
+              </th>
+            ))}
             {showDelete && <th />}
           </tr>
         </thead>
         <tbody>
           {rows.length === 0 && !showAdd && (
-            <tr><td className="rownum" /><td colSpan={span} className="empty-row">{emptyText}</td></tr>
+            <tr><td className="rownum" /><td colSpan={span} className="empty-row">{allRows.length && rows.length === 0 ? 'No rows match the filters.' : emptyText}</td></tr>
           )}
           {rows.map((row, r) => (
             <tr key={row.id} className={`${rowClass ? rowClass(row) : ''} ${sel.r === r ? 'sel-row' : ''}`}>
@@ -331,5 +471,6 @@ export default function DataGrid({ columns, rows, canEdit, onSave, onAdd, addLab
       </table>
     </div>
     </div>
+    </>
   );
 }

@@ -31,6 +31,7 @@ function trail(path, q, names) {
     if (!s1) return [HOME, TRANSPORT];
     if (s1 === 'drivers') return [HOME, TRANSPORT, DRIVERS];
     if (s1 === 'trip-sheets') return [HOME, TRANSPORT, DRIVERS, ['All Drivers Trip Sheets', '/transport/trip-sheets']];
+    if (s1 === 'combined') return [HOME, TRANSPORT, DRIVERS, ['All Drivers Trip Sheets', '/transport/trip-sheets'], ['Combined sheet', path]];
     if (s1 === 'vehicles') return [HOME, TRANSPORT, ['Vehicles & maintenance', path]];
     if (s1 === 'invoice') return [HOME, TRANSPORT, ['Invoice', path]];
     if (s1 === 'reports') return [HOME, TRANSPORT, ['Reports', path]];

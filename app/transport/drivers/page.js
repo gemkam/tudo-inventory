@@ -118,6 +118,7 @@ function DriversPage() {
         <div className="tools">
           {isAdmin && <button type="button" className="btn" onClick={addFromTop}>➕ Add driver</button>}
           <Link href="/transport/trip-sheets" className="btn">📄 All Drivers Trip Sheets</Link>
+          <Link href="/transport/combined" className="btn">🧮 Combined sheet</Link>
           <Link href="/transport/salary-sheet" className="btn in">📑 Salary sheet</Link>
           <Link href="/transport/vehicles" className="btn">🚚 Vehicles</Link>
         </div>

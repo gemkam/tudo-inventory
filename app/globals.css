@@ -4376,3 +4376,41 @@ html[data-theme="dark"] .pi-table tr.pi-dup td, html[data-theme="dark"] tr.pn-du
 .tv-tswitch .tv-switch button { font-size: 12px; padding: 4px 10px; color: var(--ink); }
 .tv-tswitch .tv-switch button.on { background: var(--brown); color: #fff; }
 @media print { .tv-tswitch { display: none !important; } }
+
+/* ===== Column widths like Excel (components/ColumnResize.js) + Excel filters (components/DataGrid.js filters) ===== */
+.col-rz { position: absolute; top: 0; right: -4px; width: 9px; height: 100%; cursor: col-resize; z-index: 6; touch-action: none; user-select: none; }
+.col-rz::after { content: ''; position: absolute; top: 20%; bottom: 20%; left: 4px; width: 2px; border-radius: 2px; background: transparent; transition: background .15s; }
+th:hover > .col-rz::after { background: color-mix(in srgb, var(--brown) 35%, transparent); }
+.col-rz:hover::after, .col-rz.on::after { background: var(--brown); top: 0; bottom: 0; }
+body.col-rz-drag, body.col-rz-drag * { cursor: col-resize !important; user-select: none !important; }
+.col-rz-reset { opacity: 0; transition: opacity .15s; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: var(--surface); color: var(--brown); cursor: pointer; z-index: 7; font-size: 12px; line-height: 18px; box-shadow: 0 0 0 1px var(--line); }
+.col-rz-reset::before { content: '⟲'; }
+table:hover .col-rz-reset, .col-rz-reset:focus { opacity: 1; }
+@media (pointer: coarse) { .col-rz-reset { opacity: .85; } }
+table[data-rz-on] th, table[data-rz-on] td { overflow: hidden; text-overflow: ellipsis; }
+table[data-rz-on] td:has(input, select, .combo-list) { overflow: visible; }
+.tv-cards .col-rz, .tv-cards .col-rz-reset { display: none !important; }
+@media (pointer: coarse) { .col-rz { width: 16px; right: -8px; } }
+@media print { .col-rz, .col-rz-reset, .dg-fbtn, .dg-fbar { display: none !important; } }
+
+.grid thead tr.labels th.dg-fth { padding-right: 28px; }
+.dg-fbtn { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; padding: 0; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--heading); font-size: 11px; line-height: 16px; cursor: pointer; z-index: 5; }
+.dg-fbtn:hover { border-color: var(--brown); color: var(--brown); }
+.dg-fbtn.on { background: var(--brown); border-color: var(--brown); color: #fff; }
+.grid thead th.dg-fth { position: sticky; }
+.dg-fmenu { position: fixed; z-index: 1100; width: 260px; max-height: min(460px, 75vh); display: flex; flex-direction: column; gap: 6px; padding: 10px; background: var(--surface); color: var(--heading); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 34px rgba(0,0,0,.18); font-size: 14px; }
+.dg-fhead { font-weight: 700; font-size: 13px; color: var(--brown); padding: 0 2px 2px; }
+.dg-fsort { text-align: left; border: 0; background: transparent; padding: 6px 8px; border-radius: 8px; cursor: pointer; color: inherit; font-size: 13px; }
+.dg-fsort:hover, .dg-fsort.on { background: var(--tint); color: var(--brown); font-weight: 600; }
+.dg-fsearch { width: 100%; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: inherit; font-size: 14px; }
+.dg-flist { overflow: auto; flex: 1 1 auto; min-height: 60px; border: 1px solid var(--line); border-radius: 8px; padding: 4px; }
+.dg-flist label { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+.dg-flist label:hover { background: var(--tint); }
+.dg-flist label span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dg-flist label small { color: var(--muted, #888); }
+.dg-flist label input { width: auto; margin: 0; }
+.dg-flist .dg-fall { font-weight: 600; border-bottom: 1px solid var(--line); border-radius: 0; margin-bottom: 2px; }
+.dg-flist p { margin: 6px; font-size: 13px; }
+.dg-fact { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+.dg-fbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: var(--tint); font-size: 13px; }
+.dg-fbar .rp-chip { padding: 4px 10px; font-size: 12px; }

@@ -187,6 +187,7 @@ function AllTripSheets() {
           <button type="button" className="btn" onClick={doPrint}>🖨 Print</button>
           <button type="button" className="btn" onClick={doPdf}>📕 PDF</button>
           <button type="button" className="btn" onClick={doExcel}>📗 Excel</button>
+          <Link href="/transport/combined" className="btn">🧮 Combined sheet</Link>
           <Link href="/transport/salary-sheet" className="btn">📑 Salary sheet</Link>
         </div>
       </div>
