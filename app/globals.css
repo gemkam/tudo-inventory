@@ -4470,3 +4470,7 @@ tr.tf-hide { display: none !important; }
 .cp-rows { max-height: 38vh; overflow: auto; border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; display: grid; gap: 4px; }
 .cp-chk { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
 .cp-chk input { width: auto; }
+
+/* Breadcrumbs: Back to where you came from (5 Nov 2026) */
+.bc a.bc-back { background: var(--brown); color: #fff; border-color: var(--brown); margin-right: 6px; }
+.bc a.bc-back:hover { background: var(--brown-hover, var(--brown)); color: #fff; }
