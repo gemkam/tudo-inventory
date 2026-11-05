@@ -20,6 +20,7 @@ import ThemeMenu from '@/components/ThemeMenu';
 import OfficeTabs from '@/components/OfficeTabs';
 import BackToTop from '@/components/BackToTop';
 import EditPasswordHost from '@/components/EditPasswordHost';
+import AdminLock, { isAdminArea } from '@/components/AdminLock';
 import LookApplier from '@/components/LookApplier';
 import { lockEdit } from '@/lib/editLock';
 import { startActivity, logPage, endActivity } from '@/lib/activity';
@@ -112,6 +113,11 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
   // Edit password: opening another page locks editing again
   useEffect(() => { lockEdit(); }, [path]);
 
+  // Admin password (5 Nov 2026, Kamran): Admin opens only after the password; stays open while moving inside Admin
+  // (Settings, Users, Activity, Power Editor), asks again after leaving Admin
+  const [adminOk, setAdminOk] = useState(false);
+  useEffect(() => { if (!isAdminArea(path)) setAdminOk(false); }, [path]);
+
   // Every page opens at the top (no jumping to the middle)
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -161,6 +167,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
   let blocked = '';
   if (ownerOnly && !user.isOwner) blocked = 'Only Administrator can open this page.';
   else if (adminOnly && !user.isAdmin) blocked = 'You need Full access to open this page.';
+  const adminLocked = !blocked && user.isOwner && isAdminArea(path) && !adminOk;
 
   return (
     <UserCtx.Provider value={user}>
@@ -216,7 +223,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
         </main>
       ) : (
         <main className={`page${wide ? ' wide' : ''}`}>
-          {blocked ? <div className="error">{blocked}</div> : <><Breadcrumbs /><div className="pc-home no-print" />{children}</>}
+          {blocked ? <div className="error">{blocked}</div> : adminLocked ? <AdminLock onOpen={() => setAdminOk(true)} /> : <><Breadcrumbs /><div className="pc-home no-print" />{children}</>}
         </main>
       )}
       {/* 🖨 Print with column choice (1 Nov 2026): in each page's toolbar, not in the top bar */}
