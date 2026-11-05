@@ -240,7 +240,7 @@ export default function AlertsPanel() {
 
   return (
     <>
-    {phone && <FloatingClock count={open.length} ringing={urgent.length > 0} onOpen={() => setMobOpen(true)} />}
+    {phone && !mobOpen && <FloatingClock count={open.length} ringing={urgent.length > 0} onOpen={() => setMobOpen(true)} />}
     {phone && mobOpen && <div className="al-sheet-back" onClick={() => setMobOpen(false)} aria-hidden="true" />}
     <aside className={`alerts-col ${urgent.length ? 'has-urgent' : ''} ${mobOpen ? 'mob-open' : ''} ${mini && !phone ? 'min' : ''}`} aria-label="Alerts">
       <div className="al-head">
