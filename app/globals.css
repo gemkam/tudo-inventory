@@ -4510,3 +4510,11 @@ tr.tf-hide { display: none !important; }
 .dw-lines { margin: 4px 0 0; padding-left: 16px; font-size: 12px; color: var(--muted); display: grid; gap: 3px; }
 .dw-note { margin: 10px 2px 0; font-size: 11.5px; color: var(--muted); line-height: 1.4; }
 .alerts-col.min .dw-note { display: none !important; }
+
+/* ☑ Columns drop-down (5 Nov 2026) */
+.cpk { position: relative; display: inline-flex; }
+.cpk-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 60; min-width: 220px; max-height: 70vh; overflow: auto; padding: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 28px rgba(0,0,0,.16); }
+.cpk-top { display: flex; justify-content: space-between; padding: 2px 6px 8px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.cpk-row { display: flex !important; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 8px; cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--ink); width: auto !important; }
+.cpk-row:hover { background: var(--row-hover, var(--row-alt)); }
+.cpk-row input { width: 16px !important; height: 16px; margin: 0; flex: 0 0 auto; accent-color: var(--brown); }

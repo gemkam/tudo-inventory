@@ -13,6 +13,7 @@ import { todayISO, fmtFullDate } from '@/lib/sheet';
 import { omrInWords } from '@/lib/words';
 import DocImport from '@/components/DocImport';
 import EditToggle from '@/components/EditToggle';
+import ColumnPicker from '@/components/ColumnPicker';
 import PaperPreview from '@/components/PaperPreview';
 import { shortOf, hasShort, FUELS } from '@/lib/docShort';
 import { lockEdit } from '@/lib/editLock';
@@ -367,6 +368,12 @@ function DocsPage() {
   const xcols = kind === 'receipt' ? xcolsAll : [];
   const hl = (k, def) => (kind === 'receipt' ? colName(k) : def); // header label
   const [colsOpen, setColsOpen] = useState(false);
+  // ☑ Columns drop-down: hidden columns per list type, saved on this device
+  const [hideCols, setHideCols] = useState([]);
+  useEffect(() => {
+    try { setHideCols(JSON.parse(localStorage.getItem(`tudo-docs-hide-${kind}`) || '[]')); } catch { setHideCols([]); }
+  }, [kind]);
+  const saveHide = (next) => { setHideCols(next); try { localStorage.setItem(`tudo-docs-hide-${kind}`, JSON.stringify(next)); } catch { /* ignore */ } };
 
   /* 🖨 Custom print: prints straight away ONLY the rows showing now (the search, plus any ▾ column filter), all columns, A4 landscape */
   const openCustomPrint = () => {
@@ -848,6 +855,21 @@ function DocsPage() {
   const shown = (list || []).filter((d) => { if (!words.length) return true; const h = hay(d); return words.every((w) => h.includes(w)); });
   const totalOf = (d) => r3(lineTotal(d.items) * (1 + n(d.vat_pct) / 100));
 
+  // columns in table order (cells are hidden by position)
+  const pickCols = [
+    ['no', 'No.'], ['date', 'Date'], ['party', K.party], ['receipt_no', 'Receipt No.'], ['vehicle_no', 'Vehicle No.'], ['fuel', 'Fuel'],
+    ['sub', 'Subtotal'], ['vat', 'VAT 5%'], ['grand', 'Grand Total'], ['vat_no', 'VAT No.'],
+    ...(kind === 'receipt' ? [['department', 'Department']] : []),
+    ...xcols.map((c) => [`x:${c.key}`, c.name]),
+    ...(kind === 'receipt' ? [['paper', 'Bill paper']] : [])
+  ].map(([key, label]) => ({ key, label }));
+  const hidden = hideCols.filter((k) => pickCols.some((c) => c.key === k));
+  const lead = canEdit ? 1 : 0;
+  const hideCss = hidden.length
+    ? hidden.map((k) => pickCols.findIndex((c) => c.key === k) + 1 + lead).map((i) => `table.iv-list tr > :nth-child(${i})`).join(',\n') + ' { display: none; }'
+    : '';
+  const colPick = <ColumnPicker cols={pickCols} hidden={hidden} onChange={saveHide} />;
+
   return (
     <>
       <div className="company-head ch-top">
@@ -894,9 +916,13 @@ function DocsPage() {
         );
       })()}
 
+      {!isAdmin && (
+        <div className="dx-bar dx-bar-off no-print">{colPick}</div>
+      )}
       {isAdmin && !canEdit && (
         <div className="dx-bar dx-bar-off no-print">
           <EditToggle show on={editing} onClick={toggleEdit} close={false} />
+          {colPick}
           <span className="muted dx-hint">Press Edit to add, import, delete or move {K.label.toLowerCase()}</span>
           <span className="dx-right"><EditToggle show on={editing} onClick={toggleEdit} close={false} /></span>
         </div>
@@ -904,6 +930,7 @@ function DocsPage() {
       {canEdit && (
         <div className="dx-bar no-print">
           <b>✏️ Edit</b>
+          {colPick}
           <button type="button" className="btn" onClick={() => (kind === 'receipt' ? startRow(null) : newDoc())} disabled={kind === 'receipt' && !!row && !row.id}>＋ Add {kind === 'receipt' ? 'row' : K.one.toLowerCase()}</button>
           {kind === 'receipt' && <button type="button" className="btn" onClick={() => setColsOpen(true)}>▥ Columns: add, rename, delete</button>}
           <DocImport co={co} coShort={C.short} kind={kind} userName={me} last={(list || [])[0]} nextNo={nextNoFor} flash={flash}
@@ -944,6 +971,7 @@ function DocsPage() {
         </div>
       ) : (
         <div className="iv-table-wrap">
+          {hideCss && <style>{hideCss}</style>}
           <table className="iv-list" style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead><tr>{canEdit && <th className="dx-c"><input type="checkbox" aria-label="Select all" checked={!!shown.length && picked.length === shown.length} onChange={() => setPicked(picked.length === shown.length ? [] : shown.map((d) => d.id))} /></th>}<th>{hl('no', 'No.')}</th><th>{hl('date', 'Date')}</th><th>{hl('party', K.party)}</th><th>{hl('receipt_no', 'Receipt No.')}</th><th>{hl('vehicle_no', 'Vehicle No.')}</th><th>{hl('fuel', 'Fuel')}</th><th className="num">{hl('sub', 'Subtotal')}</th><th className="num">{hl('vat', 'VAT 5%')}</th><th className="num">{hl('grand', 'Grand Total')}</th><th>{hl('vat_no', 'VAT No.')}</th>{kind === 'receipt' && <th>{hl('department', 'Department')}</th>}{xcols.map((c) => <th key={c.key}>{c.name}</th>)}{kind === 'receipt' && <th>{hl('paper', 'Bill paper')}</th>}{kind === 'receipt' && canEdit && <th />}</tr></thead>
             <tbody>
