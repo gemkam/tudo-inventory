@@ -419,17 +419,28 @@ function SummaryPage() {
             </div>
 
             <div className="rp-card">
-              <div className="rp-card-title">Company ranking</div>
-              <div className="rp-takeaway">{ranked.length > 1 && ranked[1].spent ? `${ranked[0].label} spent ${fmtO(r3(ranked[0].spent - ranked[1].spent))} more than ${ranked[1].label}.` : ' '}</div>
-              <table className="rp-block-table">
-                <thead><tr><th>#</th><th>Company</th><th className="num">Spent</th><th className="num">Share</th></tr></thead>
-                <tbody>
-                  {ranked.map((s, i) => (
-                    <tr key={s.key} className={`pickable ${i === 0 && s.spent ? 'top' : ''}`} onClick={() => drillCompany(s.key)}><td>{i + 1}</td><td>{s.label}</td><td className="num">{fmtAmt(s.spent)}</td><td className="num">{pct(s.spent, G.grand.spent)}%</td></tr>
-                  ))}
-                  <tr className="sum"><td /><td>Total</td><td className="num">{fmtAmt(G.grand.spent)}</td><td className="num">100%</td></tr>
-                </tbody>
-              </table>
+              <div className="rp-card-title">🏆 Company ranking</div>
+              <div className="rp-takeaway">
+                {ranked.length > 1 && ranked[1].spent
+                  ? `${ranked[0].label} spent ${fmtO(r3(ranked[0].spent - ranked[1].spent))} more than ${ranked[1].label}.`
+                  : ranked[0] && ranked[0].spent ? `Only ${ranked[0].label} has spending in this period.` : 'No spending in this period.'}
+              </div>
+              <div className="rk-list">
+                {ranked.map((s, i) => {
+                  const share = pct(s.spent, G.grand.spent);
+                  return (
+                    <button type="button" key={s.key} className={`rk-row${i === 0 && s.spent ? ' top' : ''}`} onClick={() => drillCompany(s.key)} title="Tap to see the bills">
+                      <span className="rk-no">{i + 1}</span>
+                      <span className="rk-main">
+                        <span className="rk-name">{s.label}</span>
+                        <span className="rp-hbar-track"><span className="rp-hbar-fill" style={{ width: `${Math.max(s.spent ? 3 : 0, share)}%` }} /></span>
+                      </span>
+                      <span className="rk-val"><b>{fmtAmt(s.spent)}</b><small>{share}%</small></span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="rk-total"><span>Total</span><b>{fmtAmt(G.grand.spent)}</b></div>
             </div>
 
             <div className="rp-card rp-wide">

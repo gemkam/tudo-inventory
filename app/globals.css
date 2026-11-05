@@ -4474,3 +4474,20 @@ tr.tf-hide { display: none !important; }
 /* Breadcrumbs: Back to where you came from (5 Nov 2026) */
 .bc a.bc-back { background: var(--brown); color: #fff; border-color: var(--brown); margin-right: 6px; }
 .bc a.bc-back:hover { background: var(--brown-hover, var(--brown)); color: #fff; }
+
+/* Reports & Summary: Company ranking list (5 Nov 2026) */
+.rk-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.rk-row { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: background .15s, border-color .15s; }
+.rk-row:hover { background: var(--tint, var(--row-hover)); border-color: var(--brown); }
+.rk-row.top { border-color: var(--brown); background: var(--tint, var(--row-alt)); }
+.rk-no { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 13px; background: var(--row-alt, #eef2f1); color: var(--brown); }
+.rk-row.top .rk-no { background: var(--brown); color: #fff; }
+.rk-main { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.rk-name { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rk-main .rp-hbar-track { display: block; height: 8px; border-radius: 99px; overflow: hidden; }
+.rk-main .rp-hbar-fill { display: block; height: 100%; background: var(--brown); border-radius: 99px; }
+.rk-val { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.25; }
+.rk-val b { font-size: 15px; font-variant-numeric: tabular-nums; }
+.rk-val small { font-size: 12px; color: var(--muted); font-weight: 600; }
+.rk-total { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding: 10px 12px 0; border-top: 2px solid var(--line); font-weight: 700; }
+.rk-total b { font-size: 16px; color: var(--brown); font-variant-numeric: tabular-nums; }
