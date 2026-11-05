@@ -101,7 +101,8 @@ function SummaryPage() {
     if (!key) return;
     opened.current = true;
     const ids = { pl: 'pl-statement', budget: 'gs-budget', cashflow: 'gs-cashflow', unpaid: 'gs-unpaid', analytics: 'gs-analytics' };
-    setTimeout(() => { if (['sales', 'vat', 'cash', 'checks'].includes(key)) openTab(key); else if (ids[key]) jumpTo(ids[key]); }, 400);
+    if (key === 'checks') { window.location.replace('/?dw=1'); return; } // Checks moved to Home Alerts > Double work
+    setTimeout(() => { if (['sales', 'vat', 'cash'].includes(key)) openTab(key); else if (ids[key]) jumpTo(ids[key]); }, 400);
   }, [G]);
 
   const AN = useMemo(() => (G && data ? computeAnalytics({ G, lines, income, ts: data.ts, drivers: data.drivers, pick, period, today }) : null), [G, data, lines, income, pick, period, today]);

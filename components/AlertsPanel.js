@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useDoubleWork, DoubleWorkList } from '@/components/DoubleWork';
 import { createPortal } from 'react-dom';
 import { sb } from '@/lib/supabase';
 import { todayISO } from '@/lib/sheet';
@@ -139,6 +140,18 @@ export default function AlertsPanel() {
   const [mobOpen, setMobOpen] = useState(false); /* phones: alerts hidden until the clock is tapped */
   /* PC (2 Nov 2026): − minimizes the Alerts box to its heading, ▢ opens it again; remembered on this device */
   const [mini, setMini] = useState(false);
+  const [tab, setTab] = useState('alerts'); // alerts | double
+  const dw = useDoubleWork();
+  // /?dw=1 (Accounts tile "Double work") opens this tab
+  useEffect(() => {
+    try {
+      if (new URLSearchParams(window.location.search).get('dw')) {
+        setTab('double');
+        if (window.matchMedia('(max-width: 760px)').matches) setMobOpen(true);
+        setTimeout(() => document.querySelector('.alerts-col')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+      }
+    } catch { /* ignore */ }
+  }, []);
   useEffect(() => { try { setMini(localStorage.getItem('tudo-alerts-min') === '1'); } catch { /* ignore */ } }, []);
   const toggleMini = () => setMini((m) => { const n = !m; try { localStorage.setItem('tudo-alerts-min', n ? '1' : '0'); } catch { /* ignore */ } return n; });
   const [phone, setPhone] = useState(false);
@@ -262,6 +275,18 @@ export default function AlertsPanel() {
         )}
       </div>
 
+      <div className="al-tabs" role="tablist" aria-label="Alerts or double work">
+        <button type="button" role="tab" aria-selected={tab === 'alerts'} className={tab === 'alerts' ? 'on' : ''} onClick={() => setTab('alerts')}>
+          🔔 Alerts {all && <span className="al-tn">{open.length}</span>}
+        </button>
+        <button type="button" role="tab" aria-selected={tab === 'double'} className={tab === 'double' ? 'on' : ''} onClick={() => setTab('double')}>
+          🔁 Double work {dw && dw.length > 0 && <span className="al-tn dw">{dw.length}</span>}
+        </button>
+      </div>
+
+      {tab === 'double' && <DoubleWorkList list={dw} />}
+      {tab === 'alerts' && (
+      <>
       <ol className="al-list">
         {open.map((a, i) => (
           <li key={a.key} className={`al-bubble ${a.urgent ? 'urgent' : ''} k-${a.kind}`}>
@@ -293,6 +318,8 @@ export default function AlertsPanel() {
             </ul>
           )}
         </div>
+      )}
+      </>
       )}
 
       {popup && urgent.length > 0 && typeof document !== 'undefined' && createPortal(

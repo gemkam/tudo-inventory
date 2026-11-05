@@ -4491,3 +4491,22 @@ tr.tf-hide { display: none !important; }
 .rk-val small { font-size: 12px; color: var(--muted); font-weight: 600; }
 .rk-total { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding: 10px 12px 0; border-top: 2px solid var(--line); font-weight: 700; }
 .rk-total b { font-size: 16px; color: var(--brown); font-variant-numeric: tabular-nums; }
+
+/* Home Alerts: 🔔 Alerts | 🔁 Double work tabs (5 Nov 2026) */
+.al-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 10px; padding: 4px; border-radius: 999px; background: var(--row-alt); border: 1px solid var(--line); }
+.al-tabs button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 8px; border: 0; border-radius: 999px; background: transparent; color: var(--ink); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.al-tabs button.on { background: var(--brown); color: #fff; }
+.al-tn { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; background: var(--brown); color: #fff; font-size: 11px; }
+.al-tabs button.on .al-tn { background: #fff; color: var(--brown); }
+.al-tn.dw { background: #c0392b; color: #fff; }
+.al-tabs button.on .al-tn.dw { background: #fff; color: #c0392b; }
+.alerts-col.min .al-tabs { display: none; }
+.dw-btn { background: none; border: 0; padding: 0; text-align: left; font: inherit; cursor: pointer; width: 100%; }
+.dw-arrow { font-size: 11px; color: var(--muted); margin-top: 4px; text-align: center; }
+.al-bubble.dw-bad { background: #fdecea; border-color: #f0b8b3; }
+.al-bubble.dw-bad .al-no { background: #c0392b; }
+.al-bubble.dw-warn { background: color-mix(in srgb, #f6e7b4 45%, var(--surface)); border-color: color-mix(in srgb, #d8b44a 45%, var(--line)); }
+.al-bubble.dw-warn .al-no { background: #b7791f; }
+.dw-lines { margin: 4px 0 0; padding-left: 16px; font-size: 12px; color: var(--muted); display: grid; gap: 3px; }
+.dw-note { margin: 10px 2px 0; font-size: 11.5px; color: var(--muted); line-height: 1.4; }
+.alerts-col.min .dw-note { display: none !important; }

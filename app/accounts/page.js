@@ -207,7 +207,7 @@ function HubTab({ D, co, coName, goTab }) {
     ]],
     ['📊 Reports and checks', [
       { t: 'Cash flow', d: 'Money in vs money spent, by month', href: '/expenses/summary?open=cashflow' },
-      { t: 'Checks', d: 'Double bills, same amount twice, diesel too high, trips unpaid 60+ days', href: '/expenses/summary?open=checks' },
+      { t: 'Double work', d: 'Double bills, same amount twice, diesel too high, trips unpaid 60+ days (Home Alerts)', href: '/?dw=1' },
       { t: 'Analytics', d: 'Spending pace, biggest changes, by department, biggest bills', href: '/expenses/summary?open=analytics' },
       { t: 'Reports & Summary', d: 'Whole group: by company, by head, by month, PDF', href: '/expenses/summary' },
       { t: 'Transport reports', d: 'Trips, costs and profit by month and driver', href: '/transport/reports', hide: !mcOnly },

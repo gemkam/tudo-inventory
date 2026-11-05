@@ -4,14 +4,14 @@ import { useEffect, useMemo, useState } from 'react';
 import Modal from '@/components/Modal';
 import { sb } from '@/lib/supabase';
 import { fmtAmt, monthLabel, exportStamp, exportExcel } from '@/lib/sheet';
-import { vatReturn, quarterOf, quarterLabel, cashForecast, checks, dmy } from '@/lib/groupTools';
+import { vatReturn, quarterOf, quarterLabel, cashForecast, dmy } from '@/lib/groupTools';
 
 /*
-  Top of the Reports & Summary (29 Oct 2026): tabs 💰 Sales · 🧾 VAT return · 💵 Cash forecast · 🔍 Checks.
+  Top of the Reports & Summary (29 Oct 2026): tabs 💰 Sales · 🧾 VAT return · 💵 Cash forecast · (Checks moved to Home Alerts > Double work, 5 Nov 2026).
   Toolbar buttons send window event 'gs-tab' with the tab key (and scroll here).
 */
 export const TABS = [
-  ['sales', '💰 Sales'], ['vat', '🧾 VAT return'], ['cash', '💵 Cash forecast'], ['checks', '🔍 Checks']
+  ['sales', '💰 Sales'], ['vat', '🧾 VAT return'], ['cash', '💵 Cash forecast']
 ];
 export function openTab(key) {
   window.dispatchEvent(new CustomEvent('gs-tab', { detail: key }));
@@ -37,20 +37,18 @@ export default function GroupTools({ G, data, pick, today, labelOf, driverName, 
     } catch { /* ignore */ }
     return () => { window.removeEventListener('gs-tab', on); clearTimeout(t); };
   }, []);
-  const chk = useMemo(() => checks({ data, pick, today, labelOf, driverName }), [data, pick, today, labelOf, driverName]);
   return (
     <section className="panel gs-tools pl-panel" id="gs-tools">
       <div className="gs-tabs" role="tablist">
         {TABS.map(([k, l]) => (
           <button key={k} type="button" role="tab" aria-selected={tab === k} className={`gs-tab ${tab === k ? 'on' : ''}`} onClick={() => setTab(k)}>
-            {l}{k === 'checks' && chk.length ? <span className="gs-badge">{chk.length}</span> : null}
+            {l}
           </button>
         ))}
       </div>
       {tab === 'sales' && salesSheet}
       {tab === 'vat' && <VatTab G={G} />}
       {tab === 'cash' && <CashTab data={data} pick={pick} today={today} labelOf={labelOf} driverName={driverName} isAdmin={isAdmin} />}
-      {tab === 'checks' && <ChecksTab list={chk} />}
     </section>
   );
 }
@@ -190,22 +188,4 @@ function CashTab({ data, pick, today, labelOf, driverName, isAdmin }) {
   );
 }
 
-/* ---------- 🔍 Checks ---------- */
-function ChecksTab({ list }) {
-  const [open, setOpen] = useState(null);
-  return (
-    <div className="gs-body">
-      <div className="pl-top"><h2>🔍 Checks <span className="pl-period">{list.length ? `${list.length} to look at` : 'all clear'}</span></h2></div>
-      {!list.length && <p className="muted">No double entries or odd amounts found. 👍</p>}
-      <div className="gs-checks">
-        {list.map((c, i) => (
-          <div key={i} className={`gs-check ${c.level}`}>
-            <button type="button" onClick={() => setOpen(open === i ? null : i)}><span>{c.icon}</span><b>{c.title}</b><em>{open === i ? '▲' : '▼'}</em></button>
-            {open === i && <ul>{c.lines.map((l, j) => <li key={j}>{l}</li>)}</ul>}
-          </div>
-        ))}
-      </div>
-      <p className="note">Checks: same bill number twice, same amount on the same day, maintenance on a trip sheet and on the Vehicles page, high diesel, received more than rent, trips not paid after 60 days, trips with no diesel.</p>
-    </div>
-  );
-}
+/* 🔍 Checks moved to the Home Alerts box as 🔁 Double work (components/DoubleWork.js), 5 Nov 2026 */
