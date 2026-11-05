@@ -12,7 +12,7 @@ import { sb, isLow } from '@/lib/supabase';
 function Letterhead() {
   return (
     <span className="hub-letterhead">
-      <img src="/tudonum-logo.png" alt="Tudo Num" />
+      <img src="/tudonum-brand.png" alt="Tudo Num" />
       <span className="hub-co">
         <b>MODERN CITY FOR EXPRESS SERVICES LLC</b>
         <span>CR No. 1404742 · VAT Registration No. OM11008665</span>

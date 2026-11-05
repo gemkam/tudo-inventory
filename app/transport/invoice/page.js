@@ -490,7 +490,7 @@ function InvoicePage() {
 
         {/* Letterhead: logo on the extreme left */}
         <header className="iv-head">
-          <img src="/tudonum-logo.png" alt="Tudo Num" className="iv-logo" />
+          <img src="/tudonum-brand.png" alt="Tudo Num" className="iv-logo" />
           <div className="iv-co">
             {L('co_name', COMPANY.name, 'iv-co-name')}
             <div className="iv-co-line">

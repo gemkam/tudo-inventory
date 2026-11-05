@@ -176,7 +176,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
         <div className="tbx-inner">
           <div className="tbx-row">
             <Link href={user.isEntry ? '/entry' : '/'} className="tbx-brand" aria-label="Tudo Num Office Systems, home">
-              <span className="tbx-logo"><img src="/tudonum-logo-lg.png" alt="" /></span>
+              <span className="tbx-logo"><img src="/tudonum-brand.png" alt="" /></span>
               <span className="tbx-name">
                 <b>Tudo Num</b>
                 <small>Office Systems</small>

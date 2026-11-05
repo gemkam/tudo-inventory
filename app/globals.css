@@ -727,7 +727,7 @@ body .btn.in:hover { background: var(--brown-deep); border-color: var(--brown-de
 .iv-bottomline { position: absolute; inset: auto 0 0 0; height: 4px; background: linear-gradient(90deg, var(--iv-gold), var(--iv-green) 40%); }
 .iv-mark {
   position: absolute; z-index: -1; right: -60px; top: 34%; width: 360px; height: 320px; opacity: .045;
-  background: url('/tudonum-logo.png') center / contain no-repeat; transform: rotate(-12deg);
+  background: url('/tudonum-brand.png') center / contain no-repeat; transform: rotate(-12deg);
 }
 
 .iv-head { display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: center; margin-top: 6px; }
@@ -4518,3 +4518,16 @@ tr.tf-hide { display: none !important; }
 .cpk-row { display: flex !important; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 8px; cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--ink); width: auto !important; }
 .cpk-row:hover { background: var(--row-hover, var(--row-alt)); }
 .cpk-row input { width: 16px !important; height: 16px; margin: 0; flex: 0 0 auto; accent-color: var(--brown); }
+
+/* Tudo Num Group logo (same as intro), wide shape: 5 Nov 2026 */
+.tbx-logo { width: 68px; height: 42px; }
+.tbx-logo img { width: 62px; height: 38px; }
+.hub-letterhead img { width: 104px; }
+.home-grid .hub-letterhead img { width: 74px; }
+.slip-logo { width: 100px; }
+.iv-logo { width: 110px; }
+@media screen and (max-width: 680px) {
+  .hub-letterhead img { width: 80px; }
+  .tbx-logo { width: 58px; height: 36px; } .tbx-logo img { width: 52px; height: 32px; }
+}
+@media (max-width: 600px) { .slip-logo { width: 76px; } .iv-logo { width: 82px; } }

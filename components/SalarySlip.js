@@ -47,7 +47,7 @@ export default function SalarySlipPaper({ driver, salaries, entries, month, pape
     <article className="slip-paper" id={paperId}>
       <div className="slip-topline" aria-hidden="true" />
       <header className="slip-head">
-        <img src="/tudonum-logo.png" alt="Tudo Num" className="slip-logo" />
+        <img src="/tudonum-brand.png" alt="Tudo Num" className="slip-logo" />
         <div>
           <div className="slip-co">{COMPANY.name}</div>
           <div className="slip-co-line">{COMPANY.cr}<i>·</i>{COMPANY.vat}</div>
