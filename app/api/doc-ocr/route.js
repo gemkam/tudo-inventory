@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { todayLine } from '@/lib/today';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -63,7 +64,7 @@ async function openaiStyle(url, key, models, image, errs) {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
         body: JSON.stringify({
           model, temperature: 0, max_tokens: 6000,
-          messages: [{ role: 'user', content: [{ type: 'text', text: PROMPT }, { type: 'image_url', image_url: { url: image } }] }]
+          messages: [{ role: 'user', content: [{ type: 'text', text: todayLine() + PROMPT }, { type: 'image_url', image_url: { url: image } }] }]
         })
       });
       const data = await res.json().catch(() => ({}));
@@ -114,7 +115,7 @@ async function readImage(image) {
           headers: { 'Content-Type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
           body: JSON.stringify({
             model: 'claude-haiku-4-5', max_tokens: 2000, temperature: 0,
-            messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: m[1], data: m[2] } }, { type: 'text', text: PROMPT }] }]
+            messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: m[1], data: m[2] } }, { type: 'text', text: todayLine() + PROMPT }] }]
           })
         });
         const data = await res.json().catch(() => ({}));

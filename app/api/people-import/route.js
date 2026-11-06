@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { todayLine } from '@/lib/today';
 import { aiJson } from '@/lib/aiJson';
 
 export const runtime = 'nodejs';
@@ -60,7 +61,7 @@ export async function POST(req) {
   if (!image && !text.trim()) return Response.json({ error: 'Nothing to read in this file.' }, { status: 400 });
 
   try {
-    const out = await aiJson({ prompt: PROMPT(tab), text: image ? '' : `DOCUMENT:\n${text}`, image: image || null, maxTokens: 6000 });
+    const out = await aiJson({ prompt: todayLine() + PROMPT(tab), text: image ? '' : `DOCUMENT:\n${text}`, image: image || null, maxTokens: 6000 });
     const people = (Array.isArray(out.people) ? out.people : []).filter((p) => p && String(p.name || '').trim()).slice(0, 300);
     return Response.json({ people, warnings: String(out.warnings || '') });
   } catch (e) {
