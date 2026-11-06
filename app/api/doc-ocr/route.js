@@ -45,8 +45,12 @@ Return ONLY one JSON object, no other text, in this exact shape:
  "fields": [{"label": "label exactly as printed", "value": "value as printed"}],
  "is_fuel": true or false,
  "confidence": "high | medium | low",
- "warnings": "short note of anything unclear, blurred or not matching, else empty"
+ "warnings": "short note of anything unclear, blurred or not matching, else empty",
+ "printed_by": "till or POS printout | computer printed | handwritten | screenshot | other",
+ "looks_edited": true or false,
+ "edit_signs": "if looks_edited: short note of what looks changed (different font or size in one spot, patched or blurred area, numbers not aligned), else empty"
 }
+Look carefully for signs the paper was edited or made up: one number in a different font, size or colour, patched or smudged areas, misaligned digits, totals that do not add up. Only set looks_edited true when you really see such signs.
 Rules: "fields" must list EVERY label and value printed on the paper (TXN ID, Ticket, TID, MID, Date of supply, Date of payment, Time, User, Pump No, VEH No, Product, Quantity, Price, Amount, Cash, VAT, Total, card last 4 digits, approval code, etc.), even if also used above.
 Numbers are plain numbers (5.000 -> 5, 0.239 -> 0.239), never text. Do not invent values: if you cannot read something, leave it empty and say so in warnings.
 If the paper is not a bill, invoice or receipt, return {"doc_type":"other","warnings":"not a bill or receipt"}.`;
@@ -174,7 +178,10 @@ function clean(p) {
     fields: (Array.isArray(p.fields) ? p.fields : []).map((f) => ({ label: String(f.label || '').trim(), value: String(f.value ?? '').trim() })).filter((f) => f.label || f.value).slice(0, 60),
     is_fuel: !!p.is_fuel || items.some((i) => /petrol|diesel|mogas|gasoil/i.test(i.desc)),
     confidence: String(p.confidence || ''),
-    warnings: String(p.warnings || '').trim()
+    warnings: String(p.warnings || '').trim(),
+    printed_by: String(p.printed_by || '').trim(),
+    looks_edited: p.looks_edited === true || p.looks_edited === 'true',
+    edit_signs: String(p.edit_signs || '').trim()
   };
 }
 

@@ -18,6 +18,8 @@ import PaperPreview from '@/components/PaperPreview';
 import { shortOf, hasShort, FUELS } from '@/lib/docShort';
 import { lockEdit } from '@/lib/editLock';
 import DocFiles from '@/components/DocFiles';
+import BillVerify, { readBillPaper } from '@/components/BillVerify';
+import { checkBill, AI_LABEL } from '@/lib/billCheck';
 import DeptPicker from '@/components/DeptPicker';
 import { addDept } from '@/lib/departments';
 import BillColumns from '@/components/BillColumns';
@@ -60,7 +62,7 @@ function finish(e, options, set, k) {
   requestAnimationFrame(() => { try { el.setSelectionRange(typed.length, full.length); } catch { /* ignore */ } });
 }
 
-function BillRow({ f, set, canPick, co, saving, onSave, onCancel, sugg = {}, picked = false, onPick = null, paper = null, status = '', onLeave = null, xcols = [] }) {
+function BillRow({ f, set, canPick, co, saving, onSave, onCancel, sugg = {}, picked = false, onPick = null, paper = null, verify = null, status = '', onLeave = null, xcols = [] }) {
   const stop = (e) => e.stopPropagation();
   const pickRef = useRef(null);
   const key = (e) => {
@@ -128,6 +130,7 @@ function BillRow({ f, set, canPick, co, saving, onSave, onCancel, sugg = {}, pic
           onChange={(e) => { const add = [...(e.target.files || [])]; e.target.value = ''; if (add.length) set('newFiles', [...(f.newFiles || []), ...add]); }} />
         <button type="button" className="btn small ghost" onClick={() => pickRef.current?.click()} disabled={saving}>＋ Add paper</button>
       </td>}
+      <td onClick={stop}>{verify || <span className="muted">After save</span>}</td>
       <td style={{ whiteSpace: 'nowrap' }}>
         {!f.id ? (<>
           <button type="button" className="btn small" onClick={onSave} disabled={saving}>{saving ? 'Saving...' : '✓ Save'}</button>{' '}
@@ -141,7 +144,7 @@ function BillRow({ f, set, canPick, co, saving, onSave, onCancel, sugg = {}, pic
 }
 
 function DocsPage() {
-  const { isAdmin, name: me } = useUser();
+  const { isAdmin, isOwner, name: me } = useUser();
   const [co, setCo] = useState(null);
   const [kind, setKind] = useState('receipt');
   const [list, setList] = useState(null);
@@ -442,6 +445,42 @@ function DocsPage() {
       updForms((m) => { const nx = { ...m }; if (nx[d.id] === f) delete nx[d.id]; return nx; });
       setTimeout(() => setRowSt((st) => (st[d.id] === 'saved' ? { ...st, [d.id]: '' } : st)), 2500);
     }
+  }
+
+  /* papers of a bill changed: save them, and when the first paper is new let the AI read it (AI verification) */
+  async function savePapers(d, files) {
+    const { error } = await sb().from('company_docs').update({ files }).eq('id', d.id);
+    if (error) { flash(error.message, 'err'); return; }
+    const first = (files || [])[0];
+    const changed = first && first.path !== ((d.files || [])[0] || {}).path;
+    load();
+    if (changed) {
+      const err = await readBillPaper({ ...d, files });
+      if (err) flash(`${d.doc_no}: AI could not read the paper: ${err}`, 'err');
+      load();
+    }
+  }
+  /* 🤖 AI check: read every bill paper that has no AI read yet, two at a time (free AI limit) */
+  const [aiRun, setAiRun] = useState(null); // { done, total }
+  const unread = kind === 'receipt' ? (list || []).filter((d) => checkBill(d, list).status === 'wait') : [];
+  async function aiCheckAll() {
+    const todo = [...unread];
+    if (!todo.length) return;
+    let done = 0; let bad = 0;
+    setAiRun({ done, total: todo.length });
+    const worker = async () => {
+      while (todo.length) {
+        const d = todo.shift();
+        const err = await readBillPaper(d);
+        if (err) bad += 1;
+        done += 1;
+        setAiRun({ done, total: done + todo.length });
+      }
+    };
+    await Promise.all([worker(), worker()]);
+    setAiRun(null);
+    load();
+    flash(bad ? `AI read ${done - bad} papers, ${bad} could not be read.` : `AI read ${done} papers.`, bad ? 'err' : undefined);
   }
 
   async function saveRow(given) {
@@ -861,7 +900,7 @@ function DocsPage() {
     ['sub', 'Subtotal'], ['vat', 'VAT 5%'], ['grand', 'Grand Total'], ['vat_no', 'VAT No.'],
     ...(kind === 'receipt' ? [['department', 'Department']] : []),
     ...xcols.map((c) => [`x:${c.key}`, c.name]),
-    ...(kind === 'receipt' ? [['paper', 'Bill paper']] : [])
+    ...(kind === 'receipt' ? [['paper', 'Bill paper'], ['verify', 'Verification']] : [])
   ].map(([key, label]) => ({ key, label }));
   const hidden = hideCols.filter((k) => pickCols.some((c) => c.key === k));
   const lead = canEdit ? 1 : 0;
@@ -869,6 +908,14 @@ function DocsPage() {
     ? hidden.map((k) => pickCols.findIndex((c) => c.key === k) + 1 + lead).map((i) => `table.iv-list tr > :nth-child(${i})`).join(',\n') + ' { display: none; }'
     : '';
   const colPick = <ColumnPicker cols={pickCols} hidden={hidden} onChange={saveHide} />;
+  const verCount = kind === 'receipt' ? (list || []).filter((d) => d.verify?.status === 'verified').length : 0;
+  const aiBtn = kind === 'receipt' && isAdmin ? (<>
+    <button type="button" className="btn ghost" disabled={!!aiRun || !unread.length} onClick={aiCheckAll}
+      title={unread.length ? 'AI reads every bill paper not read yet' : 'Every bill paper is already read by AI'}>
+      {aiRun ? `🤖 Reading ${aiRun.done} of ${aiRun.total}...` : `🤖 AI check${unread.length ? ` (${unread.length})` : ''}`}
+    </button>
+    <span className="muted bv-sum">✔ {verCount} of {(list || []).length} verified</span>
+  </>) : null;
 
   return (
     <>
@@ -923,6 +970,7 @@ function DocsPage() {
         <div className="dx-bar dx-bar-off no-print">
           <EditToggle show on={editing} onClick={toggleEdit} close={false} />
           {colPick}
+          {aiBtn}
           <span className="muted dx-hint">Press Edit to add, import, delete or move {K.label.toLowerCase()}</span>
           <span className="dx-right"><EditToggle show on={editing} onClick={toggleEdit} close={false} /></span>
         </div>
@@ -931,6 +979,7 @@ function DocsPage() {
         <div className="dx-bar no-print">
           <b>✏️ Edit</b>
           {colPick}
+          {aiBtn}
           <button type="button" className="btn" onClick={() => (kind === 'receipt' ? startRow(null) : newDoc())} disabled={kind === 'receipt' && !!row && !row.id}>＋ Add {kind === 'receipt' ? 'row' : K.one.toLowerCase()}</button>
           {kind === 'receipt' && <button type="button" className="btn" onClick={() => setColsOpen(true)}>▥ Columns: add, rename, delete</button>}
           <DocImport co={co} coShort={C.short} kind={kind} userName={me} last={(list || [])[0]} nextNo={nextNoFor} flash={flash}
@@ -973,7 +1022,7 @@ function DocsPage() {
         <div className="iv-table-wrap">
           {hideCss && <style>{hideCss}</style>}
           <table className="iv-list" style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead><tr>{canEdit && <th className="dx-c"><input type="checkbox" aria-label="Select all" checked={!!shown.length && picked.length === shown.length} onChange={() => setPicked(picked.length === shown.length ? [] : shown.map((d) => d.id))} /></th>}<th>{hl('no', 'No.')}</th><th>{hl('date', 'Date')}</th><th>{hl('party', K.party)}</th><th>{hl('receipt_no', 'Receipt No.')}</th><th>{hl('vehicle_no', 'Vehicle No.')}</th><th>{hl('fuel', 'Fuel')}</th><th className="num">{hl('sub', 'Subtotal')}</th><th className="num">{hl('vat', 'VAT 5%')}</th><th className="num">{hl('grand', 'Grand Total')}</th><th>{hl('vat_no', 'VAT No.')}</th>{kind === 'receipt' && <th>{hl('department', 'Department')}</th>}{xcols.map((c) => <th key={c.key}>{c.name}</th>)}{kind === 'receipt' && <th>{hl('paper', 'Bill paper')}</th>}{kind === 'receipt' && canEdit && <th />}</tr></thead>
+            <thead><tr>{canEdit && <th className="dx-c"><input type="checkbox" aria-label="Select all" checked={!!shown.length && picked.length === shown.length} onChange={() => setPicked(picked.length === shown.length ? [] : shown.map((d) => d.id))} /></th>}<th>{hl('no', 'No.')}</th><th>{hl('date', 'Date')}</th><th>{hl('party', K.party)}</th><th>{hl('receipt_no', 'Receipt No.')}</th><th>{hl('vehicle_no', 'Vehicle No.')}</th><th>{hl('fuel', 'Fuel')}</th><th className="num">{hl('sub', 'Subtotal')}</th><th className="num">{hl('vat', 'VAT 5%')}</th><th className="num">{hl('grand', 'Grand Total')}</th><th>{hl('vat_no', 'VAT No.')}</th>{kind === 'receipt' && <th>{hl('department', 'Department')}</th>}{xcols.map((c) => <th key={c.key}>{c.name}</th>)}{kind === 'receipt' && <th>{hl('paper', 'Bill paper')}</th>}{kind === 'receipt' && <th>Verification</th>}{kind === 'receipt' && canEdit && <th />}</tr></thead>
             <tbody>
               {kind === 'receipt' && row && !row.id && <BillRow f={row} set={setBill} sugg={sugg} xcols={xcols} canPick={canEdit} co={co} saving={rowSaving} onSave={saveRow} onCancel={() => setRow(null)} />}
               {shown.map((d) => kind === 'receipt' && canEdit ? (
@@ -983,11 +1032,8 @@ function DocsPage() {
                   picked={picked.includes(d.id)} onPick={() => pickOne(d.id)}
                   paper={<DocFiles row={{ id: `company_docs/${d.id}`, owner: d.party, doc_name: d.doc_no, files: d.files || [] }}
                     canEdit userName={me} flash={flash}
-                    onSave={async (files) => {
-                      const { error } = await sb().from('company_docs').update({ files }).eq('id', d.id);
-                      if (error) { flash(error.message, 'err'); return; }
-                      load();
-                    }} />} />
+                    onSave={(files) => savePapers(d, files)} />}
+                  verify={<BillVerify d={d} list={list} canVerify={isOwner} me={me} flash={flash} onChanged={load} />} />
               ) : (
                 <tr key={d.id} data-id={d.id} tabIndex={0} className={picked.includes(d.id) ? 'dx-on' : ''} onClick={() => kind !== 'receipt' && openDoc(d)} onKeyDown={(e) => e.key === 'Enter' && kind !== 'receipt' && openDoc(d)}
                   title={kind === 'receipt' ? '' : 'Open'} style={kind === 'receipt' && !canEdit ? { cursor: 'default' } : undefined}>
@@ -1010,13 +1056,10 @@ function DocsPage() {
                     <td onClick={(e) => e.stopPropagation()}>
                       <DocFiles row={{ id: `company_docs/${d.id}`, owner: d.party, doc_name: d.doc_no, files: d.files || [] }}
                         canEdit={canEdit} userName={me} flash={flash}
-                        onSave={async (files) => {
-                          const { error } = await sb().from('company_docs').update({ files }).eq('id', d.id);
-                          if (error) { flash(error.message, 'err'); return; }
-                          load();
-                        }} />
+                        onSave={(files) => savePapers(d, files)} />
                     </td>
                   )}
+                  {kind === 'receipt' && <td><BillVerify d={d} list={list} canVerify={isOwner} me={me} flash={flash} onChanged={load} /></td>}
                 </tr>
               ))}
             </tbody>

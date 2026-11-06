@@ -8,6 +8,7 @@ import { sb } from '@/lib/supabase';
 import { todayISO } from '@/lib/sheet';
 import DeptPicker from '@/components/DeptPicker';
 import { HEADS, CATEGORIES, PAY_METHODS, DEPARTMENTS, n, r3 } from '@/lib/expenses';
+import { slimPaper } from '@/lib/billCheck';
 import { fuelOf, FUELS } from '@/lib/docShort';
 
 /*
@@ -54,7 +55,7 @@ function toJpeg(canvas) {
   return out.toDataURL('image/jpeg', 0.85);
 }
 
-async function fileToImage(file) {
+export async function fileToImage(file) {
   if (isPdf(file)) {
     const lib = await loadPdfJs();
     const pdf = await lib.getDocument({ data: await file.arrayBuffer() }).promise;
@@ -166,7 +167,7 @@ export default function DocImport({ co, coShort, kind, userName, last, nextNo, o
         const { data: same } = await sb().from('company_docs').select('doc_no, company').eq('scan->>receipt_no', rno).limit(1);
         if (same && same.length) { form.save = false; form.dup = `Already saved as ${same[0].doc_no}. Not ticked, so it is not saved twice.`; }
       }
-      upd(card.id, (c) => ({ ...c, status: 'ready', model: out.model, form }));
+      upd(card.id, (c) => ({ ...c, status: 'ready', model: out.model, paper: out.data, form }));
     } catch (e) {
       upd(card.id, (c) => ({ ...c, status: 'error', error: e.message }));
     }
@@ -223,7 +224,11 @@ export default function DocImport({ co, coShort, kind, userName, last, nextNo, o
       const path = `company_docs/${data.id}/${Date.now()}-${safe(c.name)}`;
       const up = await sb().storage.from('doc-files').upload(path, c.file, { contentType: c.file.type || undefined, upsert: false });
       if (!up.error) {
-        await sb().from('company_docs').update({ files: [{ path, name: c.name, size: c.file.size, type: c.file.type || '', at: new Date().toISOString(), by: userName || '' }] }).eq('id', data.id);
+        await sb().from('company_docs').update({
+          files: [{ path, name: c.name, size: c.file.size, type: c.file.type || '', at: new Date().toISOString(), by: userName || '' }],
+          // AI verification: the paper was already read here, keep that read (no second AI call)
+          ai_check: c.paper ? { paper: slimPaper(c.paper), path, model: c.model || '', at: new Date().toISOString() } : null
+        }).eq('id', data.id);
       }
       ok += 1;
       savedRows.push({ id: data.id, path: up.error ? null : path });
