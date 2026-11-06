@@ -21,6 +21,15 @@ function OneChairman() {
     <>
       <h1>👑 {c.name}</h1>
       <p className="sub">Chairman · {all ? 'Full access · All companies' : cos.length ? 'Full access' : 'No access yet'}</p>
+      {c.approvals && (
+        <div className="adm-grid" style={{ marginBottom: 18 }}>
+          <Link href={`/chairman/${c.key}/approvals`} className="adm-tile">
+            <span className="adm-ico" aria-hidden="true">✅</span>
+            <span className="adm-tx"><b>Approvals</b><small>Bills verified by Rauf, waiting for {c.name} to approve</small></span>
+            <span className="adm-go" aria-hidden="true">›</span>
+          </Link>
+        </div>
+      )}
       {cos.length === 0 ? (
         <p className="empty">{c.name} has no access yet. His company will be added later.</p>
       ) : (

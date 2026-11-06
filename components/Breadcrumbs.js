@@ -81,6 +81,7 @@ function trail(path, q, names) {
     const t = { all: 'All accounts', bank: 'Bank & Cash', balance: 'Balance sheet', receive: 'Money to receive', pay: 'Money to pay', items: 'Assets, loans & capital' }[q.get('tab') || 'all'];
     return [HOME, ['Accounts', '/accounts'], [t || 'All accounts', path]];
   }
+  if (seg[0] === 'chairman' && seg[2] === 'approvals') return [HOME, ['Chairman', '/chairman'], [{ asif: 'Asif Altaf', sibtain: 'Sibtain' }[seg[1]] || seg[1], `/chairman/${seg[1]}`], ['Approvals', path]];
   if (seg[0] === 'chairman') return seg[1] ? [HOME, ['Chairman', '/chairman'], [{ asif: 'Asif Altaf', sibtain: 'Sibtain' }[seg[1]] || seg[1], path]] : [HOME, ['Chairman', '/chairman']];
   if (seg[0] === 'admin' && seg[1] === 'power') return [HOME, ADMIN, ['Power Editor', path]];
   if (seg[0] === 'admin') return [HOME, ADMIN];

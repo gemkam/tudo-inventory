@@ -99,6 +99,8 @@ export default function BillVerify({ d, list, canVerify, me, flash, onChanged })
         <span className="bv-who">Rauf</span>
         {appr ? (
           <span className="bv-chip bv-appr" title={`${a.by || ''} · ${when(a.at)}`}>✅ Chairman approved</span>
+        ) : a?.status === 'rejected' ? (
+          <span className="bv-chip bv-rej" title={`${a.by || ''} · ${when(a.at)}`}>✗ Chairman rejected{a.note ? ` (${a.note})` : ''}</span>
         ) : v?.status === 'verified' ? (
           <span className="bv-chip bv-waitc" title={`Verified by ${v.by || ''} · ${when(v.at)}${v.note ? ` · ${v.note}` : ''}`}>⏳ Waiting for chairman approval</span>
         ) : v?.status === 'rejected' ? (
@@ -109,7 +111,7 @@ export default function BillVerify({ d, list, canVerify, me, flash, onChanged })
             <button type="button" className="btn small ghost" disabled={!!busy} onClick={() => setRej({ reason: res.status === 'bad' && /Same/.test(res.reasons[0]?.text || '') ? 'Duplicate' : '', note: '' })}>✗ Reject</button>
           </span>
         ) : <span className="muted bv-wait">Waiting for Rauf</span>}
-        {v && !appr && canVerify && <button type="button" className="btn small ghost bv-undo" disabled={!!busy} onClick={undo} title="Undo: back to not verified">↶ Undo</button>}
+        {v && !a && canVerify && <button type="button" className="btn small ghost bv-undo" disabled={!!busy} onClick={undo} title="Undo: back to not verified">↶ Undo</button>}
       </div>
       {(appr ? a.at : v?.at) && <div className="bv-when muted">{appr ? `Approved ${when(a.at)}` : `${v.status === 'verified' ? 'Verified' : 'Rejected'} by ${v.by || ''} · ${when(v.at)}`}</div>}
 

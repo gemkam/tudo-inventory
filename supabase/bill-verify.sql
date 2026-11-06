@@ -23,3 +23,19 @@ begin
   end if;
   return new;
 end $$;
+
+-- 6 Nov 2026: chairman approval ONLY by Asif Altaf (login asif@tudo.local). Verify stays Administrator.
+create or replace function public.guard_bill_verify() returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if (tg_op = 'INSERT' and new.verify is not null) or (tg_op = 'UPDATE' and new.verify is distinct from old.verify) then
+    if not public.is_admin() then
+      raise exception 'Only the Administrator can verify bills.' using errcode = '42501';
+    end if;
+  end if;
+  if (tg_op = 'INSERT' and new.approval is not null) or (tg_op = 'UPDATE' and new.approval is distinct from old.approval) then
+    if coalesce(auth.jwt()->>'email', '') <> 'asif@tudo.local' then
+      raise exception 'Only the chairman Asif Altaf can approve bills.' using errcode = '42501';
+    end if;
+  end if;
+  return new;
+end $$;
