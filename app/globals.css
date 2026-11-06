@@ -4545,7 +4545,7 @@ span.bv-chip { cursor: default; }
 .bv-done { border-color: var(--brown); color: var(--brown-deep, var(--brown)); background: var(--tint); font-weight: 600; }
 .bv-rej { border-color: #c62828; color: #b01f1f; background: rgba(198, 40, 40, .08); white-space: normal; }
 .bv-btns { display: inline-flex; gap: 4px; }
-.bv-undo { border: 0; background: none; color: var(--brown); font-size: 12px; cursor: pointer; padding: 0 2px; }
+.bv-undo { white-space: nowrap; }
 .bv-when { font-size: 11px; padding-left: 40px; }
 .bv-sum { font-size: 12px; }
 .bv-big { font-size: 18px; font-weight: 700; display: inline-block; padding: 4px 12px; border-radius: 999px; border: 1px solid; margin: 0 0 8px; }

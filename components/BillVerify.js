@@ -109,7 +109,7 @@ export default function BillVerify({ d, list, canVerify, me, flash, onChanged })
             <button type="button" className="btn small ghost" disabled={!!busy} onClick={() => setRej({ reason: res.status === 'bad' && /Same/.test(res.reasons[0]?.text || '') ? 'Duplicate' : '', note: '' })}>✗ Reject</button>
           </span>
         ) : <span className="muted bv-wait">Waiting for Rauf</span>}
-        {v && !appr && canVerify && <button type="button" className="bv-undo" disabled={!!busy} onClick={undo} title="Undo: back to not verified">↶ Undo</button>}
+        {v && !appr && canVerify && <button type="button" className="btn small ghost bv-undo" disabled={!!busy} onClick={undo} title="Undo: back to not verified">↶ Undo</button>}
       </div>
       {(appr ? a.at : v?.at) && <div className="bv-when muted">{appr ? `Approved ${when(a.at)}` : `${v.status === 'verified' ? 'Verified' : 'Rejected'} by ${v.by || ''} · ${when(v.at)}`}</div>}
 
