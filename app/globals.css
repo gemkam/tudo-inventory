@@ -4558,3 +4558,10 @@ span.bv-chip { cursor: default; }
 .bv-reasons { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
 .bv-note { width: 100%; box-sizing: border-box; border: 1px solid var(--line); border-radius: 8px; padding: 8px; font: inherit; background: var(--surface); color: inherit; }
 :root[data-theme="dark"] .bv-ok { color: #6fd39a; } :root[data-theme="dark"] .bv-check { color: #f0b54a; } :root[data-theme="dark"] .bv-bad, :root[data-theme="dark"] .bv-rej, :root[data-theme="dark"] .bv-r-bad { color: #ff8a80; }
+/* Bills: details grey until the chairman approves; paper, verification and tick boxes stay normal */
+.bv-waitc { border-color: #d98a00; color: #9a6200; background: rgba(217, 138, 0, .12); font-weight: 600; }
+.bv-appr { border-color: #2e9e5b; color: #fff; background: #2e9e5b; font-weight: 700; }
+:root[data-theme="dark"] .bv-waitc { color: #f0b54a; }
+tr.bv-pend > td:not(.bv-keep):not(.dx-c) { opacity: .45; filter: grayscale(1); }
+tr.bv-pend:hover > td:not(.bv-keep):not(.dx-c), tr.bv-pend:focus-within > td:not(.bv-keep):not(.dx-c) { opacity: .8; }
+@media print { tr.bv-pend > td { opacity: 1 !important; filter: none !important; } }

@@ -18,7 +18,7 @@ import PaperPreview from '@/components/PaperPreview';
 import { shortOf, hasShort, FUELS } from '@/lib/docShort';
 import { lockEdit } from '@/lib/editLock';
 import DocFiles from '@/components/DocFiles';
-import BillVerify, { readBillPaper } from '@/components/BillVerify';
+import BillVerify, { readBillPaper, isApproved } from '@/components/BillVerify';
 import { checkBill, AI_LABEL } from '@/lib/billCheck';
 import DeptPicker from '@/components/DeptPicker';
 import { addDept } from '@/lib/departments';
@@ -62,7 +62,7 @@ function finish(e, options, set, k) {
   requestAnimationFrame(() => { try { el.setSelectionRange(typed.length, full.length); } catch { /* ignore */ } });
 }
 
-function BillRow({ f, set, canPick, co, saving, onSave, onCancel, sugg = {}, picked = false, onPick = null, paper = null, verify = null, status = '', onLeave = null, xcols = [] }) {
+function BillRow({ f, set, canPick, co, saving, onSave, onCancel, sugg = {}, picked = false, onPick = null, paper = null, verify = null, pending = false, status = '', onLeave = null, xcols = [] }) {
   const stop = (e) => e.stopPropagation();
   const pickRef = useRef(null);
   const key = (e) => {
@@ -99,10 +99,10 @@ function BillRow({ f, set, canPick, co, saving, onSave, onCancel, sugg = {}, pic
       onChange={(e) => (auto[k] ? finish(e, auto[k], set, k) : set(k, e.target.value))} />
   );
   return (
-    <tr data-id={f.id || undefined} className={`br-row${picked ? ' dx-on' : ''}${status === 'dirty' ? ' br-dirty' : ''}${status === 'err' ? ' br-errrow' : ''}`} onClick={stop}
+    <tr data-id={f.id || undefined} className={`br-row${pending ? ' bv-pend' : ''}${picked ? ' dx-on' : ''}${status === 'dirty' ? ' br-dirty' : ''}${status === 'err' ? ' br-errrow' : ''}`} onClick={stop}
       onBlur={(e) => { if (onLeave && !e.currentTarget.contains(e.relatedTarget)) onLeave(); }}>
       {canPick && <td className="dx-c">{onPick && <input type="checkbox" aria-label={`Select ${f.doc_no}`} checked={picked} onChange={onPick} />}</td>}
-      {paper ? <td onClick={stop}>{paper}</td> : <td className="br-paper">
+      {paper ? <td className="bv-keep" onClick={stop}>{paper}</td> : <td className="br-paper bv-keep">
         {f.oldFiles > 0 && <span className="muted br-has">📎 {f.oldFiles} saved</span>}
         {(f.newFiles || []).map((x, i) => (
           <span key={i} className="br-file" title={x.name}>📄 {x.name.length > 18 ? `${x.name.slice(0, 16)}…` : x.name}
@@ -112,7 +112,7 @@ function BillRow({ f, set, canPick, co, saving, onSave, onCancel, sugg = {}, pic
           onChange={(e) => { const add = [...(e.target.files || [])]; e.target.value = ''; if (add.length) set('newFiles', [...(f.newFiles || []), ...add]); }} />
         <button type="button" className="btn small ghost" onClick={() => pickRef.current?.click()} disabled={saving}>＋ Add paper</button>
       </td>}
-      <td onClick={stop}>{verify || <span className="muted">After save</span>}</td>
+      <td className="bv-keep" onClick={stop}>{verify || <span className="muted">After save</span>}</td>
       <td className="iv-list-no">{f.doc_no}</td>
       <td><DateInput className="br-in" value={f.doc_date || ''} onChange={(v) => set('doc_date', v)} /></td>
       <td>{inp('party', 'Paid to', { autoFocus: !f.id, list: 'br-party' })}</td>
@@ -1029,23 +1029,23 @@ function DocsPage() {
                 <BillRow key={d.id} xcols={xcols} f={forms[d.id] || billForm(d)} set={setBillFor(d)} sugg={sugg} canPick co={co}
                   saving={rowSt[d.id] === 'saving'} status={rowSt[d.id] || (forms[d.id] && isDirty(forms[d.id], d) ? 'dirty' : '')}
                   onSave={() => leaveRow(d)} onCancel={() => revertRow(d)} onLeave={() => leaveRow(d)}
-                  picked={picked.includes(d.id)} onPick={() => pickOne(d.id)}
+                  picked={picked.includes(d.id)} onPick={() => pickOne(d.id)} pending={!isApproved(d)}
                   paper={<DocFiles row={{ id: `company_docs/${d.id}`, owner: d.party, doc_name: d.doc_no, files: d.files || [] }}
                     canEdit userName={me} flash={flash}
                     onSave={(files) => savePapers(d, files)} />}
                   verify={<BillVerify d={d} list={list} canVerify={isOwner} me={me} flash={flash} onChanged={load} />} />
               ) : (
-                <tr key={d.id} data-id={d.id} tabIndex={0} className={picked.includes(d.id) ? 'dx-on' : ''} onClick={() => kind !== 'receipt' && openDoc(d)} onKeyDown={(e) => e.key === 'Enter' && kind !== 'receipt' && openDoc(d)}
+                <tr key={d.id} data-id={d.id} tabIndex={0} className={`${picked.includes(d.id) ? 'dx-on' : ''}${kind === 'receipt' && !isApproved(d) ? ' bv-pend' : ''}`} onClick={() => kind !== 'receipt' && openDoc(d)} onKeyDown={(e) => e.key === 'Enter' && kind !== 'receipt' && openDoc(d)}
                   title={kind === 'receipt' ? '' : 'Open'} style={kind === 'receipt' && !canEdit ? { cursor: 'default' } : undefined}>
                   {canEdit && <td className="dx-c" onClick={(e) => e.stopPropagation()}><input type="checkbox" aria-label={`Select ${d.doc_no}`} checked={picked.includes(d.id)} onChange={() => pickOne(d.id)} /></td>}
                   {kind === 'receipt' && (
-                    <td onClick={(e) => e.stopPropagation()}>
+                    <td className="bv-keep" onClick={(e) => e.stopPropagation()}>
                       <DocFiles row={{ id: `company_docs/${d.id}`, owner: d.party, doc_name: d.doc_no, files: d.files || [] }}
                         canEdit={canEdit} userName={me} flash={flash}
                         onSave={(files) => savePapers(d, files)} />
                     </td>
                   )}
-                  {kind === 'receipt' && <td><BillVerify d={d} list={list} canVerify={isOwner} me={me} flash={flash} onChanged={load} /></td>}
+                  {kind === 'receipt' && <td className="bv-keep"><BillVerify d={d} list={list} canVerify={isOwner} me={me} flash={flash} onChanged={load} /></td>}
                   <td className="iv-list-no">{d.doc_no}{(d.files || []).length ? ' 📎' : ''}</td>
                   <td>{fmtD(d.doc_date)}</td>
                   <td>{d.party}</td>

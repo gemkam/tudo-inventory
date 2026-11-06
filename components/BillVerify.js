@@ -6,7 +6,9 @@
   1. AI verification: rule checks (always live) + what the AI read on the paper (lib/billCheck.js).
      🟢 Looks OK / 🟠 Check / 🔴 Suspicious / ⚪ Not read yet. Tap to see the reasons and what the paper says,
      and "🤖 Read paper again". Imported bills keep the read from the import (no second AI call).
-  2. Rauf verification (Administrator only can press): ✔ Verify, or ✗ Reject with an optional reason
+  2. Rauf verification (Administrator only can press). After ✔ Verify it shows "⏳ Waiting for chairman approval";
+     when the chairman approves (company_docs.approval {status:'approved', by, at}, button comes later) it shows
+     "✅ Chairman approved" in green and the bill's typed details stop being grey. Verify, or ✗ Reject with an optional reason
      (Fake, Not correct, Duplicate, Other) and optional note. ↶ Undo puts it back to not verified.
      Saved in company_docs.verify { status: 'verified'|'rejected', by, at, reason, note }.
      DB trigger trg_guard_bill_verify blocks anyone who is not Administrator.
@@ -49,6 +51,8 @@ export async function readBillPaper(d) {
 }
 
 export function aiStatus(d, list) { return checkBill(d, list).status; }
+/* bill details stay grey until the chairman approves (Kamran 6 Nov 2026) */
+export const isApproved = (d) => d?.approval?.status === 'approved';
 
 export default function BillVerify({ d, list, canVerify, me, flash, onChanged }) {
   const [open, setOpen] = useState(false); // AI details
@@ -56,6 +60,8 @@ export default function BillVerify({ d, list, canVerify, me, flash, onChanged })
   const [busy, setBusy] = useState('');
   const res = checkBill(d, list);
   const v = d.verify || null;
+  const a = d.approval || null; // chairman approval (button comes later)
+  const appr = isApproved(d);
   const p = res.read?.paper;
 
   async function setVerify(next, msg) {
@@ -91,8 +97,10 @@ export default function BillVerify({ d, list, canVerify, me, flash, onChanged })
       </div>
       <div className="bv-line">
         <span className="bv-who">Rauf</span>
-        {v?.status === 'verified' ? (
-          <span className="bv-chip bv-done" title={`${v.by} · ${when(v.at)}${v.note ? ` · ${v.note}` : ''}`}>✔ Verified{v.by ? ` by ${v.by}` : ''}</span>
+        {appr ? (
+          <span className="bv-chip bv-appr" title={`${a.by || ''} · ${when(a.at)}`}>✅ Chairman approved</span>
+        ) : v?.status === 'verified' ? (
+          <span className="bv-chip bv-waitc" title={`Verified by ${v.by || ''} · ${when(v.at)}${v.note ? ` · ${v.note}` : ''}`}>⏳ Waiting for chairman approval</span>
         ) : v?.status === 'rejected' ? (
           <span className="bv-chip bv-rej" title={`${v.by} · ${when(v.at)}`}>✗ Rejected{v.reason ? `: ${v.reason}` : ''}{v.note ? ` (${v.note})` : ''}</span>
         ) : canVerify ? (
@@ -100,10 +108,10 @@ export default function BillVerify({ d, list, canVerify, me, flash, onChanged })
             <button type="button" className="btn small" disabled={!!busy} onClick={verify}>✔ Verify</button>
             <button type="button" className="btn small ghost" disabled={!!busy} onClick={() => setRej({ reason: res.status === 'bad' && /Same/.test(res.reasons[0]?.text || '') ? 'Duplicate' : '', note: '' })}>✗ Reject</button>
           </span>
-        ) : <span className="muted bv-wait">Waiting</span>}
-        {v && canVerify && <button type="button" className="bv-undo" disabled={!!busy} onClick={undo} title="Undo: back to not verified">↶ Undo</button>}
+        ) : <span className="muted bv-wait">Waiting for Rauf</span>}
+        {v && !appr && canVerify && <button type="button" className="bv-undo" disabled={!!busy} onClick={undo} title="Undo: back to not verified">↶ Undo</button>}
       </div>
-      {v?.at && <div className="bv-when muted">{when(v.at)}</div>}
+      {(appr ? a.at : v?.at) && <div className="bv-when muted">{appr ? `Approved ${when(a.at)}` : `${v.status === 'verified' ? 'Verified' : 'Rejected'} by ${v.by || ''} · ${when(v.at)}`}</div>}
 
       {open && (
         <Modal title={`AI verification · ${d.doc_no}`} onClose={() => setOpen(false)}>
