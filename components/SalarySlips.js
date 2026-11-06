@@ -343,7 +343,7 @@ export default function SalarySlips({ staff, drivers, me, isAdmin, flash, onSend
                     {!s ? <span className="muted">No slip</span> : s.status === 'approved'
                       ? <span className="ssl-st ok">✅ Approved{s.version > 1 ? ` · v${s.version}` : ''}</span>
                       : <span className="ssl-st draft">Draft</span>}
-                    {stale && <small className="ssl-stale" title="Personnel, Attendance or Transport salary changed after this slip was made">changed · ↻</small>}
+                    {stale && <small className="ssl-stale" title="Employees, Attendance or Transport salary changed after this slip was made">changed · ↻</small>}
                   </td>
                   <td className="no-print ssl-acts">
                     {s && <button type="button" className="dfl-btn" onClick={() => setView(s)}>👁 View</button>}
@@ -361,7 +361,7 @@ export default function SalarySlips({ staff, drivers, me, isAdmin, flash, onSend
           </table>
         </div>
       )}
-      <p className="muted pn-note no-print">Office and Site: monthly salary from Personnel, unpaid days from Attendance (absent and half days on a 30 day month), Deductions from the salary sheet. Drivers: from the Transport salary sheet of that month. Employees only see approved slips, in their own shortcut.</p>
+      <p className="muted pn-note no-print">Office and Site: monthly salary from Employees, unpaid days from Attendance (absent and half days on a 30 day month), Deductions from the salary sheet. Drivers: from the Transport salary sheet of that month. Employees only see approved slips, in their own shortcut.</p>
 
       {view && (
         <Modal title={`${view.name} · ${monthName(view.month)}`} onClose={() => setView(null)}>
@@ -427,7 +427,7 @@ export default function SalarySlips({ staff, drivers, me, isAdmin, flash, onSend
                 </button>
               ))}
             </div>
-          ) : <p className="muted" style={{ marginTop: 0 }}>Everyone already has a slip for {monthName(month)}. New employee? Add him in Personnel first.</p>}
+          ) : <p className="muted" style={{ marginTop: 0 }}>Everyone already has a slip for {monthName(month)}. New employee? Add him in Employees first.</p>}
           <div className="modal-actions"><button type="button" className="btn ghost" onClick={() => setAddOpen(false)}>Close</button></div>
         </Modal>
       )}

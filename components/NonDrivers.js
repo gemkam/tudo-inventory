@@ -27,7 +27,7 @@ export default function NonDrivers({ flash, canAdd }) {
     const sort = (staff || []).filter((x) => x.company === addP.company).length + 1;
     const { error } = await sb().from('exp_staff').insert({ name: addP.name.trim(), company: addP.company, staff_type: addP.type, designation: addP.designation.trim() || null, working_days: 30, basic: 0, sort });
     if (error) { flash(error.message, 'err'); return; }
-    flash(`${addP.name.trim()} added to Personnel`);
+    flash(`${addP.name.trim()} added to Employees`);
     setAddP(null);
     load();
   }
@@ -48,7 +48,7 @@ export default function NonDrivers({ flash, canAdd }) {
         {staff && !staff.length && <p className="muted">No staff yet.</p>}
         {!staff && <p className="muted">Loading...</p>}
       </div>
-      <p className="muted" style={{ marginBottom: 0 }}>The forms for staff will come here. The list comes from <Link href="/personnel?tab=office">Personnel</Link>.</p>
+      <p className="muted" style={{ marginBottom: 0 }}>The forms for staff will come here. The list comes from <Link href="/personnel?tab=office">Employees</Link>.</p>
 
       {addP && (
         <Modal title="＋ Add staff" onClose={() => setAddP(null)}>
@@ -61,7 +61,7 @@ export default function NonDrivers({ flash, canAdd }) {
               <select id="nd2-type" value={addP.type} onChange={(e) => setAddP({ ...addP, type: e.target.value })}><option>Office</option><option>Site</option></select>
             </div>
             <div className="field"><label htmlFor="nd2-des">Designation</label><input id="nd2-des" value={addP.designation} onChange={(e) => setAddP({ ...addP, designation: e.target.value })} placeholder="e.g. Accountant" /></div>
-            <p className="muted" style={{ margin: 0 }}>He is added to Personnel and the salary sheet. Fill his salary and papers there.</p>
+            <p className="muted" style={{ margin: 0 }}>He is added to Employees and the salary sheet. Fill his salary and papers there.</p>
             <div className="modal-actions">
               <button type="button" className="btn ghost" onClick={() => setAddP(null)}>Cancel</button>
               <button type="submit" className="btn in">Add</button>

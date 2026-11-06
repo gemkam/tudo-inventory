@@ -323,7 +323,7 @@ export default function AttendanceSheet() {
         {!canChange && isAdmin && !noTable && <p className="note no-print" style={{ margin: 0 }}>Press ✏️ Edit to mark, change, undo or delete attendance.</p>}
 
         {!staff.length ? (
-          <p className="empty">No staff for {C.short}. Add them in <Link href="/personnel?tab=office">Personnel · Office Employees</Link>.</p>
+          <p className="empty">No staff for {C.short}. Add them in <Link href="/personnel?tab=office">Employees · Office Employees</Link>.</p>
         ) : (
           <div className="table-wrap at-wrap">
             <table className="at-table">

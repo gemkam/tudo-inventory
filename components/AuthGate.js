@@ -157,7 +157,7 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
   // Invoices moved into the All Companies tabs (before VAT return), 1 Nov 2026
   if (user.isAdmin) quick.push(['/entry', 'Data entry', 'entry']);
   // 👥 Personnel (1 Nov 2026): Employees (Office, Drivers, Site, Subcontractors, Attendance), just before Admin
-  if (user.canRead) quick.push(['/personnel', 'Personnel', 'users']);
+  if (user.canRead) quick.push(['/personnel', 'Employees', 'users']);
   // 📊 Reports & Summary (was the Group Summary tab of All Companies), 1 Nov 2026
   if (user.canRead) quick.push(['/expenses/summary', 'Reports & Summary', 'chart']);
   // 🏦 Accounts (4 Nov 2026): Bank & Cash ledger, Balance sheet, Money to receive / pay, Assets & loans, just before Admin

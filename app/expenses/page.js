@@ -168,7 +168,7 @@ function ExpensesPage() {
     const { error: err } = await sb().from('exp_staff').update({ archived_at: new Date().toISOString(), archived_by: me || null, archive_reason: 'Deleted from the salary sheet', active: false, slip_link_on: false }).eq('id', s.id);
     if (err) { flash(err.message, 'err'); return; }
     setStaff((list) => list.filter((x) => x.id !== s.id));
-    flash(`${s.name} moved to Personnel › Archives`);
+    flash(`${s.name} moved to Employees › Archives`);
   }
 
   if (error) return <div className="error">Could not load expenses: {error}</div>;

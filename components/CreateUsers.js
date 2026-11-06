@@ -93,7 +93,7 @@ export default function CreateUsers({ flash, onChanged }) {
       res = await sb().from('exp_staff').insert({ name: addP.name.trim(), company: addP.company, staff_type: addP.type, designation: addP.designation.trim() || null, working_days: 30, basic: 0, sort }).select('id').single();
     }
     if (res.error) { flash(res.error.message, 'err'); return; }
-    flash(`${addP.name.trim()} added to Personnel. Fill his salary and papers there later.`);
+    flash(`${addP.name.trim()} added to Employees. Fill his salary and papers there later.`);
     setAddP(null);
     await load(); onChanged?.();
     setForm((f) => ({ ...f, person: res.data.id, username: f.username || nice(addP.name) }));
@@ -117,7 +117,7 @@ export default function CreateUsers({ flash, onChanged }) {
             </select>
             <button type="button" className="btn" onClick={() => setAddP({ name: '', company: kind === 'driver' ? 'modern-city' : 'sumptuosity', type: 'Office', designation: '', vehicle: '' })}>＋ Add {kind === 'driver' ? 'driver' : 'staff'}</button>
           </div>
-          <small className="muted">The list comes from <Link href={`/personnel?tab=${kind === 'driver' ? 'drivers' : 'office'}`}>Personnel</Link>. Someone added there shows here by himself.</small>
+          <small className="muted">The list comes from <Link href={`/personnel?tab=${kind === 'driver' ? 'drivers' : 'office'}`}>Employees</Link>. Someone added there shows here by himself.</small>
         </div>
         <div className="cu-two">
           <div className="field"><label htmlFor="cu-user">Username</label><input id="cu-user" autoComplete="off" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} placeholder="e.g. saif" /></div>
@@ -172,7 +172,7 @@ export default function CreateUsers({ flash, onChanged }) {
                 <div className="field"><label htmlFor="ap-des">Designation</label><input id="ap-des" value={addP.designation} onChange={(e) => setAddP({ ...addP, designation: e.target.value })} placeholder="e.g. Accountant" /></div>
               </>
             )}
-            <p className="muted" style={{ margin: 0 }}>He is added to Personnel ({kind === 'driver' ? 'Drivers' : `${addP.type} Employees`}) and to the salary sheet.</p>
+            <p className="muted" style={{ margin: 0 }}>He is added to Employees ({kind === 'driver' ? 'Drivers' : `${addP.type} Employees`}) and to the salary sheet.</p>
             <div className="modal-actions">
               <button type="button" className="btn ghost" onClick={() => setAddP(null)}>Cancel</button>
               <button type="submit" className="btn in">Add</button>

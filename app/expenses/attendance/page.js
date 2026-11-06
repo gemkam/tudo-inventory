@@ -10,5 +10,5 @@ export default function OldAttendance() {
     const m = q.get('m');
     window.location.replace(`/personnel?tab=attendance${co ? `&co=${co}` : ''}${m ? `&m=${m}` : ''}`);
   }, []);
-  return <div className="loading">Opening Personnel · Attendance...</div>;
+  return <div className="loading">Opening Employees · Attendance...</div>;
 }

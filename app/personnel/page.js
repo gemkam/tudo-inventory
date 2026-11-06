@@ -481,7 +481,7 @@ function PersonnelPage() {
       rows: rows.map((r) => { const x = statOf(r); return [r.name, tCo(r), r.designation || r.department || '', r.contract || '', r.resident_card_expiry || '', r.passport || '', n(r.basic), n(r.allowances), n(r.house_rent), n(r.utilities), r.transport_allow ? 'Yes' : 'No', r.mobile || '', r.ticket || '', x.present, x.absent, x.leave, x.half]; }),
       numCols: [6, 7, 8, 9]
     });
-    exportExcel(`Personnel ${todayISO()}.xlsx`, [
+    exportExcel(`Employees ${todayISO()}.xlsx`, [
       staffSheet('Office Employees', officeRows),
       { name: 'Drivers', title: 'Drivers · Tudo Num', subtitle: exportStamp(), head: ['Name', 'Company', 'Contract', 'Resident card expiry', 'Passport', 'Basic', 'Allowance total', 'House rent', 'Utilities', 'Ticket'], rows: driverRows.map((r) => [r.name, tCo(r), r.contract || '', r.resident_card_expiry || '', r.passport || '', n(r.salary), n(r.allowances), n(r.house_rent), n(r.utilities), r.ticket || '']), numCols: [5, 6, 7, 8] },
       staffSheet('Site Employees', siteRows),
@@ -530,8 +530,8 @@ function PersonnelPage() {
       <div className="company-head ch-top pn-head">
         <div className="pn-head-txt">
           <span className="company-name">Tudo Num Group</span>
-          <h1>👥 Personnel</h1>
-          <p className="sub">Employees · {(staff || []).length + (drivers || []).length + (subs || []).length} people · {monthLabel(month)}</p>
+          <h1>👥 Employees</h1>
+          <p className="sub">{(staff || []).length + (drivers || []).length + (subs || []).length} people · {monthLabel(month)}</p>
         </div>
         <PeopleSearch q={q} setQ={setQ} hay={hay} coShort={CO_SHORT}
           groups={[
@@ -847,7 +847,7 @@ function PeopleSearch({ q, setQ, hay, groups, coShort, onOpen }) {
   return (
     <div className="ps" ref={box}>
       <span className="ps-ico" aria-hidden="true">🔍</span>
-      <input type="search" value={q} placeholder="Search everything in Personnel" aria-label="Search Personnel"
+      <input type="search" value={q} placeholder="Search everything in Employees" aria-label="Search Employees"
         onChange={(e) => { setQ(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)}
         onKeyDown={(e) => { if (e.key === 'Escape') { setOpen(false); e.currentTarget.blur(); } if (e.key === 'Enter') { const g = found.find((x) => x[2].length); if (g) { onOpen(g[0]); setOpen(false); } } }} />
       {open && words.length > 0 && (

@@ -41,12 +41,12 @@ export default function PersonnelSideNav() {
   const onPage = path === '/personnel';
 
   return (
-    <aside className={`tsn no-print${phoneOpen ? ' phone-open' : ''}`} aria-label="Personnel menu">
+    <aside className={`tsn no-print${phoneOpen ? ' phone-open' : ''}`} aria-label="Employees menu">
       <button type="button" className="tsn-phone" onClick={() => setPhoneOpen((v) => !v)} aria-expanded={phoneOpen}>
-        👥 Personnel menu{here ? ` · ${here[2]}` : ''} <span aria-hidden="true">{phoneOpen ? '▴' : '▾'}</span>
+        👥 Employees menu{here ? ` · ${here[2]}` : ''} <span aria-hidden="true">{phoneOpen ? '▴' : '▾'}</span>
       </button>
       <nav className="tsn-list">
-        <div className="tsn-title"><span className="tsn-title-tx">👥 Personnel</span></div>
+        <div className="tsn-title"><span className="tsn-title-tx">👥 Employees</span></div>
         {PERSONNEL_TABS.map(([k, ic, label]) => (onPage ? (
           <button key={k} type="button" className={`tsn-btn${tab === k ? ' on' : ''}`} aria-current={tab === k ? 'page' : undefined} onClick={() => go(k)}>
             <span className="tsn-ic" aria-hidden="true">{ic}</span><span className="tsn-tx">{label}</span>

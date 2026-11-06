@@ -31,13 +31,13 @@ const NAMES = {
   transport_invoices: ['Transport', 'Transport invoices'], transport_profit_taken: ['Transport', 'Profit taken'],
   entry_links: ['Transport', 'Data entry share links'],
   exp_entries: ['All Companies', 'Bills / expenses'], company_docs: ['All Companies', 'Invoices and payment receipts'],
-  exp_budgets: ['All Companies', 'Budgets'], exp_staff: ['Personnel', 'Office / site staff'],
-  exp_attendance: ['Personnel', 'Attendance marks'], personnel_subcontractors: ['Personnel', 'Subcontractors'],
-  personnel_companies: ['Personnel', 'Added companies'], salary_slips: ['Salary', 'Salary slips'],
+  exp_budgets: ['All Companies', 'Budgets'], exp_staff: ['Employees', 'Office / site staff'],
+  exp_attendance: ['Employees', 'Attendance marks'], personnel_subcontractors: ['Employees', 'Subcontractors'],
+  personnel_companies: ['Employees', 'Added companies'], salary_slips: ['Salary', 'Salary slips'],
   salary_credits: ['Salary', 'Salary credited'], doc_checklist: ['Documents', 'Documents checklist'],
   app_labels: ['Settings', 'Renamed labels'], app_settings: ['Settings', 'App settings']
 };
-const GROUPS = ['All Companies', 'Transport', 'Personnel', 'Salary', 'Inventory', 'Documents', 'Settings', 'Other'];
+const GROUPS = ['All Companies', 'Transport', 'Employees', 'Salary', 'Inventory', 'Documents', 'Settings', 'Other'];
 const SOURCE_KIND = { trip: 'trip', salary: 'driver salary', extra: 'transport expense', maint: 'vehicle maintenance', receipt: 'payment receipt' };
 const PAGE = 200;
 
