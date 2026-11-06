@@ -19,7 +19,7 @@ import { shortOf, hasShort, FUELS } from '@/lib/docShort';
 import { lockEdit } from '@/lib/editLock';
 import DocFiles from '@/components/DocFiles';
 import BillVerify, { readBillPaper, isApproved } from '@/components/BillVerify';
-import { checkBill, AI_LABEL } from '@/lib/billCheck';
+import { checkBill, aiOn } from '@/lib/billCheck';
 import DeptPicker from '@/components/DeptPicker';
 import { addDept } from '@/lib/departments';
 import BillColumns from '@/components/BillColumns';
@@ -462,7 +462,7 @@ function DocsPage() {
   }
   /* 🤖 AI check: read every bill paper that has no AI read yet, two at a time (free AI limit) */
   const [aiRun, setAiRun] = useState(null); // { done, total }
-  const unread = kind === 'receipt' ? (list || []).filter((d) => checkBill(d, list).status === 'wait') : [];
+  const unread = kind === 'receipt' ? (list || []).filter((d) => aiOn(d) && checkBill(d, list).status === 'wait') : [];
   async function aiCheckAll() {
     const todo = [...unread];
     if (!todo.length) return;

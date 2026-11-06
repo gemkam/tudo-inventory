@@ -18,7 +18,7 @@ import { useState } from 'react';
 import Modal from '@/components/Modal';
 import { sb } from '@/lib/supabase';
 import { fmtFullDate } from '@/lib/sheet';
-import { checkBill, slimPaper, AI_LABEL, REJECT_REASONS } from '@/lib/billCheck';
+import { checkBill, slimPaper, AI_LABEL, REJECT_REASONS, aiOn } from '@/lib/billCheck';
 import { fileToImage } from '@/components/DocImport';
 
 const when = (iso) => (iso ? fmtFullDate(String(iso).slice(0, 10)) : '');
@@ -88,13 +88,13 @@ export default function BillVerify({ d, list, canVerify, me, flash, onChanged })
 
   return (
     <div className="bv" onClick={(e) => e.stopPropagation()}>
-      <div className="bv-line">
+      {aiOn(d) && <div className="bv-line">
         <span className="bv-who">AI</span>
         <button type="button" className={`bv-chip bv-${res.status}`} onClick={() => setOpen(true)}
           title={res.reasons.length ? res.reasons.map((r) => r.text).join('\n') : 'Tap for details'}>
           {busy === 'ai' ? '🤖 Reading...' : AI_LABEL[res.status]}{res.reasons.length ? ` (${res.reasons.length})` : ''}
         </button>
-      </div>
+      </div>}
       <div className="bv-line">
         <span className="bv-who">Rauf</span>
         {appr ? (
