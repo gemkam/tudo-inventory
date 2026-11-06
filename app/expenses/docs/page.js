@@ -102,6 +102,17 @@ function BillRow({ f, set, canPick, co, saving, onSave, onCancel, sugg = {}, pic
     <tr data-id={f.id || undefined} className={`br-row${picked ? ' dx-on' : ''}${status === 'dirty' ? ' br-dirty' : ''}${status === 'err' ? ' br-errrow' : ''}`} onClick={stop}
       onBlur={(e) => { if (onLeave && !e.currentTarget.contains(e.relatedTarget)) onLeave(); }}>
       {canPick && <td className="dx-c">{onPick && <input type="checkbox" aria-label={`Select ${f.doc_no}`} checked={picked} onChange={onPick} />}</td>}
+      {paper ? <td onClick={stop}>{paper}</td> : <td className="br-paper">
+        {f.oldFiles > 0 && <span className="muted br-has">📎 {f.oldFiles} saved</span>}
+        {(f.newFiles || []).map((x, i) => (
+          <span key={i} className="br-file" title={x.name}>📄 {x.name.length > 18 ? `${x.name.slice(0, 16)}…` : x.name}
+            <button type="button" aria-label={`Remove ${x.name}`} onClick={() => set('newFiles', f.newFiles.filter((_, j) => j !== i))}>×</button></span>
+        ))}
+        <input ref={pickRef} type="file" accept="image/*,application/pdf" multiple hidden
+          onChange={(e) => { const add = [...(e.target.files || [])]; e.target.value = ''; if (add.length) set('newFiles', [...(f.newFiles || []), ...add]); }} />
+        <button type="button" className="btn small ghost" onClick={() => pickRef.current?.click()} disabled={saving}>＋ Add paper</button>
+      </td>}
+      <td onClick={stop}>{verify || <span className="muted">After save</span>}</td>
       <td className="iv-list-no">{f.doc_no}</td>
       <td><DateInput className="br-in" value={f.doc_date || ''} onChange={(v) => set('doc_date', v)} /></td>
       <td>{inp('party', 'Paid to', { autoFocus: !f.id, list: 'br-party' })}</td>
@@ -120,17 +131,6 @@ function BillRow({ f, set, canPick, co, saving, onSave, onCancel, sugg = {}, pic
         <td key={c.key}><input className="br-in" value={(f.extra || {})[c.key] ?? ''} placeholder={c.name} onKeyDown={key} autoComplete="off"
           onChange={(e) => set('extra', { ...(f.extra || {}), [c.key]: e.target.value })} /></td>
       ))}
-      {paper ? <td onClick={stop}>{paper}</td> : <td className="br-paper">
-        {f.oldFiles > 0 && <span className="muted br-has">📎 {f.oldFiles} saved</span>}
-        {(f.newFiles || []).map((x, i) => (
-          <span key={i} className="br-file" title={x.name}>📄 {x.name.length > 18 ? `${x.name.slice(0, 16)}…` : x.name}
-            <button type="button" aria-label={`Remove ${x.name}`} onClick={() => set('newFiles', f.newFiles.filter((_, j) => j !== i))}>×</button></span>
-        ))}
-        <input ref={pickRef} type="file" accept="image/*,application/pdf" multiple hidden
-          onChange={(e) => { const add = [...(e.target.files || [])]; e.target.value = ''; if (add.length) set('newFiles', [...(f.newFiles || []), ...add]); }} />
-        <button type="button" className="btn small ghost" onClick={() => pickRef.current?.click()} disabled={saving}>＋ Add paper</button>
-      </td>}
-      <td onClick={stop}>{verify || <span className="muted">After save</span>}</td>
       <td style={{ whiteSpace: 'nowrap' }}>
         {!f.id ? (<>
           <button type="button" className="btn small" onClick={onSave} disabled={saving}>{saving ? 'Saving...' : '✓ Save'}</button>{' '}
@@ -896,11 +896,11 @@ function DocsPage() {
 
   // columns in table order (cells are hidden by position)
   const pickCols = [
+    ...(kind === 'receipt' ? [['paper', 'Bill paper'], ['verify', 'Verification']] : []),
     ['no', 'No.'], ['date', 'Date'], ['party', K.party], ['receipt_no', 'Receipt No.'], ['vehicle_no', 'Vehicle No.'], ['fuel', 'Fuel'],
     ['sub', 'Subtotal'], ['vat', 'VAT 5%'], ['grand', 'Grand Total'], ['vat_no', 'VAT No.'],
     ...(kind === 'receipt' ? [['department', 'Department']] : []),
     ...xcols.map((c) => [`x:${c.key}`, c.name]),
-    ...(kind === 'receipt' ? [['paper', 'Bill paper'], ['verify', 'Verification']] : [])
   ].map(([key, label]) => ({ key, label }));
   const hidden = hideCols.filter((k) => pickCols.some((c) => c.key === k));
   const lead = canEdit ? 1 : 0;
@@ -1022,7 +1022,7 @@ function DocsPage() {
         <div className="iv-table-wrap">
           {hideCss && <style>{hideCss}</style>}
           <table className="iv-list" style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead><tr>{canEdit && <th className="dx-c"><input type="checkbox" aria-label="Select all" checked={!!shown.length && picked.length === shown.length} onChange={() => setPicked(picked.length === shown.length ? [] : shown.map((d) => d.id))} /></th>}<th>{hl('no', 'No.')}</th><th>{hl('date', 'Date')}</th><th>{hl('party', K.party)}</th><th>{hl('receipt_no', 'Receipt No.')}</th><th>{hl('vehicle_no', 'Vehicle No.')}</th><th>{hl('fuel', 'Fuel')}</th><th className="num">{hl('sub', 'Subtotal')}</th><th className="num">{hl('vat', 'VAT 5%')}</th><th className="num">{hl('grand', 'Grand Total')}</th><th>{hl('vat_no', 'VAT No.')}</th>{kind === 'receipt' && <th>{hl('department', 'Department')}</th>}{xcols.map((c) => <th key={c.key}>{c.name}</th>)}{kind === 'receipt' && <th>{hl('paper', 'Bill paper')}</th>}{kind === 'receipt' && <th>Verification</th>}{kind === 'receipt' && canEdit && <th />}</tr></thead>
+            <thead><tr>{canEdit && <th className="dx-c"><input type="checkbox" aria-label="Select all" checked={!!shown.length && picked.length === shown.length} onChange={() => setPicked(picked.length === shown.length ? [] : shown.map((d) => d.id))} /></th>}{kind === 'receipt' && <th>{hl('paper', 'Bill paper')}</th>}{kind === 'receipt' && <th>Verification</th>}<th>{hl('no', 'No.')}</th><th>{hl('date', 'Date')}</th><th>{hl('party', K.party)}</th><th>{hl('receipt_no', 'Receipt No.')}</th><th>{hl('vehicle_no', 'Vehicle No.')}</th><th>{hl('fuel', 'Fuel')}</th><th className="num">{hl('sub', 'Subtotal')}</th><th className="num">{hl('vat', 'VAT 5%')}</th><th className="num">{hl('grand', 'Grand Total')}</th><th>{hl('vat_no', 'VAT No.')}</th>{kind === 'receipt' && <th>{hl('department', 'Department')}</th>}{xcols.map((c) => <th key={c.key}>{c.name}</th>)}{kind === 'receipt' && canEdit && <th />}</tr></thead>
             <tbody>
               {kind === 'receipt' && row && !row.id && <BillRow f={row} set={setBill} sugg={sugg} xcols={xcols} canPick={canEdit} co={co} saving={rowSaving} onSave={saveRow} onCancel={() => setRow(null)} />}
               {shown.map((d) => kind === 'receipt' && canEdit ? (
@@ -1038,6 +1038,14 @@ function DocsPage() {
                 <tr key={d.id} data-id={d.id} tabIndex={0} className={picked.includes(d.id) ? 'dx-on' : ''} onClick={() => kind !== 'receipt' && openDoc(d)} onKeyDown={(e) => e.key === 'Enter' && kind !== 'receipt' && openDoc(d)}
                   title={kind === 'receipt' ? '' : 'Open'} style={kind === 'receipt' && !canEdit ? { cursor: 'default' } : undefined}>
                   {canEdit && <td className="dx-c" onClick={(e) => e.stopPropagation()}><input type="checkbox" aria-label={`Select ${d.doc_no}`} checked={picked.includes(d.id)} onChange={() => pickOne(d.id)} /></td>}
+                  {kind === 'receipt' && (
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <DocFiles row={{ id: `company_docs/${d.id}`, owner: d.party, doc_name: d.doc_no, files: d.files || [] }}
+                        canEdit={canEdit} userName={me} flash={flash}
+                        onSave={(files) => savePapers(d, files)} />
+                    </td>
+                  )}
+                  {kind === 'receipt' && <td><BillVerify d={d} list={list} canVerify={isOwner} me={me} flash={flash} onChanged={load} /></td>}
                   <td className="iv-list-no">{d.doc_no}{(d.files || []).length ? ' 📎' : ''}</td>
                   <td>{fmtD(d.doc_date)}</td>
                   <td>{d.party}</td>
@@ -1052,14 +1060,6 @@ function DocsPage() {
                   </>); })()}
                   {kind === 'receipt' && <td>{d.department || ''}</td>}
                   {xcols.map((c) => <td key={c.key}>{(d.extra || {})[c.key] || ''}</td>)}
-                  {kind === 'receipt' && (
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <DocFiles row={{ id: `company_docs/${d.id}`, owner: d.party, doc_name: d.doc_no, files: d.files || [] }}
-                        canEdit={canEdit} userName={me} flash={flash}
-                        onSave={(files) => savePapers(d, files)} />
-                    </td>
-                  )}
-                  {kind === 'receipt' && <td><BillVerify d={d} list={list} canVerify={isOwner} me={me} flash={flash} onChanged={load} /></td>}
                 </tr>
               ))}
             </tbody>
