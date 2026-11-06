@@ -127,7 +127,7 @@ export default function BillVerify({ d, list, canVerify, me, flash, onChanged })
                   ['Subtotal', f3(p.subtotal)], ['VAT', f3(p.vat_amount)], ['Total', f3(p.total)], ['Printed by', p.printed_by], ['Clear photo', p.confidence]]
                   .filter(([, val]) => val !== '' && val !== null && val !== undefined).map(([k, val]) => <tr key={k}><td>{k}</td><td>{val}</td></tr>)}
               </tbody></table>
-              <span className="muted">Read {when(res.read.at)}{res.read.model ? ` · ${res.read.model}` : ''}</span>
+              <span className="muted">Read {when(res.read.at)}</span>
             </div>
           )}
           <p className="muted" style={{ fontSize: 12 }}>AI only lists what it finds. It cannot prove a bill is real.</p>
