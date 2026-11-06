@@ -6,6 +6,7 @@ import TableFilter from '@/components/TableFilter';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import TransportSideNav, { showTransportSide } from '@/components/TransportSideNav';
 import ExpenseSideNav, { showExpenseSide } from '@/components/ExpenseSideNav';
+import { canSeeChairman } from '@/lib/chairmen';
 import PersonnelSideNav, { showPersonnelSide } from '@/components/PersonnelSideNav';
 import SideHover from '@/components/SideHover';
 import PrintColumns from '@/components/PrintColumns';
@@ -162,6 +163,8 @@ export default function AuthGate({ children, adminOnly = false, ownerOnly = fals
   if (user.canRead) quick.push(['/expenses/summary', 'Reports & Summary', 'chart']);
   // 🏦 Accounts (4 Nov 2026): Bank & Cash ledger, Balance sheet, Money to receive / pay, Assets & loans, just before Admin
   if (user.canRead) quick.push(['/accounts', 'Accounts', 'bank']);
+  // 👑 Chairman (6 Nov 2026): just before Admin; Administrator and the chairmen (lib/chairmen.js)
+  if (canSeeChairman(user)) quick.push(['/chairman', 'Chairman', 'crown']);
   if (user.isOwner) quick.push(['/admin', 'Admin', 'shield']);
 
   let blocked = '';
@@ -260,6 +263,7 @@ const ICONS = {
   invoice: <><path d="M6 3h9l3 3v15H6z" /><path d="M15 3v3h3" /><path d="M9 11h6M9 15h6M9 7h3" /></>,
   chart: <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></>,
   bank: <><path d="M3 9.5 12 4l9 5.5" /><path d="M4 9.5h16" /><path d="M6 10v8M10 10v8M14 10v8M18 10v8" /><path d="M3 20.5h18" /></>,
+  crown: <><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z" /><path d="M5 19h14" /></>,
   shield: <><path d="M12 3 4 6v6c0 4.5 3.4 8.2 8 9 4.6-.8 8-4.5 8-9V6z" /><path d="m9 12 2 2 4-4" /></>,
   gear: <><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1" /></>,
   users: <><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5" /><circle cx="17" cy="9" r="2.5" /><path d="M17 14.5c2.4 0 4 1.5 4.5 4.5" /></>,
